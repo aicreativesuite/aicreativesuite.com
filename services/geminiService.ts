@@ -113,7 +113,6 @@ export const transcribeAudio = async (audioBase64: string, mimeType: string): Pr
 
 // --- Video Generation (Veo) ---
 
-// Fix: Use `any` for the return type as `VideosOperation` is not an exported member.
 export const generateVideoFromPrompt = async (prompt: string, aspectRatio: '16:9' | '9:16', isHighQuality: boolean): Promise<any> => {
     const ai = getGeminiAI();
     const model = isHighQuality ? 'veo-3.1-generate-preview' : 'veo-3.1-fast-generate-preview';
@@ -128,7 +127,6 @@ export const generateVideoFromPrompt = async (prompt: string, aspectRatio: '16:9
     });
 };
 
-// Fix: Use `any` for the return type as `VideosOperation` is not an exported member.
 export const generateVideoFromImage = async (prompt: string | null, imageBase64: string, mimeType: string, aspectRatio: '16:9' | '9:16', isHighQuality: boolean): Promise<any> => {
     const ai = getGeminiAI();
     const model = isHighQuality ? 'veo-3.1-generate-preview' : 'veo-3.1-fast-generate-preview';
@@ -147,7 +145,6 @@ export const generateVideoFromImage = async (prompt: string | null, imageBase64:
     });
 };
 
-// Fix: Use `any` for the return type as `VideosOperation` is not an exported member.
 export const extendVideo = async (prompt: string, previousVideo: any, aspectRatio: '16:9' | '9:16'): Promise<any> => {
     const ai = getGeminiAI();
     return ai.models.generateVideos({
@@ -162,7 +159,6 @@ export const extendVideo = async (prompt: string, previousVideo: any, aspectRati
     });
 };
 
-// Fix: Use `any` for the operation parameter and return type.
 export const pollVideoOperation = async (operation: any): Promise<any> => {
     const ai = getGeminiAI();
     return ai.operations.getVideosOperation({ operation });

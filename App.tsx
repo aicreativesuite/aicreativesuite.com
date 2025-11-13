@@ -1,7 +1,5 @@
 
 
-
-
 import React, { useState, useMemo } from 'react';
 import { FEATURES, FeatureId, CATEGORY_DETAILS } from './constants';
 import ImageGenerator from './components/features/ImageGenerator';
@@ -111,9 +109,7 @@ export const TrafficBoosterModal: React.FC<TrafficBoosterModalProps> = ({ show, 
                         </div>
                         <div className="grid grid-cols-4 gap-3 text-center p-2 bg-slate-950/50 rounded-lg border border-slate-700">
                             {filteredPlatforms.map(platform => (
-                                // FIX: Argument of type 'string' is not assignable to parameter of type '"image" | "video" | "text" | "audio"'.
-                                // Explicitly cast contentType to its specific union type to resolve a TypeScript inference issue inside the map function.
-                                <a key={platform.name} href={platform.shareUrl ? platform.shareUrl(contentUrl || window.location.href, shareText, contentType as ('image' | 'video' | 'text' | 'audio')) : '#'} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center p-2 rounded-lg hover:bg-slate-700/50 transition group">
+                                <a key={platform.name} href={platform.shareUrl ? platform.shareUrl(contentUrl || window.location.href, shareText, contentType) : '#'} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center p-2 rounded-lg hover:bg-slate-700/50 transition group">
                                     <div className="w-10 h-10 text-slate-300 group-hover:text-white transition transform group-hover:scale-110">{platform.icon}</div>
                                     <span className="text-xs mt-1 text-slate-400">{platform.name}</span>
                                 </a>
@@ -293,115 +289,108 @@ const App: React.FC = () => {
                     <svg className="w-8 h-8 text-cyan-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12.75 2.06733L16.2045 9.42933L22.929 10.3958L17.8395 15.3443L19.0215 22.0403L12.75 18.2143L6.4785 22.0403L7.6605 15.3443L2.571 10.3958L9.2955 9.42933L12.75 2.06733ZM12.75 5.51133L10.6695 9.89733L5.9445 10.6013L9.348 13.9103L8.514 18.6053L12.75 16.1463L16.986 18.6053L16.152 13.9103L19.5555 10.6013L14.8305 9.89733L12.75 5.51133Z"></path>
                     </svg>
-                    <h1 className={`text-xl font-bold text-white whitespace-nowrap transition-all duration-200 ease-in-out overflow-hidden ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100 ml-3'}`}>AI Creative Suite</h1>
+                    <h1 className={`text-xl font-bold text-white whitespace-nowrap transition-all duration-300 ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100 ml-3'}`}>
+AI Creative Suite</h1>
                 </div>
 
-                <nav className={`flex-grow p-4 overflow-y-auto ${isSidebarCollapsed ? 'space-y-2' : 'space-y-6'}`}>
-                    <div>
-                         <NavLink 
-                            isActive={activeFeature === null}
-                            onClick={(e) => { e.preventDefault(); setActiveFeature(null); }}
-                            title="Dashboard"
-                            icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>}
-                        />
-                    </div>
-
-                    {categorizedFeatures.order.map(category => (
-                        <div key={category}>
-                            <h2 className={`text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2 ${isSidebarCollapsed ? 'justify-center my-4' : 'px-4 mb-2'}`}>
-                                {CATEGORY_DETAILS[category].icon}
-                                <span className={isSidebarCollapsed ? 'hidden' : ''}>{category}</span>
+                <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                    <a href="#" onClick={(e) => { e.preventDefault(); setActiveFeature(null); }} className={`flex items-center text-sm font-medium transition-all duration-200 group relative ${isSidebarCollapsed ? 'justify-center w-12 h-12 rounded-xl' : 'px-4 py-2.5 rounded-lg'} ${activeFeature === null ? 'bg-cyan-500/10 text-cyan-300' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z"></path></svg>
+                        <span className={`whitespace-nowrap transition-all duration-200 ease-in-out overflow-hidden ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100 ml-3'}`}>Dashboard</span>
+                        {activeFeature === null && !isSidebarCollapsed && (
+                             <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-cyan-400 rounded-r-full"></div>
+                        )}
+                    </a>
+                    
+                    {!isSidebarCollapsed && categorizedFeatures.order.map(categoryName => (
+                        <div key={categoryName} className="pt-4">
+                            <h2 className="px-4 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center">
+                                {CATEGORY_DETAILS[categoryName].icon}
+                                <span className="ml-2">{categoryName}</span>
                             </h2>
-                            <ul className={`space-y-1 ${isSidebarCollapsed ? 'flex flex-col items-center' : ''}`}>
-                                {categorizedFeatures.categories[category].map(feature => (
-                                    <li key={feature.id} className="w-full">
-                                        <NavLink 
-                                            isActive={activeFeature === feature.id}
-                                            onClick={(e) => { e.preventDefault(); setActiveFeature(feature.id); }}
-                                            title={feature.title}
-                                            icon={feature.icon}
-                                        />
-                                    </li>
+                            <div className="space-y-1">
+                                {categorizedFeatures.categories[categoryName].map(feature => (
+                                    <NavLink
+                                        key={feature.id}
+                                        isActive={activeFeature === feature.id}
+                                        onClick={(e) => { e.preventDefault(); setActiveFeature(feature.id); }}
+                                        title={feature.title}
+                                        icon={feature.icon}
+                                    />
                                 ))}
-                            </ul>
+                            </div>
                         </div>
                     ))}
+                     {!isSidebarCollapsed && (
+                         <div className="pt-4">
+                            <h2 className="px-4 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center">
+                                {CATEGORY_DETAILS['Account'].icon}
+                                <span className="ml-2">Account</span>
+                            </h2>
+                            <div className="space-y-1">
+                                {categorizedFeatures.categories['Account'].map(feature => (
+                                    <NavLink
+                                        key={feature.id}
+                                        isActive={activeFeature === feature.id}
+                                        onClick={(e) => { e.preventDefault(); setActiveFeature(feature.id); }}
+                                        title={feature.title}
+                                        icon={feature.icon}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                     )}
+
                 </nav>
 
-                <div className={`flex-shrink-0 p-4 border-t border-slate-800 ${isSidebarCollapsed ? 'space-y-2' : 'space-y-1'}`}>
-                    <h2 className={`text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2 ${isSidebarCollapsed ? 'justify-center my-4' : 'px-4 mb-2'}`}>
-                        {CATEGORY_DETAILS['Account'].icon}
-                        <span className={isSidebarCollapsed ? 'hidden' : ''}>Account</span>
-                    </h2>
-                    <ul className={`space-y-1 ${isSidebarCollapsed ? 'flex flex-col items-center' : ''}`}>
-                        {categorizedFeatures.categories['Account'].map(feature => (
-                             <li key={feature.id} className="w-full">
-                                <NavLink 
-                                    isActive={activeFeature === feature.id}
-                                    onClick={(e) => { e.preventDefault(); setActiveFeature(feature.id); }}
-                                    title={feature.title}
-                                    icon={feature.icon}
-                                />
-                            </li>
-                        ))}
-                    </ul>
+                <div className="flex-shrink-0 p-4 border-t border-slate-800">
+                    <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="w-full flex items-center justify-center p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors duration-200">
+                        {isSidebarCollapsed ? (
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" /><path fillRule="evenodd" d="M4.293 15.707a1 1 0 010-1.414L8.586 10 4.293 5.707a1 1 0 011.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                        ) : (
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 4.293a1 1 0 010 1.414L5.414 10l4.293 4.293a1 1 0 01-1.414 1.414l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 0z" clipRule="evenodd" /><path fillRule="evenodd" d="M15.707 4.293a1 1 0 010 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                        )}
+                        <span className={`ml-2 text-sm font-medium whitespace-nowrap transition-all duration-200 ease-in-out overflow-hidden ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>Collapse</span>
+                    </button>
                 </div>
             </aside>
             
-             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="h-20 flex-shrink-0 flex items-center justify-between px-8 bg-slate-950/50 backdrop-blur-sm border-b border-slate-800 z-10">
-                     <div className="flex items-center space-x-4">
-                        <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" aria-label="Toggle sidebar">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                            </svg>
-                        </button>
-                        <div className="h-6 border-r border-slate-700"></div>
-                        {ActiveComponent ? (
-                             <div className="flex items-center space-x-4">
-                                <div className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-cyan-400">
-                                     {React.cloneElement(activeFeatureDetails.icon, { className: 'w-6 h-6' })}
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-bold text-white">{activeFeatureDetails?.title}</h2>
-                                    <p className="text-xs text-slate-400 mt-1 hidden sm:block">{activeFeatureDetails?.description}</p>
-                                </div>
+            <main className="flex-1 overflow-y-auto p-8 relative bg-dots">
+                {/* Background pattern */}
+                <div className="absolute inset-0 bg-grid-slate-800/50 [mask-image:linear-gradient(to_bottom,white_4rem,transparent_20rem)]"></div>
+                
+                <div className="relative">
+                    {!activeFeature && (
+                        <div>
+                            <h1 className="text-4xl font-extrabold text-white mb-2">Welcome to the AI Creative Suite</h1>
+                            <p className="text-lg text-slate-400 mb-8">Your all-in-one platform for AI-powered content creation. Select a tool to get started.</p>
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {dashboardFeatures.map(feature => (
+                                    <FeatureCard key={feature.id} feature={feature} onClick={() => setActiveFeature(feature.id)} />
+                                ))}
                             </div>
-                        ) : (
-                             <div>
-                                <h2 className="text-lg font-bold text-white">Dashboard</h2>
-                                <p className="text-xs text-slate-400 mt-1 hidden sm:block">Welcome to your AI Creative Suite</p>
-                            </div>
-                        )}
-                    </div>
-                </header>
+                        </div>
+                    )}
 
-                <main className="flex-1 overflow-y-auto min-w-0">
-                    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-                        {ActiveComponent ? (
-                            <div className="main-content-enter">
-                                <ActiveComponent onShare={openTrafficBooster} />
-                            </div>
-                        ) : (
-                            <div className="main-content-enter">
-                                <div className="mb-12">
-                                    <h2 className="text-4xl font-extrabold text-white sm:text-5xl md:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-slate-200 to-slate-500">AI Creative Suite</h2>
-                                    <p className="mt-4 max-w-2xl text-lg text-slate-400">
-                                        A powerful suite of AI-powered tools for design, content creation, and analysis, all powered by Google's Gemini models.
-                                    </p>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {dashboardFeatures.map((feature) => (
-                                        <FeatureCard key={feature.id} feature={feature} onClick={() => setActiveFeature(feature.id)} />
-                                    ))}
+                    {ActiveComponent && activeFeatureDetails && (
+                        <div>
+                            <div className="flex items-center space-x-4 mb-8">
+                                <button onClick={() => setActiveFeature(null)} className="p-2 rounded-full bg-slate-800/70 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>
+                                </button>
+                                <div>
+                                    <h1 className="text-3xl font-bold text-white">{activeFeatureDetails.title}</h1>
+                                    <p className="text-slate-400">{activeFeatureDetails.description}</p>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                </main>
-            </div>
+                            <ActiveComponent onShare={openTrafficBooster} />
+                        </div>
+                    )}
+                </div>
+            </main>
         </div>
     );
 };
 
+// Fix: Add default export for the App component.
 export default App;

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 
@@ -50,7 +51,6 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ onShare }) => {
     const [transcripts, setTranscripts] = useState<{user: string, model: string}[]>([]);
     const [currentInterim, setCurrentInterim] = useState('');
     
-    // Fix: Use `any` for the session type as `LiveSession` is not an exported member.
     const sessionPromiseRef = useRef<Promise<any> | null>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
     const inputAudioContextRef = useRef<AudioContext | null>(null);

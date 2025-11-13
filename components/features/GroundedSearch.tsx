@@ -20,7 +20,6 @@ const GroundingChunkDisplay: React.FC<{ chunk: GroundingChunk }> = ({ chunk }) =
         return (
             <a href={chunk.maps.uri} target="_blank" rel="noopener noreferrer" className="block p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm">
                  <p className="font-semibold text-cyan-400 truncate">{chunk.maps.title}</p>
-                 {/* FIX: Cast to 'any' to bypass a potential library typing issue where the 'snippet' property is not defined on the type. */}
                  <p className="text-slate-400 text-xs truncate">{(chunk.maps.placeAnswerSources?.reviewSnippets?.[0] as any)?.snippet ?? 'View on Google Maps'}</p>
             </a>
         );
