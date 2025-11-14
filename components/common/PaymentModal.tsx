@@ -139,13 +139,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ show, onClose, plan, billin
                                         </svg>
                                         <span>Secure Payment Gateway</span>
                                     </div>
-                                    <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-1">
-                                        <a href="#" className="underline hover:text-cyan-400">Credit Card</a>
-                                        <span className="text-slate-600 hidden sm:inline">|</span>
-                                        <a href="#" className="underline hover:text-cyan-400">Global Debit Card</a>
-                                        <span className="text-slate-600 hidden sm:inline">|</span>
-                                        <a href="#" className="underline hover:text-cyan-400">International Debit Card</a>
-                                    </div>
                                 </div>
                             </form>
                         )}
