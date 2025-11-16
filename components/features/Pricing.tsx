@@ -1,15 +1,8 @@
 
+
 import React, { useState } from 'react';
 import PaymentModal from '../common/PaymentModal';
-
-// Define a type for the plan object for better type safety
-export interface Plan {
-    name: string;
-    price: { monthly: number | 'Free' | 'Custom', yearly: number | 'Free' | 'Custom' };
-    features: string[];
-    cta: string;
-    popular?: boolean;
-}
+import { Plan } from '../../constants';
 
 interface PricingProps {
     onShare?: (options: any) => void;
@@ -34,20 +27,20 @@ const Pricing: React.FC<PricingProps> = () => {
         },
         {
             name: 'Startup',
-            price: { monthly: 59, yearly: 590 },
+            price: { monthly: 79, yearly: 790 },
             features: ['Standard AI models', '250 image generations/mo', '25 video generations/mo', 'Priority email support', 'Marketing Assistant'],
             cta: 'Choose Startup'
         },
         {
             name: 'Pro',
-            price: { monthly: 119, yearly: 1190 },
+            price: { monthly: 149, yearly: 1490 },
             features: ['Advanced AI models', '500 image generations/mo', '50 video generations/mo', 'Priority chat support', 'Thinking Mode access'],
             cta: 'Choose Pro',
             popular: true
         },
         {
             name: 'Studio',
-            price: { monthly: 249, yearly: 2490 },
+            price: { monthly: 299, yearly: 2990 },
             features: ['All Pro features', 'Unlimited generations', '2 Team Seats', 'Sound Studio Pro', 'API access'],
             cta: 'Choose Studio'
         },

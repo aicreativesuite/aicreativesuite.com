@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 
 export const DESIGN_STYLES = [
@@ -915,6 +916,15 @@ export const PLATFORMS: Platform[] = [
     return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }},
 ];
+
+// Define a type for the plan object for better type safety
+export interface Plan {
+    name: string;
+    price: { monthly: number | 'Free' | 'Custom', yearly: number | 'Free' | 'Custom' };
+    features: string[];
+    cta: string;
+    popular?: boolean;
+}
 
 export type FeatureId =
     | 'image-generator'

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plan } from '../features/Pricing';
+import { Plan } from '../../constants';
 import Loader from './Loader';
 
 interface PaymentModalProps {
