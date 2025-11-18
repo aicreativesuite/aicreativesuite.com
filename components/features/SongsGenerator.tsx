@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { generateSongConcept, generateSpeech } from '../../services/geminiService';
 import { MUSIC_GENRES, MUSIC_MOODS } from '../../constants';
 import Loader from '../common/Loader';
+import { pcmToWav, decode } from '../../utils';
 
 interface SongsGeneratorProps {
     onShare: (options: { contentText: string; contentType: 'text' }) => void;
@@ -75,12 +75,8 @@ const SongsGenerator: React.FC<SongsGeneratorProps> = ({ onShare }) => {
             const base64Audio = await generateSpeech(cleanLyrics);
 
             if (base64Audio) {
-                const binaryString = atob(base64Audio);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const blob = new Blob([bytes.buffer], { type: 'audio/mpeg' });
+                const bytes = decode(base64Audio);
+                const blob = pcmToWav(bytes, 24000, 1, 16);
                 setAudioUrl(URL.createObjectURL(blob));
             } else {
                 throw new Error("TTS API did not return audio data.");

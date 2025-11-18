@@ -191,7 +191,7 @@ export const performGroundedSearch = async (prompt: string, useMaps: boolean, lo
 // --- Text-to-Speech ---
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string | null> => {
-    const ai = getGeminiAI();
+    const ai = new GoogleGenAI({});
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
         contents: [{ parts: [{ text }] }],
@@ -213,7 +213,7 @@ export const generateMultiSpeakerSpeech = async (
     text: string,
     speakers: { speaker: string; voiceName: string }[]
 ): Promise<string | null> => {
-    const ai = getGeminiAI();
+    const ai = new GoogleGenAI({});
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
         contents: [{ parts: [{ text }] }],
@@ -500,6 +500,51 @@ For each variation, use a different marketing angle (e.g., scarcity, benefit-ori
                         },
                     },
                     required: ['angle', 'copy'],
+                },
+            },
+        },
+    });
+};
+
+export const generateBulkEmails = async (template: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Generate 3 examples of a bulk email campaign using the following template. Replace placeholders like [Name] or [Product] with varied, realistic examples.\n\nTemplate:\n${template}`;
+    return ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        subject: { type: Type.STRING },
+                        body: { type: Type.STRING },
+                    },
+                    required: ['subject', 'body'],
+                },
+            },
+        },
+    });
+};
+
+export const generateBulkSms = async (template: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Generate 3 varied examples of a bulk SMS campaign using the following template. Keep them concise for SMS. Replace placeholders like [Name] or [Product] with realistic examples.\n\nTemplate:\n${template}`;
+    return ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        body: { type: Type.STRING },
+                    },
+                    required: ['body'],
                 },
             },
         },

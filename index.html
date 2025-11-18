@@ -58,8 +58,10 @@
         }
 
         /* Custom focus rings */
-        .focus-ring {
-            @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500;
+        .focus-ring:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px #06b6d4;
         }
     </style>
 <script type="importmap">

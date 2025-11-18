@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { generateImage, generateDialogueSnippet, generateCharacterSituations, generateSpeech, generateStoryOutline, generateMusicCues } from '../../services/geminiService';
 import { MOVIE_GENRES, ASPECT_RATIOS, VISUAL_STYLES, DIRECTOR_STYLES_DESCRIPTIVE } from '../../constants';
 import Loader from '../common/Loader';
+import { pcmToWav, decode } from '../../utils';
 
 // --- Types ---
 type Scene = {
@@ -43,7 +44,6 @@ type Tab = 'concept' | 'story' | 'script' | 'visuals' | 'sound';
 interface MovieGeneratorProps {
     onShare: (options: any) => void;
 }
-
 
 // --- Modals (Unchanged) ---
 interface SceneEditorModalProps {
@@ -693,13 +693,8 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
             if (base64Audio) {
                 if (part.audioUrl) URL.revokeObjectURL(part.audioUrl);
     
-                const binaryString = atob(base64Audio);
-                const len = binaryString.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const blob = new Blob([bytes.buffer], { type: 'audio/mpeg' });
+                const bytes = decode(base64Audio);
+                const blob = pcmToWav(bytes, 24000, 1, 16);
                 const url = URL.createObjectURL(blob);
                 setScriptParts(prev => prev.map(p => p.id === partId ? { ...p, audioUrl: url, audioType: 'ai' } : p));
             } else {

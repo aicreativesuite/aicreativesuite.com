@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
     generateMemeConcept,
@@ -10,8 +11,9 @@ import {
 import { MEME_STYLES, VEO_LOADING_MESSAGES, TTS_VOICES } from '../../constants';
 import Loader from '../common/Loader';
 import ImageUploader from '../common/ImageUploader';
-import { fileToBase64 } from '../../utils';
+import { fileToBase64, pcmToWav, decode } from '../../utils';
 import QRCode from 'qrcode';
+import ApiKeyDialog from '../common/ApiKeyDialog';
 
 
 interface ViralMemeGeneratorProps {
@@ -46,22 +48,161 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
     const [loadingStep, setLoadingStep] = useState<LoadingStep>('');
     const [loadingMessage, setLoadingMessage] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [apiKeyReady, setApiKeyReady] = useState(false);
+    const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
     
     // Refs
     const pollIntervalRef = useRef<number | null>(null);
     const messageIntervalRef = useRef<number | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const audioRef = useRef<HTMLAudioElement>(null);
+    
+    // This function is for client-side video processing
+    const handleProcessVideo = async (videoSrcUrl: string) => {
+        if (!memeAudioUrl || !uniqueId) return;
 
-    // Cleanup object URLs on unmount or when they change
+        setLoadingStep('processing');
+        setLoadingMessage('Adding audio and overlays to video...');
+
+        try {
+            const qrUrl = await QRCode.toDataURL(`https://aicreativesuite.dev/verify?id=${uniqueId}`, { errorCorrectionLevel: 'H', margin: 1, width: 128 });
+            const qrImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = qrUrl;
+            });
+
+            const videoEl = document.createElement('video');
+            videoEl.muted = true;
+            videoEl.src = videoSrcUrl;
+            videoEl.crossOrigin = "anonymous";
+            videoEl.loop = true;
+            
+            const audioEl = document.createElement('audio');
+            audioEl.src = memeAudioUrl;
+
+            await Promise.all([
+                new Promise<void>(res => videoEl.onloadedmetadata = () => res()),
+                new Promise<void>(res => audioEl.onloadedmetadata = () => res())
+            ]);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = videoEl.videoWidth;
+            canvas.height = videoEl.videoHeight;
+            const ctx = canvas.getContext('2d', { alpha: false });
+            if (!ctx) throw new Error('Could not get canvas context');
+
+            const audioCtx = new AudioContext();
+            const sourceNode = audioCtx.createMediaElementSource(audioEl);
+            const destNode = audioCtx.createMediaStreamDestination();
+            sourceNode.connect(destNode);
+            const audioTrack = destNode.stream.getAudioTracks()[0];
+            const videoTrack = canvas.captureStream(30).getVideoTracks()[0];
+
+            const combinedStream = new MediaStream([videoTrack, audioTrack]);
+            const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+            const recordedChunks: Blob[] = [];
+            recorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data) };
+            
+            const recordingPromise = new Promise<void>(resolve => {
+                recorder.onstop = () => resolve();
+            });
+            
+            recorder.start();
+            videoEl.play();
+            audioEl.play();
+            
+            const drawFrame = () => {
+                if (audioEl.paused || audioEl.ended) {
+                    if (recorder.state === 'recording') recorder.stop();
+                    return;
+                }
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                
+                const fontSize = Math.max(30, canvas.width / 12);
+                ctx.font = `bold ${fontSize}px Impact, sans-serif`;
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = fontSize / 20;
+                ctx.textAlign = 'center';
+
+                ctx.strokeText(topText, canvas.width / 2, fontSize * 1.2);
+                ctx.fillText(topText, canvas.width / 2, fontSize * 1.2);
+
+                ctx.strokeText(bottomText, canvas.width / 2, canvas.height - (fontSize * 0.5));
+                ctx.fillText(bottomText, canvas.width / 2, canvas.height - (fontSize * 0.5));
+
+                const qrSize = Math.max(48, Math.floor(canvas.width * 0.1));
+                ctx.drawImage(qrImage, canvas.width - qrSize - 10, canvas.height - qrSize - 10, qrSize, qrSize);
+
+                requestAnimationFrame(drawFrame);
+            };
+
+            drawFrame();
+            
+            await recordingPromise;
+            
+            const finalBlob = new Blob(recordedChunks, { type: 'video/webm' });
+            setFinalVideoUrl(URL.createObjectURL(finalBlob));
+            stopLoading();
+
+        } catch (err: any) {
+            setError("Failed to process video: " + err.message);
+            stopLoading();
+        }
+    };
+    
     useEffect(() => {
+        const videoToProcess = mode === 'video' ? uploadedVideoUrl : memeVideoUrl;
+        if (videoToProcess && memeAudioUrl && uniqueId && loadingStep !== 'processing' && !finalVideoUrl) {
+            handleProcessVideo(videoToProcess);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [uploadedVideoUrl, memeVideoUrl, memeAudioUrl, uniqueId, mode, finalVideoUrl]);
+
+
+    useEffect(() => {
+        const checkKey = async () => {
+            // @ts-ignore
+            if (typeof window.aistudio !== 'undefined') {
+                // @ts-ignore
+                if (await window.aistudio.hasSelectedApiKey()) {
+                    setApiKeyReady(true);
+                    setShowApiKeyDialog(false);
+                } else {
+                    setApiKeyReady(false);
+                    if (mode === 'generate' || mode === 'upload') {
+                        setShowApiKeyDialog(true);
+                    } else {
+                        setShowApiKeyDialog(false);
+                    }
+                }
+            } else {
+                setApiKeyReady(true);
+                setShowApiKeyDialog(false);
+            }
+        };
+        checkKey();
+
         return () => {
             if (memeAudioUrl) URL.revokeObjectURL(memeAudioUrl);
             if (memeVideoUrl) URL.revokeObjectURL(memeVideoUrl);
             if (uploadedVideoUrl) URL.revokeObjectURL(uploadedVideoUrl);
             if (finalVideoUrl) URL.revokeObjectURL(finalVideoUrl);
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
         };
-    }, [memeAudioUrl, memeVideoUrl, uploadedVideoUrl, finalVideoUrl]);
+    }, [mode, memeAudioUrl, memeVideoUrl, uploadedVideoUrl, finalVideoUrl]);
+
+    const handleSelectKey = async () => {
+        // @ts-ignore
+        if (window.aistudio) {
+            // @ts-ignore
+            await window.aistudio.openSelectKey();
+            setApiKeyReady(true);
+            setShowApiKeyDialog(false);
+        }
+    };
 
     // This effect derives the script from the generated concept
     useEffect(() => {
@@ -97,6 +238,7 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
         const file = e.target.files?.[0];
         if (file) {
             setUploadedVideoFile(file);
+            if(uploadedVideoUrl) URL.revokeObjectURL(uploadedVideoUrl);
             setUploadedVideoUrl(URL.createObjectURL(file));
             setError(null);
         }
@@ -118,12 +260,20 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
                     if (uri) {
                         const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
                         const blob = await response.blob();
+                        if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
+                        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
                         setMemeVideoUrl(URL.createObjectURL(blob));
-                        stopLoading();
+                        // Let the useEffect trigger processing, don't stop loading here.
                     } else { throw new Error('Video generation finished, but no video was returned.'); }
                 }
-            } catch (err) {
-                setError('An error occurred while checking video status.');
+            } catch (err: any) {
+                if(err.message?.includes("Requested entity was not found")) {
+                    setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
+                    setApiKeyReady(false);
+                    setShowApiKeyDialog(true);
+                } else {
+                    setError('An error occurred while checking video status.');
+                }
                 stopLoading();
             }
         }, 10000);
@@ -131,6 +281,13 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // @ts-ignore
+        if (mode !== 'video' && !apiKeyReady && typeof window.aistudio !== 'undefined') {
+            setShowApiKeyDialog(true);
+            return;
+        }
+        
         resetState();
 
         const newId = Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -141,16 +298,15 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
             setLoadingStep('concept');
             setLoadingMessage('Thinking of a viral idea...');
             let conceptResponse;
+            let currentMemeImage = null;
+
             if (mode === 'generate') {
                 if (!topic) { setError('Please enter a topic.'); stopLoading(); return; }
                 conceptResponse = await generateMemeConcept(topic, style);
             } else { // 'upload' or 'video'
-                let file = uploadedImageFile;
-                let base64: string | null = null;
-                
-                if (mode === 'video') {
+                 if (mode === 'video') {
                     if (!uploadedVideoFile || !uploadedVideoUrl) { setError('Please upload a video.'); stopLoading(); return; }
-                    base64 = await new Promise((resolve) => {
+                    currentMemeImage = await new Promise((resolve, reject) => {
                         const video = document.createElement('video');
                         video.src = uploadedVideoUrl;
                         video.onloadeddata = () => {
@@ -158,19 +314,18 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
                             canvas.width = video.videoWidth;
                             canvas.height = video.videoHeight;
                             canvas.getContext('2d')?.drawImage(video, 0, 0);
-                            resolve(canvas.toDataURL('image/jpeg').split(',')[1]);
+                            resolve({ base64: canvas.toDataURL('image/jpeg').split(',')[1], mimeType: 'image/jpeg' });
                         };
+                        video.onerror = reject;
                     });
-                     if (!base64) throw new Error("Could not capture video frame.");
-                     setMemeImage({ base64, mimeType: 'image/jpeg' });
-                     file = new File([], "frame.jpg", {type: 'image/jpeg'}); // dummy file for type check
+                     if (!currentMemeImage) throw new Error("Could not capture video frame.");
                 } else { // image upload
                     if (!uploadedImageFile) { setError('Please upload an image.'); stopLoading(); return; }
-                    base64 = await fileToBase64(uploadedImageFile);
-                    setMemeImage({ base64, mimeType: uploadedImageFile.type });
-                    file = uploadedImageFile;
+                    const base64 = await fileToBase64(uploadedImageFile);
+                    currentMemeImage = { base64, mimeType: uploadedImageFile.type };
                 }
-                conceptResponse = await generateMemeConceptFromImage(base64, file.type, style);
+                setMemeImage(currentMemeImage);
+                conceptResponse = await generateMemeConceptFromImage(currentMemeImage.base64, currentMemeImage.mimeType, style);
             }
             const concept = JSON.parse(conceptResponse.text);
             setMemeConcept(concept);
@@ -180,7 +335,8 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
                 setLoadingStep('image');
                 setLoadingMessage('Creating the perfect image...');
                 const imageBytes = await generateImage(concept.imageDescription, '1:1');
-                setMemeImage({ base64: imageBytes, mimeType: 'image/jpeg' });
+                currentMemeImage = { base64: imageBytes, mimeType: 'image/jpeg' };
+                setMemeImage(currentMemeImage);
             }
 
             // Step 3: Generate Audio (common for all modes)
@@ -189,18 +345,13 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
             const script = concept.imageDescription || `${concept.topText}. ${concept.bottomText}`;
             const audioBase64 = await generateSpeech(script, selectedVoice);
             if (!audioBase64) throw new Error("TTS API did not return audio.");
-            const audioBytes = atob(audioBase64).split('').map(c => c.charCodeAt(0));
-            const blob = new Blob([new Uint8Array(audioBytes)], { type: 'audio/mpeg' });
+            const audioBytes = decode(audioBase64);
+            const blob = pcmToWav(audioBytes, 24000, 1, 16);
             setMemeAudioUrl(URL.createObjectURL(blob));
 
-            // Step 4: Generate/Process Video
-            setLoadingStep('video');
-            if (mode === 'video') {
-                // Client-side processing for uploaded video
-                if (!uploadedVideoUrl || !memeAudioUrl || !uniqueId) throw new Error("Missing assets for video processing.");
-                // The processing is triggered by a button press after audio is loaded.
-                stopLoading(); // Wait for user to click process
-            } else { // Animate an image using Veo for 'generate' and 'upload' modes
+            // Step 4: Generate Video (for 'generate' and 'upload' modes)
+            if (mode === 'generate' || mode === 'upload') {
+                setLoadingStep('video');
                 let i = 0;
                 setLoadingMessage(VEO_LOADING_MESSAGES[i]);
                 messageIntervalRef.current = window.setInterval(() => {
@@ -208,197 +359,100 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
                     setLoadingMessage(VEO_LOADING_MESSAGES[i]);
                 }, 3000);
                 
-                const currentMemeImage = mode === 'generate' ? memeImage : { base64: await fileToBase64(uploadedImageFile!), mimeType: uploadedImageFile!.type };
-                if (!currentMemeImage) throw new Error("Meme image is not available.");
+                if (!currentMemeImage) throw new Error("Meme image is not available for animation.");
 
                 const videoPrompt = `A short, looping video animating this image. The image shows ${concept.imageDescription}. The character in the image should appear to be speaking or reacting.`;
                 const operation = await generateVideoFromImage(videoPrompt, currentMemeImage.base64, currentMemeImage.mimeType, '9:16', false);
                 handlePolling(operation);
+            } else {
+                stopLoading();
             }
         } catch (err: any) {
-            setError(err.message || 'An error occurred during generation.');
+            if(err.message?.includes("Requested entity was not found")) {
+                setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
+                setApiKeyReady(false);
+                setShowApiKeyDialog(true);
+            } else {
+                setError(err.message || 'An error occurred during generation.');
+            }
             stopLoading();
         }
     };
     
-    // This function is for client-side video processing
-    const handleProcessVideo = async () => {
-        if (!uploadedVideoUrl || !memeAudioUrl || !uniqueId) return;
-
-        setLoadingStep('processing');
-        setLoadingMessage('Burning overlays onto video...');
-
-        try {
-            const qrUrl = await QRCode.toDataURL(`https://aicreativesuite.dev/verify?id=${uniqueId}`, { errorCorrectionLevel: 'H', margin: 1, width: 128 });
-            const qrImage = await new Promise<HTMLImageElement>((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = reject;
-                img.src = qrUrl;
-            });
-
-            const videoEl = document.createElement('video');
-            videoEl.muted = true;
-            videoEl.src = uploadedVideoUrl;
-            
-            const audioEl = document.createElement('audio');
-            audioEl.src = memeAudioUrl;
-
-            await Promise.all([
-                new Promise<void>(res => videoEl.onloadedmetadata = () => res()),
-                new Promise<void>(res => audioEl.onloadedmetadata = () => res())
-            ]);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = videoEl.videoWidth;
-            canvas.height = videoEl.videoHeight;
-            const ctx = canvas.getContext('2d', { alpha: false });
-            if (!ctx) throw new Error('Could not get canvas context');
-
-            const audioCtx = new AudioContext();
-            const sourceNode = audioCtx.createMediaElementSource(audioEl);
-            const destNode = audioCtx.createMediaStreamDestination();
-            sourceNode.connect(destNode);
-            const audioTrack = destNode.stream.getAudioTracks()[0];
-            const videoTrack = canvas.captureStream(30).getVideoTracks()[0];
-
-            const combinedStream = new MediaStream([videoTrack, audioTrack]);
-            const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
-            const recordedChunks: Blob[] = [];
-            recorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data) };
-            
-            // FIX: The `onstop` handler was incorrectly assigned. It should be a function that calls `resolve`,
-            // not `resolve` directly, to satisfy TypeScript's event handler signature.
-            const recordingPromise = new Promise<void>(resolve => { recorder.onstop = () => resolve(); });
-            
-            recorder.start();
-            videoEl.play();
-            audioEl.play();
-            
-            const drawFrame = () => {
-                if (videoEl.paused || videoEl.ended) {
-                    if (recorder.state === 'recording') recorder.stop();
-                    return;
-                }
-                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-                
-                // Draw Text and QR
-                const fontSize = Math.max(30, canvas.width / 12);
-                ctx.font = `bold ${fontSize}px Impact, sans-serif`;
-                ctx.fillStyle = 'white';
-                ctx.strokeStyle = 'black';
-                ctx.lineWidth = fontSize / 15;
-                ctx.textAlign = 'center';
-
-                ctx.strokeText(topText, canvas.width / 2, fontSize * 1.2);
-                ctx.fillText(topText, canvas.width / 2, fontSize * 1.2);
-
-                ctx.strokeText(bottomText, canvas.width / 2, canvas.height - (fontSize * 0.5));
-                ctx.fillText(bottomText, canvas.width / 2, canvas.height - (fontSize * 0.5));
-
-                const qrSize = Math.max(48, Math.floor(canvas.width * 0.1));
-                ctx.drawImage(qrImage, canvas.width - qrSize - 10, canvas.height - qrSize - 10, qrSize, qrSize);
-
-                requestAnimationFrame(drawFrame);
-            };
-
-            drawFrame();
-            
-            await recordingPromise;
-            
-            const finalBlob = new Blob(recordedChunks, { type: 'video/webm' });
-            setFinalVideoUrl(URL.createObjectURL(finalBlob));
-            stopLoading();
-
-        } catch (err: any) {
-            setError("Failed to process video: " + err.message);
-            stopLoading();
-        }
-    };
-
-
     const isLoading = loadingStep !== '';
 
     return (
-        <div className="flex flex-col lg:flex-row gap-8">
-            <div className="w-full lg:w-1/3 space-y-4">
-                 <div className="flex bg-slate-800 rounded-lg p-1">
-                    <button onClick={() => handleModeChange('generate')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'generate' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>From Topic</button>
-                    <button onClick={() => handleModeChange('upload')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'upload' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>From Image</button>
-                    <button onClick={() => handleModeChange('video')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'video' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>From Video</button>
+        <>
+            <ApiKeyDialog show={showApiKeyDialog} onSelectKey={handleSelectKey} />
+            <div className="flex flex-col lg:flex-row gap-8">
+                <div className="w-full lg:w-1/3 space-y-4">
+                    <div className="flex bg-slate-800 rounded-lg p-1">
+                        <button onClick={() => handleModeChange('generate')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'generate' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>From Topic</button>
+                        <button onClick={() => handleModeChange('upload')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'upload' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>From Image</button>
+                        <button onClick={() => handleModeChange('video')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'video' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>From Video</button>
+                    </div>
+                    
+                    <form onSubmit={handleSubmit} className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                        <fieldset disabled={isLoading}>
+                            {mode === 'generate' && (
+                                <div>
+                                    <label htmlFor="topic" className="block text-sm font-medium text-slate-300 mb-2">Meme Topic</label>
+                                    <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., Programmers trying to fix bugs" />
+                                </div>
+                            )}
+                            {mode === 'upload' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">Upload Image</label>
+                                    <ImageUploader onImageUpload={setUploadedImageFile} onImageClear={() => setUploadedImageFile(null)} />
+                                </div>
+                            )}
+                            {mode === 'video' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">Upload Video</label>
+                                    <input type="file" accept="video/*" onChange={handleVideoFileChange} className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100" />
+                                    {uploadedVideoUrl && <video src={uploadedVideoUrl} controls className="mt-2 rounded-lg w-full" />}
+                                </div>
+                            )}
+                            <div>
+                                <label htmlFor="style" className="block text-sm font-medium text-slate-300 mb-2">Meme Style</label>
+                                <select id="style" value={style} onChange={(e) => setStyle(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
+                                    {MEME_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <button type="submit" disabled={isLoading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed">
+                                {isLoading ? 'Generating...' : 'Generate Meme'}
+                            </button>
+                        </fieldset>
+                        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+                    </form>
                 </div>
-                
-                <form onSubmit={handleSubmit} className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                    <fieldset disabled={isLoading}>
-                        {mode === 'generate' && (
-                             <div>
-                                <label htmlFor="topic" className="block text-sm font-medium text-slate-300 mb-2">Meme Topic</label>
-                                <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., Programmers trying to fix bugs" />
-                            </div>
-                        )}
-                        {mode === 'upload' && (
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">Upload Image</label>
-                                <ImageUploader onImageUpload={setUploadedImageFile} onImageClear={() => setUploadedImageFile(null)} />
-                            </div>
-                        )}
-                         {mode === 'video' && (
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">Upload Video</label>
-                                 <input type="file" accept="video/*" onChange={handleVideoFileChange} className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100" />
-                                {uploadedVideoUrl && <video src={uploadedVideoUrl} controls className="mt-2 rounded-lg w-full" />}
-                            </div>
-                        )}
-                        <div>
-                            <label htmlFor="style" className="block text-sm font-medium text-slate-300 mb-2">Meme Style</label>
-                            <select id="style" value={style} onChange={(e) => setStyle(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                                {MEME_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                        </div>
-                        <button type="submit" className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed">
-                            {isLoading ? 'Generating...' : '1. Generate Concept & Audio'}
-                        </button>
-                    </fieldset>
-                    {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-                </form>
-                {mode === 'video' && memeAudioUrl && !finalVideoUrl && (
-                     <div className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                        <button onClick={handleProcessVideo} disabled={isLoading} className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed">
-                            {loadingStep === 'processing' ? 'Processing...' : '2. Process Video with Overlays'}
-                        </button>
-                     </div>
-                )}
-            </div>
 
-            <div className="w-full lg:w-2/3 flex items-center justify-center bg-slate-900/50 rounded-2xl border border-slate-800 min-h-[400px] lg:min-h-0 p-6">
-                {isLoading && <Loader message={loadingMessage} />}
-                
-                {!isLoading && (finalVideoUrl || memeVideoUrl) && (
-                    <div className="w-full max-w-sm mx-auto text-center space-y-4">
-                        <div className="relative aspect-[9/16] w-full bg-black rounded-lg overflow-hidden shadow-2xl shadow-cyan-900/20">
-                            <video ref={videoRef} src={finalVideoUrl || memeVideoUrl} muted loop playsInline className="w-full h-full object-cover" />
-                        </div>
-                        <audio ref={audioRef} src={memeAudioUrl!} controls className="w-full" />
-                         <div className="flex gap-4">
-                            <button onClick={() => { videoRef.current?.play(); audioRef.current?.play(); }} className="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">Play</button>
+                <div className="w-full lg:w-2/3 flex items-center justify-center bg-slate-900/50 rounded-2xl border border-slate-800 min-h-[400px] lg:min-h-0 p-6">
+                    {isLoading && <Loader message={loadingMessage} />}
+                    
+                    {!isLoading && finalVideoUrl && (
+                        <div className="w-full max-w-sm mx-auto text-center space-y-4">
+                            <div className="relative aspect-[9/16] w-full bg-black rounded-lg overflow-hidden shadow-2xl shadow-cyan-900/20">
+                                <video ref={videoRef} src={finalVideoUrl} controls loop playsInline className="w-full h-full object-cover" />
+                            </div>
                             <button
-                                onClick={() => onShare({ contentUrl: finalVideoUrl || memeVideoUrl || '', contentText: memeScript, contentType: 'video' })}
-                                className="flex-1 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700"
+                                onClick={() => onShare({ contentUrl: finalVideoUrl, contentText: memeScript, contentType: 'video' })}
+                                className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700"
                             >
-                                Share
+                                Share Meme
                             </button>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {!isLoading && !(finalVideoUrl || memeVideoUrl) && (
-                    <div className="text-center text-slate-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-16 w-16 opacity-30" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM9.5 15.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm5 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm.36-4.13c-.63.85-1.6 1.38-2.73 1.38s-2.1-.53-2.73-1.38C9.37 11.23 9 10.95 9 10.61c0-.51.64-.81.97-.42.33.39.73.71 1.25.89.33.12.71.12.98 0 .52-.18.92-.5 1.25-.89.33-.39.97-.09.97.42-.01.34-.37.62-.64.76z"/></svg>
-                        <p className="mt-4">Your viral meme video will appear here.</p>
-                    </div>
-                )}
+                    {!isLoading && !finalVideoUrl && (
+                        <div className="text-center text-slate-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-16 w-16 opacity-30" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM9.5 15.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm5 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm.36-4.13c-.63.85-1.6 1.38-2.73 1.38s-2.1-.53-2.73-1.38C9.37 11.23 9 10.95 9 10.61c0-.51.64-.81.97-.42.33.39.73.71 1.25.89.33.12.71.12.98 0 .52-.18.92-.5 1.25-.89.33-.39.97-.09.97.42-.01.34-.37.62-.64.76z"/></svg>
+                            <p className="mt-4">Your viral meme video will appear here.</p>
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 

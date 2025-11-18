@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { generateVideoFromPrompt, generateVideoFromImage, pollVideoOperation } from '../../services/geminiService';
 import { VIDEO_ASPECT_RATIOS, VEO_LOADING_MESSAGES } from '../../constants';
@@ -34,12 +33,18 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ onShare }) => {
     useEffect(() => {
         const checkKey = async () => {
             // @ts-ignore
-            if (window.aistudio && await window.aistudio.hasSelectedApiKey()) {
+            if (typeof window.aistudio !== 'undefined') {
+                // @ts-ignore
+                if (await window.aistudio.hasSelectedApiKey()) {
+                    setApiKeyReady(true);
+                    setShowApiKeyDialog(false);
+                } else {
+                    setApiKeyReady(false);
+                    setShowApiKeyDialog(true);
+                }
+            } else {
                 setApiKeyReady(true);
                 setShowApiKeyDialog(false);
-            } else {
-                setApiKeyReady(false);
-                setShowApiKeyDialog(true);
             }
         };
         checkKey();
@@ -114,6 +119,12 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ onShare }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // @ts-ignore
+        if (!apiKeyReady && typeof window.aistudio !== 'undefined') {
+            setShowApiKeyDialog(true);
+            return;
+        }
         
         if (mode === 'image-to-video' && !imageFile) {
             setError('Please upload an image for image-to-video mode.');
@@ -212,10 +223,10 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ onShare }) => {
                         </div>
                         <button
                             type="submit"
-                            disabled={loading || !apiKeyReady}
+                            disabled={loading}
                             className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300"
                         >
-                            {loading ? 'Generating...' : (!apiKeyReady ? 'API Key Required' : 'Generate Video')}
+                            {loading ? 'Generating...' : 'Generate Video'}
                         </button>
                         {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
                     </form>

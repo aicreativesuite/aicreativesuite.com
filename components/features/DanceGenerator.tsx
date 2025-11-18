@@ -31,12 +31,18 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
     useEffect(() => {
         const checkKey = async () => {
             // @ts-ignore
-            if (window.aistudio && await window.aistudio.hasSelectedApiKey()) {
+            if (typeof window.aistudio !== 'undefined') {
+                // @ts-ignore
+                if (await window.aistudio.hasSelectedApiKey()) {
+                    setApiKeyReady(true);
+                    setShowApiKeyDialog(false);
+                } else {
+                    setApiKeyReady(false);
+                    setShowApiKeyDialog(true);
+                }
+            } else {
                 setApiKeyReady(true);
                 setShowApiKeyDialog(false);
-            } else {
-                setApiKeyReady(false);
-                setShowApiKeyDialog(true);
             }
         };
         checkKey();
@@ -111,6 +117,12 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // @ts-ignore
+        if (!apiKeyReady && typeof window.aistudio !== 'undefined') {
+            setShowApiKeyDialog(true);
+            return;
+        }
         
         if (!characterDescription || !setting) {
             setError('Please describe the character and setting.');
@@ -196,10 +208,10 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
                         
                         <button
                             type="submit"
-                            disabled={loading || !apiKeyReady}
+                            disabled={loading}
                             className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300"
                         >
-                            {loading ? 'Generating...' : (!apiKeyReady ? 'API Key Required' : 'Generate Dance Video')}
+                            {loading ? 'Generating...' : 'Generate Dance Video'}
                         </button>
                         {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
                     </form>

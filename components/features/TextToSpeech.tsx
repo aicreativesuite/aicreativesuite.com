@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { generateSpeech } from '../../services/geminiService';
 import Loader from '../common/Loader';
+import { pcmToWav, decode } from '../../utils';
 
 interface TextToSpeechProps {
     onShare: (options: { contentUrl: string; contentText: string; contentType: 'audio' }) => void;
@@ -39,13 +40,8 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
         try {
             const base64Audio = await generateSpeech(text);
             if (base64Audio) {
-                const binaryString = atob(base64Audio);
-                const len = binaryString.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const blob = new Blob([bytes.buffer], { type: 'audio/mpeg' });
+                const bytes = decode(base64Audio);
+                const blob = pcmToWav(bytes, 24000, 1, 16);
                 const url = URL.createObjectURL(blob);
                 setAudioUrl(url);
             } else {

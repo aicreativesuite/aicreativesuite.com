@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { generateImage } from '../../services/geminiService';
 import { DESIGN_STYLES, ASPECT_RATIOS, ART_TECHNIQUES_BY_DESIGN, ARTISTIC_STYLES } from '../../constants';
@@ -81,7 +82,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
         try {
             let fullPrompt = `${prompt}, in a ${designStyle} design style${artTechnique ? `, using a ${artTechnique} technique` : ''}${artisticStyle !== 'None' ? `, with a ${artisticStyle} artistic style` : ''}.`;
             if (negativePrompt) {
-                fullPrompt += ` --no ${negativePrompt}`;
+                fullPrompt += `, avoiding ${negativePrompt}`;
             }
             const imageBytes = await generateImage(fullPrompt, aspectRatio);
             if (addQr) {

@@ -1,10 +1,10 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { generateText, generateImage, generateSpeech, generateVideoFromImage, pollVideoOperation } from '../../services/geminiService';
 import { COMEDIAN_STYLES, AUDIENCE_TYPES, VEO_LOADING_MESSAGES, TTS_VOICES } from '../../constants';
 import Loader from '../common/Loader';
 import ApiKeyDialog from '../common/ApiKeyDialog';
+import { pcmToWav, decode } from '../../utils';
 
 interface StandupGeneratorProps {
     onShare: (options: { contentUrl: string; contentText: string; contentType: 'video' }) => void;
@@ -41,12 +41,18 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
     useEffect(() => {
         const checkKey = async () => {
             // @ts-ignore
-            if (window.aistudio && await window.aistudio.hasSelectedApiKey()) {
+            if (typeof window.aistudio !== 'undefined') {
+                // @ts-ignore
+                if (await window.aistudio.hasSelectedApiKey()) {
+                    setApiKeyReady(true);
+                    setShowApiKeyDialog(false);
+                } else {
+                    setApiKeyReady(false);
+                    setShowApiKeyDialog(true);
+                }
+            } else {
                 setApiKeyReady(true);
                 setShowApiKeyDialog(false);
-            } else {
-                setApiKeyReady(false);
-                setShowApiKeyDialog(true);
             }
         };
         checkKey();
@@ -94,8 +100,14 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
                         stopLoading();
                     }
                 }
-            } catch (err) {
-                setError('An error occurred while checking video status.');
+            } catch (err: any) {
+                if (err.message?.includes("Requested entity was not found")) {
+                    setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
+                    setApiKeyReady(false);
+                    setShowApiKeyDialog(true);
+                } else {
+                    setError('An error occurred while checking video status.');
+                }
                 cleanupPolling();
                 stopLoading();
             }
@@ -104,6 +116,12 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // @ts-ignore
+        if (!apiKeyReady && typeof window.aistudio !== 'undefined') {
+            setShowApiKeyDialog(true);
+            return;
+        }
+
         if (!topic || !comedianAppearance) {
             setError('Please fill out the topic and comedian appearance.');
             return;
@@ -138,10 +156,8 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
             const voice = TTS_VOICES[Math.floor(Math.random() * TTS_VOICES.length)];
             const audioBase64 = await generateSpeech(script, voice);
             if (audioBase64) {
-                const binaryString = atob(audioBase64);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-                const blob = new Blob([bytes.buffer], { type: 'audio/mpeg' });
+                const bytes = decode(audioBase64);
+                const blob = pcmToWav(bytes, 24000, 1, 16);
                 setJokeAudioUrl(URL.createObjectURL(blob));
             } else {
                 throw new Error("TTS API did not return audio.");
@@ -191,7 +207,7 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
                 <div className="w-full lg:w-1/3 space-y-6">
                     <form onSubmit={handleSubmit} className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
                         <h3 className="text-xl font-bold text-white mb-4">Comedy Set Setup</h3>
-                        <fieldset disabled={isLoading || !apiKeyReady}>
+                        <fieldset disabled={isLoading}>
                             <div>
                                 <label htmlFor="topic" className="block text-sm font-medium text-slate-300 mb-2">Topic</label>
                                 <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., Dating Apps" />
@@ -213,7 +229,7 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
                                 <textarea id="comedianAppearance" rows={3} value={comedianAppearance} onChange={(e) => setComedianAppearance(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A woman in her 30s with vibrant pink hair, wearing a leather jacket." />
                             </div>
                             <button type="submit" className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300">
-                                {isLoading ? 'Generating...' : (!apiKeyReady ? 'API Key Required' : 'Generate Comedy Set')}
+                                {isLoading ? 'Generating...' : 'Generate Comedy Set'}
                             </button>
                         </fieldset>
                         {error && <p className="text-red-400 text-sm mt-2">{error}</p>}

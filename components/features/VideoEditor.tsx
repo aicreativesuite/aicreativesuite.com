@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { generateVideoFromPrompt, extendVideo, pollVideoOperation } from '../../services/geminiService';
 import { VIDEO_ASPECT_RATIOS, VEO_LOADING_MESSAGES, VIDEO_EXTENSION_SUGGESTIONS } from '../../constants';
@@ -36,12 +35,18 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
     useEffect(() => {
         const checkKey = async () => {
             // @ts-ignore
-            if (window.aistudio && await window.aistudio.hasSelectedApiKey()) {
+            if (typeof window.aistudio !== 'undefined') {
+                // @ts-ignore
+                if (await window.aistudio.hasSelectedApiKey()) {
+                    setApiKeyReady(true);
+                    setShowApiKeyDialog(false);
+                } else {
+                    setApiKeyReady(false);
+                    setShowApiKeyDialog(true);
+                }
+            } else {
                 setApiKeyReady(true);
                 setShowApiKeyDialog(false);
-            } else {
-                setApiKeyReady(false);
-                setShowApiKeyDialog(true);
             }
         };
         checkKey();
@@ -83,6 +88,18 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
             pollIntervalRef.current = null;
         }
     };
+
+    const handleApiError = (err: any) => {
+        stopLoading();
+        if (err.message?.includes("Requested entity was not found")) {
+            setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
+            setApiKeyReady(false);
+            setShowApiKeyDialog(true);
+        } else {
+            setError('Failed to start video generation. Please check your prompt and try again.');
+        }
+        console.error(err);
+    };
     
     const handlePolling = (operation: any, onComplete: (finalOp: any) => void) => {
         let op = operation;
@@ -92,16 +109,20 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
                 if (op.done) {
                     onComplete(op);
                 }
-            } catch (err) {
-                stopLoading();
-                setError('An error occurred while checking video status.');
-                console.error(err);
+            } catch (err: any) {
+                handleApiError(err);
             }
         }, 10000);
     };
 
     const handleInitialSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // @ts-ignore
+        if (!apiKeyReady && typeof window.aistudio !== 'undefined') {
+            setShowApiKeyDialog(true);
+            return;
+        }
+
         if (!initialPrompt) {
             setError('Please enter a prompt for the base video.');
             return;
@@ -135,6 +156,12 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
 
     const handleExtensionSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // @ts-ignore
+        if (!apiKeyReady && typeof window.aistudio !== 'undefined') {
+            setShowApiKeyDialog(true);
+            return;
+        }
+
         if (!extensionPrompt) {
             setError('Please enter a prompt to extend the video.');
             return;
@@ -168,18 +195,6 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
         }
     };
     
-    const handleApiError = (err: any) => {
-        stopLoading();
-        if (err.message?.includes("Requested entity was not found")) {
-            setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
-            setApiKeyReady(false);
-            setShowApiKeyDialog(true);
-        } else {
-            setError('Failed to start video generation. Please check your prompt and try again.');
-        }
-        console.error(err);
-    };
-
     const handleReset = () => {
         stopLoading();
         setInitialPrompt('');
@@ -207,7 +222,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
 
                     {/* Step 1: Initial Video Generation Form */}
                     <form onSubmit={handleInitialSubmit} className="space-y-4 p-4 bg-slate-800 rounded-lg border border-slate-700">
-                        <fieldset disabled={loadingInitial || !!initialVideoUrl || !apiKeyReady}>
+                        <fieldset disabled={loadingInitial || !!initialVideoUrl}>
                             <h4 className="font-semibold text-slate-200">Step 1: Create a Base Video</h4>
                             <textarea
                                 rows={3}
@@ -232,14 +247,14 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
                                 </div>
                             </div>
                             <button type="submit" className="w-full mt-2 bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300">
-                                {!apiKeyReady ? 'API Key Required' : (initialVideoUrl ? 'Base Video Created' : (loadingInitial ? 'Creating...' : 'Create Base Video'))}
+                                {initialVideoUrl ? 'Base Video Created' : (loadingInitial ? 'Creating...' : 'Create Base Video')}
                             </button>
                         </fieldset>
                     </form>
 
                     {/* Step 2: Extension Form */}
                     <form onSubmit={handleExtensionSubmit} className="space-y-4 p-4 bg-slate-800 rounded-lg border border-slate-700">
-                        <fieldset disabled={!initialVideoUrl || loadingExtension || loadingInitial || !apiKeyReady}>
+                        <fieldset disabled={!initialVideoUrl || loadingExtension || loadingInitial}>
                             <h4 className="font-semibold text-slate-200">Step 2: Extend Your Video (+7s)</h4>
                             <textarea
                                 rows={3}

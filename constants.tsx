@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 
 // --- SVG Icons for UI ---
@@ -174,7 +175,6 @@ export const SOUND_EFFECT_CATEGORIES = ["Sci-Fi", "Fantasy", "Nature", "Urban", 
 export const MUSIC_STYLES = ["Orchestral", "Electronic", "Acoustic", "Rock", "Hip Hop", "Ambient"];
 export const TTS_VOICES = ["Kore", "Puck", "Charon", "Zephyr", "Fenrir"];
 
-// FIX: Add MUSIC_GENRES and MUSIC_MOODS exports for the Songs Generator feature.
 // --- Songs Generator ---
 export const MUSIC_GENRES = [
     "Acid Jazz", "Afrobeat", "Alternative", "Ambient", "Anti-Folk", "Baroque Pop", "Bebop", "Black Metal", "Bluegrass", "Blues", "Boom Bap", "Bossa Nova", "Britpop", "Chiptune", "Classical", "Cloud Rap", "Conscious Hip Hop", "Cool Jazz", "Country", "Death Metal", "Disco", "Doom Metal", "Downtempo", "Drill", "Drum and Bass", "Dubstep", "Electronic", "Emo", "Fado", "Folk", "Folk Rock", "Free Jazz", "Funk", "G-Funk", "Gabber", "Garage Rock", "Gospel", "Grunge", "Hard Bop", "Hard Rock", "Hardcore", "Heavy Metal", "Highlife", "Hip Hop", "House", "IDM", "Indie Rock", "Industrial Rock", "J-Pop", "Jazz", "Jazz Fusion", "K-Pop", "Lo-fi Hip Hop", "Mariachi", "Metal", "Mumble Rap", "Musical Theatre", "Neofolk", "New Wave", "Noise Rock", "Nu Metal", "Pop", "Post-Punk", "Post-Rock", "Power Metal", "Progressive Rock", "Psychedelic Folk", "Psychedelic Rock", "Punk", "R&B", "Reggae", "Rock", "Salsa", "Samba", "Screamo", "Shoegaze", "Ska", "Soul", "Southern Rock", "Spoken Word", "Swing", "Symphonic Metal", "Synth-pop", "Synthwave", "Techno", "Thrash Metal", "Trance", "Trap", "UK Garage", "Vaporwave"

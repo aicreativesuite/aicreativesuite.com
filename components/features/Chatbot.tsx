@@ -36,63 +36,47 @@ You have deep, specific knowledge about how large-scale media platforms operate.
 --- START OF KNOWLEDGE BASE ---
 How does Instagram manage billions of images?
 
-Instagram manages its colossal volume of images through a highly distributed, fault-tolerant architecture built on Facebook's infrastructure, designed to store, process, and deliver media with high efficiency and reliability.
+Instagram manages its colossal volume of images through a highly distributed, fault-tolerant architecture built on Meta's infrastructure, designed to store, process, and deliver media with high efficiency and reliability.
 
-When you upload a photo, it doesn't go to a single server. The image is immediately processed and stored across multiple geographically distributed data centers for redundancy. The system first creates several resized versions (thumbnails, feed-quality, high-resolution) to serve different contexts efficiently, optimizing for both speed and data usage.
+When you upload a photo, it doesn't go to a single server. The image is immediately processed and stored across multiple geographically distributed data centers. The system first creates several resized versions (thumbnails, feed-quality, high-resolution) to serve different contexts efficiently, optimizing for both speed and data usage.
 
-The images are then stored in a massive, custom-built object storage system (Haystack) that strips away unnecessary metadata to pack billions of photos densely, reducing overhead and cost. Delivery is handled by a global Content Delivery Network (CDN) that caches the most frequently accessed images at edge locations worldwide, ensuring they load instantly for users everywhere.
+The images are stored in a massive, custom-built object storage system that is highly optimized for small, frequently accessed files. Delivery is handled by Meta's global private Content Delivery Network (CDN) that caches the most frequently accessed images at edge locations worldwide, ensuring they load instantly for users everywhere.
 
-Instagram's media pipeline consists of highly specialized services. The Upload Service handles the initial reception and validation of the image data. The Media Processing Service uses asynchronous workers to generate different sizes and formats, and applies filters using optimized image libraries.
-
-The Media Storage Service writes the final images to the distributed object store and manages their replication across data centers. A dedicated CDN Service manages the distribution and caching logic to push content to the edge.
+Instagram's media pipeline consists of highly specialized microservices. The Upload Service handles the initial reception of the image data. The Media Processing Service uses asynchronous workers to generate different sizes and formats. The Media Storage Service writes the final images to the distributed object store and manages replication.
 
 Behind the scenes, Instagram runs continuous background processing. Machine learning models analyze images for content moderation, automatic alt-text generation, and to power features like "Searchable Photos." The architecture prioritizes eventual consistency; your photo might be visible in your feed before all its high-resolution copies have been replicated to every data center.
 
-This immense volume of data is stored in a combination of massive object storage for the images themselves and scalable databases for the metadata (likes, comments, tags). The entire system is designed for high availability and horizontal scaling, allowing it to seamlessly accommodate upload spikes during global events.
-
-The most impressive part is the scale and efficiency. Instagram stores trillions of photos, serves billions of image requests daily, and processes petabytes of new image data, all while maintaining fast upload times and instant load times for users across the globe.
-
-Instagram's Media Management Tech Stack:
-- Frontend: React Native, JavaScript, TypeScript
-- Backend: Python (Django), Go, C++, Java
-- Databases & Storage: PostgreSQL, Cassandra, Redis, TAO (graph database), Facebook's Haystack/Taoper (object storage)
-- Image Storage & CDN: Facebook's proprietary CDN, Akamai, AWS CloudFront
-- Async Processing: Apache Kafka, Celery, Async frameworks
-- Data Processing: Apache Spark, Presto, Hive
-- Security: Facebook's internal security infrastructure, TLS, photo encryption at rest
-- Infrastructure: Facebook's global data center network
-- DevOps: Facebook's internal deployment tools (FBLearner, Chef), Kubernetes
-- Machine Learning: PyTorch, Caffe2 (for image recognition, content moderation, feed ranking)
+Instagram's Modern Media Tech Stack:
+- Backend: Primarily Python 3, with performance-critical services in C++, Go, and increasingly Rust.
+- Databases & Storage: MySQL (using RocksDB engine), ZippyDB (distributed key-value store), Scuba (real-time analytics), and proprietary, highly-optimized object storage systems evolved from Haystack.
+- Image Storage & CDN: Meta's global private CDN, which uses edge locations to cache content close to users for faster delivery.
+- Async Processing: A robust system of asynchronous task queues for media processing (resizing, encoding) and ML analysis.
+- Data Processing: Presto for large-scale analytics and Apache Spark for complex data pipelines.
+- Infrastructure: Runs entirely on Meta's massive, custom-built global data center infrastructure and network backbone (Express Backbone).
+- DevOps & Deployment: Utilizes Meta's internal continuous deployment systems (e.g., Tupperware for container management) for rapid, reliable rollouts.
+- Machine Learning: Heavily relies on PyTorch for a wide range of applications, including content ranking, moderation, recommendation, and computer vision tasks.
 
 How does TikTok serve videos so quickly?
 
 TikTok achieves its lightning-fast video delivery through a highly-optimized, globally-distributed architecture that prioritizes low latency and high bandwidth for short-form video streaming.
 
-When you open the app, the next videos are already being pre-fetched and cached on your device based on predictive algorithms, ensuring the next video starts playing almost instantly upon swipe. The videos themselves are stored in a massively scalable object storage system and delivered through a custom-built Content Delivery Network (CDN) with points of presence (PoPs) strategically placed around the world to be as close as possible to users.
+When you open the app, the next videos are already being pre-fetched and cached on your device based on predictive algorithms, ensuring the next video starts playing almost instantly upon swipe. The videos themselves are stored in a massively scalable object storage system and delivered through a custom-built Content Delivery Network (CDN) with points of presence (PoPs) strategically placed around the world.
 
 This process is managed by a microservices backend. Your request for the "For You" feed is processed by a recommendation service, which returns a list of video IDs. The app then requests these videos from the nearest CDN edge server, minimizing the distance data must travel.
 
-TikTok's core delivery consists of highly specialized services. The Video Storage Service manages the petabytes of video content in a distributed file system. The CDN Routing Service intelligently directs your device to the optimal server for video download based on your location, network conditions, and server load.
-
-The Pre-fetching Service is critical, proactively loading the first few seconds of likely-next videos into your device's memory. A dedicated Adaptive Bitrate Streaming Service dynamically adjusts the video quality in real-time to match your network speed, preventing buffering.
-
-Behind the scenes, TikTok runs real-time network optimizations. It uses protocols like QUIC to reduce connection establishment time and can switch between CDNs mid-stream if performance degrades. Video files are heavily compressed using advanced codecs and stored in multiple resolutions ready for immediate delivery.
-
-This immense volume of video data is stored in a distributed object store, while metadata and user data are managed in scalable databases. The entire system is designed for high concurrency and fault tolerance, handling billions of video requests daily from users across the globe.
+TikTok's core delivery consists of highly specialized services. The Video Storage Service manages petabytes of video content. The CDN Routing Service intelligently directs your device to the optimal server. The Pre-fetching Service is critical, proactively loading the first few seconds of likely-next videos. An Adaptive Bitrate Streaming Service dynamically adjusts the video quality in real-time to match your network speed, preventing buffering.
 
 The most impressive part is the seamless integration of speed and personalization. TikTok doesn't just deliver videos quickly, it delivers the *right* videos quickly, pre-loading your personalized "For You" feed so the next video is always ready before you even swipe.
 
-TikTok Tech Stack:
-- Frontend: Swift (iOS), Kotlin (Android), C++ (core video rendering)
-- Backend: Go, Python, Java, C++
-- Databases & Storage: Apache HBase, MySQL, Redis, ByteGraph (custom graph database), object storage
-- Video Storage & CDN: Custom-built global CDN, AWS S3, Google Cloud Storage
-- Messaging & Streaming: Apache Kafka, Apache Pulsar
-- Data Processing: Apache Flink, Spark, ClickHouse
-- Security: TLS 1.3, proprietary DDoS protection
-- Infrastructure: Hybrid (on-premise and public cloud), Kubernetes
-- DevOps: Argo CD, Prometheus, Grafana
-- Machine Learning: PyTorch, TensorFlow (for recommendation, video understanding, and transcoding optimization)
+TikTok's Modern Tech Stack:
+- Backend: Go for high-concurrency services, Python, and Java.
+- Databases & Storage: Abase (a custom system based on Apache HBase), TiDB (for SQL workloads), ByteGraph (proprietary graph database), and extensive use of object storage.
+- Video Storage & CDN: A massive, custom-built global CDN with intelligent routing, supplemented by public cloud providers and offered commercially via BytePlus.
+- Messaging & Streaming: Apache Kafka and Apache Pulsar are used for real-time data ingestion and event streaming.
+- Data Processing: Apache Flink is heavily used for real-time stream processing, alongside Spark and ClickHouse for analytics.
+- Infrastructure: A hybrid cloud strategy utilizing both massive on-premise data centers and public clouds, with Kubernetes for container orchestration.
+- DevOps: A sophisticated internal DevOps platform focused on automation, with tools like Argo CD for GitOps.
+- Machine Learning: A proprietary ML platform (Monolith) alongside PyTorch and TensorFlow for powering its formidable recommendation engine, video analysis, and content moderation.
 --- END OF KNOWLEDGE BASE ---
 `;
         setChat(createChatSession(systemInstruction));

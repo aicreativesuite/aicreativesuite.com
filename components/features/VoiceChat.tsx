@@ -1,27 +1,8 @@
-
 import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { encode, decode } from '../../utils';
 
 // --- Audio Helper Functions ---
-function encode(bytes: Uint8Array): string {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function decode(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
 async function decodeAudioData(
   data: Uint8Array,
   ctx: AudioContext,
@@ -44,6 +25,10 @@ interface VoiceChatProps {
     onShare: (options: { contentText: string; contentType: 'text' }) => void;
 }
 
+// --- Module-level variables for session persistence ---
+let nextStartTime = 0;
+const sources = new Set<AudioBufferSourceNode>();
+
 // --- Component ---
 const VoiceChat: React.FC<VoiceChatProps> = ({ onShare }) => {
     const [isSessionActive, setIsSessionActive] = useState(false);
@@ -60,8 +45,6 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ onShare }) => {
 
     const currentInputTranscription = useRef('');
     const currentOutputTranscription = useRef('');
-    let nextStartTime = 0;
-    const sources = new Set<AudioBufferSourceNode>();
 
     const stopSession = useCallback(() => {
         if (sessionPromiseRef.current) {
@@ -89,6 +72,12 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ onShare }) => {
             outputAudioContextRef.current = null;
         }
         
+        for (const source of sources.values()) {
+            source.stop();
+        }
+        sources.clear();
+        nextStartTime = 0;
+
         setIsSessionActive(false);
         setStatus('Session ended. Press Start to begin again.');
     }, []);
@@ -100,6 +89,8 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ onShare }) => {
         setCurrentInterim('');
         currentInputTranscription.current = '';
         currentOutputTranscription.current = '';
+        nextStartTime = 0;
+        sources.clear();
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
