@@ -154,11 +154,32 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
         }
     }
 
+    const handleDeleteItem = (index: number, type: 'email' | 'sms' | 'ab') => {
+        if (type === 'email' && parsedBulkResult) {
+            setParsedBulkResult(parsedBulkResult.filter((_, i) => i !== index));
+        } else if (type === 'sms' && parsedSmsResult) {
+            setParsedSmsResult(parsedSmsResult.filter((_, i) => i !== index));
+        } else if (type === 'ab' && parsedAbTestResult) {
+            setParsedAbTestResult(parsedAbTestResult.filter((_, i) => i !== index));
+        }
+    }
+
+    const handleDownloadItem = (content: string, filename: string) => {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        displayToast('Downloaded!');
+    }
+
     const renderToolForm = () => {
         if (!activeTool) return null;
         if (activeTool === 'ab-test') {
              return (
-                 <form onSubmit={handleToolSubmit} className="space-y-4 bg-slate-900/50 p-4 rounded-lg">
+                 <form onSubmit={handleToolSubmit} className="space-y-4 bg-slate-900/50 p-4 rounded-lg border border-slate-800">
                     <h3 className="text-lg font-bold">A/B Test Copy Generator</h3>
                     <p className="text-sm text-slate-400 -mt-2">Generate copy variations with different marketing angles.</p>
                     <textarea rows={3} value={abProduct} onChange={(e) => setAbProduct(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="Product/Service Description..." />
@@ -171,7 +192,7 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
             );
         }
         return (
-             <form onSubmit={handleToolSubmit} className="space-y-4 bg-slate-900/50 p-4 rounded-lg">
+             <form onSubmit={handleToolSubmit} className="space-y-4 bg-slate-900/50 p-4 rounded-lg border border-slate-800">
                 <h3 className="text-lg font-bold">Bulk {activeTool === 'email' ? 'Email' : 'SMS'} Generator</h3>
                  <p className="text-sm text-slate-400 -mt-2">Create multiple variations from a single template.</p>
                 <textarea rows={6} value={emailSmsTemplate} onChange={(e) => setEmailSmsTemplate(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder={`Enter ${activeTool} template. Use [Name], [Product], etc.`} />
@@ -189,7 +210,7 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
                     {toastMessage}
                 </div>
             )}
-            <div className="lg:w-1/2 flex flex-col h-[70vh] bg-slate-900/50 rounded-lg">
+            <div className="lg:w-1/2 flex flex-col h-[70vh] bg-slate-900/50 rounded-lg border border-slate-800">
                 <div className="flex-shrink-0 p-4 border-b border-slate-700 flex justify-between items-center">
                     <h3 className="font-bold text-lg text-white">AI Marketing Agent</h3>
                     <button
@@ -228,26 +249,35 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
                     <button onClick={() => setActiveTool('ab-test')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${activeTool === 'ab-test' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>A/B Test Copy</button>
                 </div>
                 {renderToolForm()}
-                 <div className="min-h-[200px] bg-slate-900/50 rounded-lg p-4 prose-sm prose-invert max-w-none">
+                 <div className="min-h-[200px] bg-slate-900/50 rounded-lg p-4 prose-sm prose-invert max-w-none border border-slate-800">
                     {toolLoading && <Loader />}
                     {parsedAbTestResult ? (
                         <div className="space-y-4 not-prose">
                             {parsedAbTestResult.map((item, index) => (
-                                <div key={index} className="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                                <div key={index} className="bg-slate-800 p-4 rounded-lg border border-slate-700 relative group">
+                                    <button onClick={() => handleDeleteItem(index, 'ab')} className="absolute top-2 right-2 text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition" title="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                    </button>
                                     <h4 className="font-bold text-cyan-400 mb-2 text-base">{item.angle}</h4>
                                     <p className="text-slate-300 whitespace-pre-wrap mb-4 text-sm">{item.copy}</p>
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex flex-wrap gap-2">
                                         <button
                                             onClick={() => { navigator.clipboard.writeText(item.copy); displayToast('Copied to clipboard!'); }}
-                                            className="inline-flex items-center space-x-2 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
+                                            className="inline-flex items-center space-x-1 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
                                         >
                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" /><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" /></svg>
                                             <span>Copy</span>
                                         </button>
+                                        <button
+                                            onClick={() => handleDownloadItem(item.copy, `ab_copy_${item.angle.replace(/\s+/g, '_')}.txt`)}
+                                            className="inline-flex items-center space-x-1 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                            <span>Download</span>
+                                        </button>
                                          <button
                                             onClick={() => onShare({ contentText: `[${item.angle}] ${item.copy}`, contentType: 'text' })}
-                                            title="Share this copy"
-                                            className="inline-flex items-center space-x-2 bg-purple-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-purple-700 transition-colors"
+                                            className="inline-flex items-center space-x-1 bg-purple-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-purple-700 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
                                             <span>Share</span>
@@ -259,22 +289,31 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
                     ) : parsedSmsResult ? (
                         <div className="space-y-4 not-prose">
                             {parsedSmsResult.map((sms, index) => (
-                                <div key={index} className="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                                <div key={index} className="bg-slate-800 p-4 rounded-lg border border-slate-700 relative group">
+                                    <button onClick={() => handleDeleteItem(index, 'sms')} className="absolute top-2 right-2 text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition" title="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                    </button>
                                     <p className="text-slate-300 whitespace-pre-wrap mb-4 text-sm">{sms.body}</p>
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex flex-wrap gap-2">
                                         <a 
                                             href={`sms:?body=${encodeURIComponent(sms.body)}`}
-                                            className="inline-flex items-center space-x-2 bg-purple-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-purple-700 transition-colors"
+                                            className="inline-flex items-center space-x-1 bg-green-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-green-700 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                                                 <path fillRule="evenodd" d="M4.848 2.771A49.144 49.144 0 0112 2.25c2.43 0 4.817.178 7.152.52 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97a48.901 48.901 0 01-14.304 0c-1.978-.292-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.678 3.348-3.97zM6.75 8.25a.75.75 0 01.75-.75h9a.75.75 0 010 1.5h-9a.75.75 0 01-.75-.75zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H7.5z" clipRule="evenodd" />
                                             </svg>
                                             <span>Send SMS</span>
                                         </a>
+                                        <button
+                                            onClick={() => handleDownloadItem(sms.body, `sms_${index}.txt`)}
+                                            className="inline-flex items-center space-x-1 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                            <span>Download</span>
+                                        </button>
                                          <button
                                             onClick={() => onShare({ contentText: sms.body, contentType: 'text' })}
-                                            title="Share this SMS"
-                                            className="inline-flex items-center space-x-2 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
+                                            className="inline-flex items-center space-x-1 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
                                             <span>Share</span>
@@ -286,21 +325,30 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
                     ) : parsedBulkResult ? (
                         <div className="space-y-4 not-prose">
                             {parsedBulkResult.map((email, index) => (
-                                <div key={index} className="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                                <div key={index} className="bg-slate-800 p-4 rounded-lg border border-slate-700 relative group">
+                                    <button onClick={() => handleDeleteItem(index, 'email')} className="absolute top-2 right-2 text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition" title="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                    </button>
                                     <h4 className="font-bold text-white mb-2 text-base">{email.subject}</h4>
                                     <p className="text-slate-300 whitespace-pre-wrap mb-4 text-sm">{email.body}</p>
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex flex-wrap gap-2">
                                         <a 
                                             href={`mailto:?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`}
-                                            className="inline-flex items-center space-x-2 bg-cyan-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-cyan-700 transition-colors"
+                                            className="inline-flex items-center space-x-1 bg-cyan-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-cyan-700 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.532 60.532 0 0021.056-10.151.75.75 0 000-1.172A60.533 60.533 0 003.478 2.405z" /></svg>
                                             <span>Send Email</span>
                                         </a>
                                         <button
+                                            onClick={() => handleDownloadItem(`Subject: ${email.subject}\n\n${email.body}`, `email_${index}.txt`)}
+                                            className="inline-flex items-center space-x-1 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                            <span>Download</span>
+                                        </button>
+                                        <button
                                             onClick={() => onShare({ contentText: `Subject: ${email.subject}\n\n${email.body}`, contentType: 'text' })}
-                                            title="Share this Email"
-                                            className="inline-flex items-center space-x-2 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
+                                            className="inline-flex items-center space-x-1 bg-slate-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-slate-500 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
                                             <span>Share</span>

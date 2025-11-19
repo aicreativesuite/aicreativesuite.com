@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { expandContent } from '../../services/geminiService';
 import { EXPANDED_CONTENT_TYPES, CONTENT_TONES } from '../../constants';
@@ -37,6 +38,17 @@ const ContentGenerator: React.FC<ContentGeneratorProps> = ({ onShare }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDownload = () => {
+        if (!result) return;
+        const blob = new Blob([result], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `content_${contentType.replace(/\s+/g, '_')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -94,15 +106,31 @@ const ContentGenerator: React.FC<ContentGeneratorProps> = ({ onShare }) => {
                 <div className="flex-shrink-0 p-4 border-b border-slate-700 flex justify-between items-center">
                     <h3 className="font-bold text-lg text-white">Generated Content</h3>
                     {result && (
-                        <button
-                            onClick={() => onShare({ contentText: result, contentType: 'text' })}
-                            className="flex items-center space-x-2 bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 transition-colors duration-300 text-sm"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-                            </svg>
-                            <span>Share</span>
-                        </button>
+                        <div className="flex items-center space-x-2">
+                            <button
+                                onClick={handleDownload}
+                                className="flex items-center space-x-1 bg-slate-700 text-white font-bold py-2 px-3 rounded-lg hover:bg-slate-600 transition-colors duration-300 text-sm"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                <span>Download</span>
+                            </button>
+                            <button
+                                onClick={() => onShare({ contentText: result, contentType: 'text' })}
+                                className="flex items-center space-x-1 bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 transition-colors duration-300 text-sm"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                                </svg>
+                                <span>Share</span>
+                            </button>
+                             <button
+                                onClick={() => setResult(null)}
+                                className="flex items-center space-x-1 bg-red-900/50 text-red-200 font-bold py-2 px-3 rounded-lg hover:bg-red-900/70 transition-colors duration-300 text-sm"
+                                title="Discard"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                            </button>
+                        </div>
                     )}
                 </div>
                 <div className="flex-grow p-6 overflow-y-auto">

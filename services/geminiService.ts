@@ -1,5 +1,4 @@
 
-
 import { GoogleGenAI, GenerateContentResponse, Chat, Modality, Type } from "@google/genai";
 
 // This file centralizes all API calls to the Gemini API.
@@ -551,7 +550,7 @@ export const generateBulkSms = async (template: string): Promise<GenerateContent
     });
 };
 
-// --- Traffic Booster / Outreach ---
+// --- Traffic Booster / Outreach (Lead Finding) ---
 export const generateOutreachPitch = async (businessName: string, service: string, format: 'email' | 'sms' | 'phone script'): Promise<GenerateContentResponse> => {
     const ai = getGeminiAI();
     const prompt = `Write a short, professional but friendly ${format} pitch to a business named "${businessName}".
@@ -566,6 +565,92 @@ export const generateOutreachPitch = async (businessName: string, service: strin
     return ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
+    });
+};
+
+// --- AI Traffic Booster (Strategy Generator) ---
+
+export const generateTrafficStrategy = async (niche: string, audience: string, url: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Act as an elite "AI Traffic Booster" strategist. Your goal is to help a website grab a slice of the 10 billion monthly visits available online by optimizing for AI Search (GEO), Social Media, and Technical excellence.
+
+    Context:
+    - Niche: "${niche}"
+    - Audience: "${audience}"
+    - Website URL: "${url || 'New Brand'}"
+
+    Generate a comprehensive 4-pillar strategy:
+
+    1. Content & GEO (Generative Engine Optimization):
+       - How to rank in AI Overviews (Google SGE) and LLM answers (ChatGPT, Perplexity).
+       - Specific "citation-worthy" content formats (tables, stats, quotes).
+       - Keyword strategy for conversational queries.
+
+    2. Social Dominance & Distribution:
+       - Tactics for repurposing content across platforms (LinkedIn, TikTok, etc.).
+       - Viral hooks specific to this niche.
+       - Timing/Hashtag strategy.
+
+    3. Technical Foundation & Analytics:
+       - Essential Schema Markup (for machine readability).
+       - How to track AI-driven traffic (e.g. custom filters).
+       - Technical audits (speed, mobile usability).
+
+    4. Paid Growth & Conversion (UX):
+       - High-ROI ad targeting strategies.
+       - Personalization tactics to lower bounce rate.
+       - "Zero-click" value propositions.
+
+    Return strictly as JSON matching the provided schema.`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    geoStrategy: {
+                        type: Type.OBJECT,
+                        properties: {
+                            title: { type: Type.STRING },
+                            tactics: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            citationContent: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Ideas for citation-worthy content (stats, tables)" },
+                        },
+                         required: ["title", "tactics", "citationContent"]
+                    },
+                    socialStrategy: {
+                        type: Type.OBJECT,
+                        properties: {
+                            title: { type: Type.STRING },
+                            repurposingTactics: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            viralHooks: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        },
+                        required: ["title", "repurposingTactics", "viralHooks"]
+                    },
+                    technicalStrategy: {
+                        type: Type.OBJECT,
+                        properties: {
+                            title: { type: Type.STRING },
+                            schemaMarkup: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            analyticsTips: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        },
+                        required: ["title", "schemaMarkup", "analyticsTips"]
+                    },
+                    growthStrategy: {
+                        type: Type.OBJECT,
+                         properties: {
+                            title: { type: Type.STRING },
+                            adTargeting: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            uxPersonalization: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        },
+                        required: ["title", "adTargeting", "uxPersonalization"]
+                    }
+                },
+                required: ["geoStrategy", "socialStrategy", "technicalStrategy", "growthStrategy"],
+            },
+        },
     });
 };
 
@@ -694,5 +779,53 @@ export const expandContent = async (topic: string, contentType: string, tone: st
     return ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: prompt,
+    });
+};
+
+// --- Domain Finder ---
+export const generateDomainAndHostingRecommendations = async (description: string, projectType: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Generate 10 creative, modern, and available-sounding domain name ideas for a project described as: "${description}". The project type is: "${projectType}".
+    
+    Also, recommend 3 excellent FREE hosting providers suitable for this specific project type (e.g., if it's a static site, suggest GitHub Pages/Netlify/Vercel; if it requires a backend, suggest Render/Railway/Fly.io free tiers).
+    
+    Return the response as a JSON object with the following structure:
+    {
+      "domains": ["domain1.app", "domain2.io", ...],
+      "hosting": [
+        { "name": "Provider Name", "description": "Short description", "bestFor": "Best use case", "freeTierFeatures": "Key free features" },
+        ...
+      ]
+    }`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    domains: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING }
+                    },
+                    hosting: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                name: { type: Type.STRING },
+                                description: { type: Type.STRING },
+                                bestFor: { type: Type.STRING },
+                                freeTierFeatures: { type: Type.STRING },
+                            },
+                            required: ["name", "description", "bestFor", "freeTierFeatures"]
+                        }
+                    }
+                },
+                required: ["domains", "hosting"]
+            }
+        }
     });
 };

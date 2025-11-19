@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useMemo } from 'react';
 import { FEATURES, FeatureId, CATEGORY_DETAILS, PricingIcon, AccountIcon } from './constants';
 import ImageGenerator from './components/features/ImageGenerator';
@@ -24,7 +22,9 @@ import StandupGenerator from './components/features/StandupGenerator';
 import StrandsGenerator from './components/features/StrandsGenerator';
 import DanceGenerator from './components/features/DanceGenerator';
 import TrafficBooster from './components/features/TrafficBooster';
+import AiTrafficBooster from './components/features/AiTrafficBooster';
 import ViralMemeGenerator from './components/features/ViralMemeGenerator';
+import DomainFinder from './components/features/DomainFinder';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
 
 
@@ -39,7 +39,7 @@ interface TrafficBoosterModalProps {
 
 export const TrafficBoosterModal: React.FC<TrafficBoosterModalProps> = ({ show, onClose, contentUrl, contentText, contentType = 'image' }) => {
     type ToastType = 'success' | 'info' | 'error';
-    const [activeTab, setActiveTab] = useState<PlatformCategory>('Photo Sharing');
+    const [activeTab, setActiveTab] = useState<PlatformCategory>('Social & Micro');
     const [shareText, setShareText] = useState('');
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
@@ -96,7 +96,7 @@ export const TrafficBoosterModal: React.FC<TrafficBoosterModalProps> = ({ show, 
                     {toast.message}
                 </div>
             )}
-            <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl p-8 max-w-4xl w-full mx-4 border border-slate-700 shadow-2xl shadow-cyan-500/10 modal-content" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl p-8 max-w-5xl w-full mx-4 border border-slate-700 shadow-2xl shadow-cyan-500/10 modal-content max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
                     <h2 className="text-2xl font-bold text-white">Share & Promote</h2>
                     <button onClick={onClose} className=" text-slate-400 hover:text-white transition-colors">
@@ -111,7 +111,7 @@ export const TrafficBoosterModal: React.FC<TrafficBoosterModalProps> = ({ show, 
                             {contentType === 'image' && contentUrl && <img src={contentUrl} alt="Content preview" className="max-h-full w-auto rounded" />}
                             {contentType === 'video' && contentUrl && <video src={contentUrl} controls className="max-h-full w-auto rounded" />}
                             {contentType === 'audio' && contentUrl && <audio src={contentUrl} controls className="w-full" />}
-                            {contentType === 'text' && contentText && <p className="text-slate-300 text-sm h-full overflow-y-auto p-2">{String(contentText)}</p>}
+                            {contentType === 'text' && contentText && <p className="text-slate-300 text-sm h-full overflow-y-auto p-2 whitespace-pre-wrap">{String(contentText)}</p>}
                         </div>
                          <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-700">
                             <h3 className="font-semibold text-slate-200 mb-3">Other Actions</h3>
@@ -138,18 +138,20 @@ export const TrafficBoosterModal: React.FC<TrafficBoosterModalProps> = ({ show, 
 
                         <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-700">
                              <h3 className="font-semibold text-slate-200 mb-4">Share to Platform</h3>
-                             <div className="flex bg-slate-800 rounded-lg p-1 text-sm border border-slate-700 mb-4">
+                             <div className="flex overflow-x-auto pb-2 mb-4 gap-2 scrollbar-hide bg-slate-800/50 p-2 rounded-lg">
                                 {categories.map(cat => (
-                                    <button key={cat} onClick={() => setActiveTab(cat)} className={`w-full p-2 rounded-md text-xs font-semibold transition ${activeTab === cat ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>
+                                    <button key={cat} onClick={() => setActiveTab(cat)} className={`whitespace-nowrap px-3 py-2 rounded-md text-xs font-semibold transition flex-shrink-0 ${activeTab === cat ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>
                                         {cat}
                                     </button>
                                 ))}
                             </div>
-                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 text-center">
+                            <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 gap-2 text-center max-h-[250px] overflow-y-auto pr-1">
                                 {filteredPlatforms.map(platform => (
-                                    <button type="button" key={platform.name} onClick={() => handlePlatformShare(platform)} className="flex flex-col items-center p-2 rounded-lg hover:bg-slate-700/50 transition group cursor-pointer focus-ring text-left">
-                                        <div className="w-10 h-10 text-slate-300 group-hover:text-white transition transform group-hover:scale-110">{platform.icon}</div>
-                                        <span className="text-xs mt-1 text-slate-400">{platform.name}</span>
+                                    <button type="button" key={platform.name} onClick={() => handlePlatformShare(platform)} className="flex flex-col items-center p-2 rounded-lg hover:bg-slate-700/50 transition group cursor-pointer focus-ring">
+                                        <div className="w-10 h-10 flex items-center justify-center text-slate-300 group-hover:text-white transition transform group-hover:scale-110">
+                                            {platform.icon}
+                                        </div>
+                                        <span className="text-[10px] mt-1 text-slate-400 leading-tight">{platform.name}</span>
                                     </button>
                                 ))}
                             </div>
@@ -234,7 +236,9 @@ const App: React.FC = () => {
             case 'strands-generator': return StrandsGenerator;
             case 'dance-generator': return DanceGenerator;
             case 'traffic-booster': return TrafficBooster;
+            case 'ai-traffic-booster': return AiTrafficBooster;
             case 'viral-meme-generator': return ViralMemeGenerator;
+            case 'domain-finder': return DomainFinder;
             case 'pricing': return Pricing;
             case 'profile-settings': return ProfileAndSettings;
             default: return null;
