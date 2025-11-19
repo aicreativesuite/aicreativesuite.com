@@ -829,3 +829,60 @@ export const generateDomainAndHostingRecommendations = async (description: strin
         }
     });
 };
+
+// --- Podcast Generator ---
+export const generatePodcastScript = async (sourceText: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Create a lively, engaging podcast script between two hosts, Alex and Jamie, based on the following source material.
+    
+    Source Material: "${sourceText}"
+    
+    The conversation should be natural, with banter, "hmm"s, and clear turn-taking.
+    Alex is enthusiastic and asks questions. Jamie is insightful and explains details.
+    
+    Return a JSON array of objects, where each object has a "speaker" (either "Alex" or "Jamie") and "text" (their dialogue).
+    Example: [{"speaker": "Alex", "text": "Welcome back everyone!"}, {"speaker": "Jamie", "text": "Today we're diving deep into..."}]`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        speaker: { type: Type.STRING, enum: ["Alex", "Jamie"] },
+                        text: { type: Type.STRING },
+                    },
+                    required: ["speaker", "text"],
+                },
+            },
+        },
+    });
+};
+
+// --- Trend Forecaster ---
+export const generateTrendReport = async (topic: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Act as a future trends analyst. Research and analyze the current landscape and future trajectory of "${topic}".
+    
+    Use Google Search to find the latest real-time data, news, and signals.
+
+    Identify:
+    1. Three Emerging Trends (What is gaining traction right now?)
+    2. One Declining Trend (What is fading away?)
+    3. One Wildcard Prediction (Low probability, high impact event)
+
+    Format the output as a clean Markdown report with headers, bullet points, and bold text for emphasis. 
+    Do NOT return JSON. Return a human-readable Markdown document.`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-pro', // Using Pro for better synthesis
+        contents: prompt,
+        config: {
+            tools: [{ googleSearch: {} }],
+        }
+    });
+};

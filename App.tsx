@@ -25,6 +25,8 @@ import TrafficBooster from './components/features/TrafficBooster';
 import AiTrafficBooster from './components/features/AiTrafficBooster';
 import ViralMemeGenerator from './components/features/ViralMemeGenerator';
 import DomainFinder from './components/features/DomainFinder';
+import PodcastGenerator from './components/features/PodcastGenerator';
+import TrendForecaster from './components/features/TrendForecaster';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
 
 
@@ -220,10 +222,12 @@ const App: React.FC = () => {
             case 'image-generator': return ImageGenerator;
             case 'image-editor': return ImageEditor;
             case 'video-generator': return VideoGenerator;
+            case 'podcast-generator': return PodcastGenerator;
             case 'movie-generator': return MovieGenerator;
             case 'voice-chat': return VoiceChat;
             case 'chatbot': return Chatbot;
             case 'grounded-search': return GroundedSearch;
+            case 'trend-forecaster': return TrendForecaster;
             case 'media-analyzer': return MediaAnalyzer;
             case 'text-to-speech': return TextToSpeech;
             case 'avatar-generator': return AvatarGenerator;
