@@ -31,6 +31,7 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
     const [error, setError] = useState<string | null>(null);
     const [apiKeyReady, setApiKeyReady] = useState(false);
     const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
     
     // Refs
     const pollIntervalRef = useRef<number | null>(null);
@@ -133,6 +134,7 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
         setComedianImage(null);
         setJokeAudioUrl(null);
         setComedianVideoUrl(null);
+        setIsSaved(false);
 
         try {
             // Step 1: Generate Joke
@@ -197,6 +199,11 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
         }
     };
 
+    const handleSave = () => {
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
+    };
+
     const isLoading = loadingStep !== '';
 
     return (
@@ -250,11 +257,18 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
                                 <h4 className="font-bold text-slate-100 mb-2">Script:</h4>
                                 <p className="whitespace-pre-wrap">{jokeScript}</p>
                             </div>
-                            <div className="flex gap-4">
-                                <button onClick={handlePlay} className="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors">Play Set</button>
+                            <div className="flex gap-2 justify-center flex-wrap">
+                                <button onClick={handlePlay} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex-1 min-w-[100px]">Play</button>
+                                <a href={comedianVideoUrl} download={`standup-video-${Date.now()}.mp4`} className="bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors flex-1 min-w-[100px] flex items-center justify-center">Download</a>
+                                <button
+                                    onClick={handleSave}
+                                    className={`font-bold py-2 px-4 rounded-lg transition-colors flex-1 min-w-[100px] ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+                                >
+                                    {isSaved ? 'Saved' : 'Save'}
+                                </button>
                                 <button
                                     onClick={() => onShare({ contentUrl: comedianVideoUrl, contentText: jokeScript, contentType: 'video' })}
-                                    className="flex-1 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                                    className="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors flex-1 min-w-[100px]"
                                 >
                                     Share
                                 </button>

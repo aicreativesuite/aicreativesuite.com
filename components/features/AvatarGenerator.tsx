@@ -1,11 +1,54 @@
+
 import React, { useState } from 'react';
 import { generateImage } from '../../services/geminiService';
 import { ASPECT_RATIOS, AVATAR_HAIR_COLORS, AVATAR_EYE_COLORS, AVATAR_CLOTHING_STYLES, AVATAR_EXPRESSIONS } from '../../constants';
 import Loader from '../common/Loader';
+import QRCode from 'qrcode';
 
 interface AvatarGeneratorProps {
     onShare: (options: { contentUrl: string; contentText: string; contentType: 'image' }) => void;
 }
+
+const addQrCodeToImage = (imageBase64: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+        const verificationUrl = `https://aicreativesuite.dev/verify?id=${uniqueId}`;
+
+        const baseImage = new Image();
+        baseImage.crossOrigin = 'anonymous';
+        baseImage.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = baseImage.width;
+            canvas.height = baseImage.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject('Could not get canvas context');
+
+            ctx.drawImage(baseImage, 0, 0);
+
+            QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: 'H', margin: 1, width: 128 }, (err, qrUrl) => {
+                if (err) return reject(err);
+
+                const qrImage = new Image();
+                qrImage.crossOrigin = 'anonymous';
+                qrImage.onload = () => {
+                    const qrSize = Math.max(64, Math.floor(baseImage.width * 0.1));
+                    const padding = qrSize * 0.1;
+                    const x = canvas.width - qrSize - padding;
+                    const y = canvas.height - qrSize - padding;
+                    
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.fillRect(x - (padding / 2), y - (padding / 2), qrSize + padding, qrSize + padding);
+                    ctx.drawImage(qrImage, x, y, qrSize, qrSize);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                qrImage.onerror = reject;
+                qrImage.src = qrUrl;
+            });
+        };
+        baseImage.onerror = reject;
+        baseImage.src = `data:image/jpeg;base64,${imageBase64}`;
+    });
+};
 
 const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
     const [prompt, setPrompt] = useState('');
@@ -14,9 +57,11 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
     const [clothingStyle, setClothingStyle] = useState(AVATAR_CLOTHING_STYLES[0]);
     const [expression, setExpression] = useState(AVATAR_EXPRESSIONS[0]);
     const [aspectRatio, setAspectRatio] = useState('1:1');
+    const [addQr, setAddQr] = useState(true);
     const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isSaved, setIsSaved] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,6 +72,7 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
         setLoading(true);
         setError(null);
         setImage(null);
+        setIsSaved(false);
         try {
             let fullPrompt = `A high-quality, digital art headshot avatar of ${prompt}.`;
             
@@ -42,13 +88,24 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
             }
             
             const imageBytes = await generateImage(fullPrompt, aspectRatio);
-            setImage(`data:image/jpeg;base64,${imageBytes}`);
+            
+            if (addQr) {
+                const imageWithQr = await addQrCodeToImage(imageBytes);
+                setImage(imageWithQr);
+            } else {
+                setImage(`data:image/jpeg;base64,${imageBytes}`);
+            }
         } catch (err) {
             setError('Failed to generate avatar. Please try again.');
             console.error(err);
         } finally {
             setLoading(false);
         }
+    };
+    
+    const handleSave = () => {
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
     };
 
     return (
@@ -130,6 +187,18 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
                         ))}
                     </div>
                 </div>
+                
+                <div className="flex items-center">
+                    <input
+                        id="add-qr"
+                        type="checkbox"
+                        checked={addQr}
+                        onChange={(e) => setAddQr(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
+                    />
+                    <label htmlFor="add-qr" className="ml-2 block text-sm text-slate-300">Add verification QR code</label>
+                </div>
+
                 <button
                     type="submit"
                     disabled={loading}
@@ -143,9 +212,24 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
             <div className="w-full md:w-2/3 flex items-center justify-center bg-slate-800/50 rounded-lg border border-slate-700 min-h-[300px] md:min-h-0 p-4">
                 {loading && <Loader message="Creating your avatar..." />}
                 {!loading && image && (
-                    <div className="text-center">
-                        <img src={image} alt="Generated Avatar" className="max-w-full max-h-[60vh] rounded-lg object-contain" />
-                        <div className="mt-4">
+                    <div className="text-center group">
+                        <img src={image} alt="Generated Avatar" className="max-w-full max-h-[60vh] rounded-lg object-contain mb-4" />
+                        <div className="flex flex-wrap gap-3 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a href={image} download={`avatar-${Date.now()}.jpg`} className="flex items-center justify-center space-x-2 bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors duration-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                <span>Download</span>
+                            </a>
+                            <button
+                                onClick={handleSave}
+                                className={`flex items-center justify-center space-x-2 font-bold py-2 px-4 rounded-lg transition-colors duration-300 ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+                            >
+                                {isSaved ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                                )}
+                                <span>{isSaved ? 'Saved' : 'Save'}</span>
+                            </button>
                             <button
                                 onClick={() => onShare({ contentUrl: image, contentText: prompt, contentType: 'image' })}
                                 className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"

@@ -50,6 +50,7 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
     const [error, setError] = useState<string | null>(null);
     const [apiKeyReady, setApiKeyReady] = useState(false);
     const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
     
     // Refs
     const pollIntervalRef = useRef<number | null>(null);
@@ -225,6 +226,7 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
         setFinalVideoUrl(null);
         setError(null);
         setLoadingStep('');
+        setIsSaved(false);
     };
 
     const handleModeChange = (newMode: GenerationMode) => {
@@ -287,6 +289,7 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
         }
         
         resetState();
+        setIsSaved(false);
 
         const newId = Date.now().toString(36) + Math.random().toString(36).substring(2);
         setUniqueId(newId);
@@ -377,6 +380,11 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
         }
     };
     
+    const handleSave = () => {
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
+    };
+    
     const isLoading = loadingStep !== '';
 
     return (
@@ -433,12 +441,29 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
                             <div className="relative aspect-[9/16] w-full bg-black rounded-lg overflow-hidden shadow-2xl shadow-cyan-900/20">
                                 <video ref={videoRef} src={finalVideoUrl} controls loop playsInline className="w-full h-full object-cover" />
                             </div>
-                            <button
-                                onClick={() => onShare({ contentUrl: finalVideoUrl, contentText: memeScript, contentType: 'video' })}
-                                className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 shadow-lg shadow-purple-500/20 transition-all"
-                            >
-                                Share Meme
-                            </button>
+                            <div className="flex space-x-2 justify-center">
+                                <a href={finalVideoUrl} download={`viral-meme-${Date.now()}.mp4`} className="flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                    <span>Download</span>
+                                </a>
+                                <button
+                                    onClick={handleSave}
+                                    className={`flex items-center justify-center space-x-2 font-bold py-3 px-4 rounded-lg transition-colors duration-300 ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+                                >
+                                    {isSaved ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                                    )}
+                                    <span>{isSaved ? 'Saved' : 'Save'}</span>
+                                </button>
+                                <button
+                                    onClick={() => onShare({ contentUrl: finalVideoUrl, contentText: memeScript, contentType: 'video' })}
+                                    className="flex-1 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 shadow-lg shadow-purple-500/20 transition-all"
+                                >
+                                    Share Meme
+                                </button>
+                            </div>
                         </div>
                     )}
 

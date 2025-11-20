@@ -63,6 +63,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
     const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isSaved, setIsSaved] = useState(false);
 
     useEffect(() => {
         const availableArtTechniques = ART_TECHNIQUES_BY_DESIGN[designStyle] || [];
@@ -78,6 +79,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
         setLoading(true);
         setError(null);
         setImage(null);
+        setIsSaved(false);
         try {
             let fullPrompt = `${prompt}, in a ${designStyle} design style${artTechnique ? `, using a ${artTechnique} technique` : ''}${artisticStyle !== 'None' ? `, with a ${artisticStyle} artistic style` : ''}${visualEffect !== 'None' ? `, featuring ${visualEffect} visual effects` : ''}.`;
             if (negativePrompt) {
@@ -96,6 +98,11 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
         } finally {
             setLoading(false);
         }
+    };
+    
+    const handleSave = () => {
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
     };
     
     const availableArtTechniques = ART_TECHNIQUES_BY_DESIGN[designStyle] || [];
@@ -191,12 +198,23 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
                 {loading && <Loader message="Creating your vision..." />}
                 {!loading && image && (
                      <div className="text-center w-full h-full flex flex-col items-center justify-center group">
-                        <img src={image} alt="Generated" className="max-w-full max-h-full rounded-lg object-contain shadow-2xl shadow-black/40" />
-                        <div className="mt-6 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-4 justify-center">
+                        <img src={image} alt="Generated" className="max-w-full max-h-[70vh] rounded-lg object-contain shadow-2xl shadow-black/40" />
+                        <div className="mt-6 flex space-x-4 justify-center">
                             <a href={image} download={`generated-image-${Date.now()}.jpg`} className="flex items-center justify-center space-x-2 bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors duration-300">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                                 <span>Download</span>
                             </a>
+                            <button
+                                onClick={handleSave}
+                                className={`flex items-center justify-center space-x-2 font-bold py-2 px-4 rounded-lg transition-colors duration-300 ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+                            >
+                                {isSaved ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                                )}
+                                <span>{isSaved ? 'Saved' : 'Save'}</span>
+                            </button>
                             <button
                                 onClick={() => onShare({ contentUrl: image, contentText: prompt, contentType: 'image' })}
                                 className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"

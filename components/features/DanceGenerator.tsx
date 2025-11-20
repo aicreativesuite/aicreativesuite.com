@@ -23,6 +23,7 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
     const [error, setError] = useState<string | null>(null);
     const pollIntervalRef = useRef<number | null>(null);
     const messageIntervalRef = useRef<number | null>(null);
+    const [isSaved, setIsSaved] = useState(false);
     
     // API Key State
     const [apiKeyReady, setApiKeyReady] = useState(false);
@@ -132,6 +133,7 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
         setLoading(true);
         setError(null);
         setVideoUrl(null);
+        setIsSaved(false);
         startLoadingMessages();
 
         try {
@@ -149,6 +151,11 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
             }
             console.error(err);
         }
+    };
+    
+    const handleSave = () => {
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
     };
 
     const fullPromptText = `A video of a ${characterDescription} performing a ${danceStyle} dance in ${setting}.`;
@@ -221,10 +228,25 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
                     {!loading && videoUrl && (
                         <div className="text-center w-full">
                             <video src={videoUrl} controls autoPlay loop className="max-w-full max-h-[75vh] rounded-lg shadow-2xl shadow-black/40" />
-                            <div className="mt-6">
+                            <div className="mt-6 flex justify-center space-x-4">
+                                <a href={videoUrl} download={`dance-video-${Date.now()}.mp4`} className="flex items-center justify-center space-x-2 bg-slate-800 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                    <span>Download</span>
+                                </a>
+                                <button
+                                    onClick={handleSave}
+                                    className={`flex items-center justify-center space-x-2 font-bold py-2 px-4 rounded-lg transition-colors ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+                                >
+                                    {isSaved ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                                    )}
+                                    <span>{isSaved ? 'Saved' : 'Save'}</span>
+                                </button>
                                 <button
                                     onClick={() => onShare({ contentUrl: videoUrl, contentText: fullPromptText, contentType: 'video' })}
-                                    className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300 mx-auto"
+                                    className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />

@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { generateImage, generateDialogueSnippet, generateCharacterSituations, generateSpeech, generateStoryOutline, generateMusicCues } from '../../services/geminiService';
 import { MOVIE_GENRES, ASPECT_RATIOS, VISUAL_STYLES, DIRECTOR_STYLES_DESCRIPTIVE } from '../../constants';
 import Loader from '../common/Loader';
 import { pcmToWav, decode } from '../../utils';
+import QRCode from 'qrcode';
 
 // --- Types ---
 type Scene = {
@@ -44,6 +46,48 @@ type Tab = 'concept' | 'story' | 'script' | 'visuals' | 'sound';
 interface MovieGeneratorProps {
     onShare: (options: any) => void;
 }
+
+// Add helper
+const addQrCodeToImage = (imageBase64: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+        const verificationUrl = `https://aicreativesuite.dev/verify?id=${uniqueId}`;
+
+        const baseImage = new Image();
+        baseImage.crossOrigin = 'anonymous';
+        baseImage.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = baseImage.width;
+            canvas.height = baseImage.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject('Could not get canvas context');
+
+            ctx.drawImage(baseImage, 0, 0);
+
+            QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: 'H', margin: 1, width: 128 }, (err, qrUrl) => {
+                if (err) return reject(err);
+
+                const qrImage = new Image();
+                qrImage.crossOrigin = 'anonymous';
+                qrImage.onload = () => {
+                    const qrSize = Math.max(64, Math.floor(baseImage.width * 0.1));
+                    const padding = qrSize * 0.1;
+                    const x = canvas.width - qrSize - padding;
+                    const y = canvas.height - qrSize - padding;
+                    
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.fillRect(x - (padding / 2), y - (padding / 2), qrSize + padding, qrSize + padding);
+                    ctx.drawImage(qrImage, x, y, qrSize, qrSize);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                qrImage.onerror = reject;
+                qrImage.src = qrUrl;
+            });
+        };
+        baseImage.onerror = reject;
+        baseImage.src = `data:image/jpeg;base64,${imageBase64}`;
+    });
+};
 
 // --- Modals (Unchanged) ---
 interface SceneEditorModalProps {
@@ -398,6 +442,7 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
     const [visualStyle, setVisualStyle] = useState('');
     const [directorStyle, setDirectorStyle] = useState('');
     const [aspectRatio, setAspectRatio] = useState('3:4');
+    const [addQr, setAddQr] = useState(true);
     
     // UI State
     const [poster, setPoster] = useState<string | null>(null);
@@ -461,7 +506,13 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
         try {
             const posterPrompt = `A cinematic movie poster for a ${genre} film titled "${title}". The logline is: "${logline}". The visual style should be ${visualStyle || 'photorealistic'}. ${directorStyle ? `The directorial style is ${directorStyle}.` : ''} The poster should be epic and visually striking.`;
             const imageBytes = await generateImage(posterPrompt, aspectRatio);
-            setPoster(`data:image/jpeg;base64,${imageBytes}`);
+            
+            if (addQr) {
+                const imageWithQr = await addQrCodeToImage(imageBytes);
+                setPoster(imageWithQr);
+            } else {
+                setPoster(`data:image/jpeg;base64,${imageBytes}`);
+            }
         } catch (err) {
             setError('Failed to generate movie concept. Please try again.');
             console.error(err);
@@ -859,6 +910,16 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
                                     <option value="">None</option>
                                     {DIRECTOR_STYLES_DESCRIPTIVE.map((d) => <option key={d.name} value={d.value}>{d.name}</option>)}
                                 </select>
+                            </div>
+                             <div className="flex items-center">
+                                <input
+                                    id="add-qr-poster"
+                                    type="checkbox"
+                                    checked={addQr}
+                                    onChange={(e) => setAddQr(e.target.checked)}
+                                    className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
+                                />
+                                <label htmlFor="add-qr-poster" className="ml-2 block text-sm text-slate-300">Add verification QR code to poster</label>
                             </div>
                             <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300">
                                 {loading ? 'Generating...' : (poster ? 'Update Concept & Poster' : 'Generate Movie Concept')}
