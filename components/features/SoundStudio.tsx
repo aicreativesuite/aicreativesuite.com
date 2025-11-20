@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { generateSpeech, generateMultiSpeakerSpeech, generateText } from '../../services/geminiService';
 import Loader from '../common/Loader';
@@ -88,7 +89,7 @@ const TextToSpeechTab: React.FC<TabProps> = ({ onShare }) => {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-8">
              <div className="flex bg-slate-800/50 rounded-lg p-1">
                 <button onClick={() => setTtsMode('single')} className={`w-1/2 p-2 rounded-md text-sm font-semibold transition ${ttsMode === 'single' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>Single Speaker</button>
                 <button onClick={() => setTtsMode('multi')} className={`w-1/2 p-2 rounded-md text-sm font-semibold transition ${ttsMode === 'multi' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>Multi-Speaker</button>
@@ -98,28 +99,37 @@ const TextToSpeechTab: React.FC<TabProps> = ({ onShare }) => {
                 {ttsMode === 'single' ? 'Generate speech from text using a single voice.' : 'Generate a conversation from a script with two distinct voices.'}
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-8">
                 {ttsMode === 'multi' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-900/50 p-8 rounded-xl border border-slate-700">
                         {speakers.map((s, index) => (
-                            <div key={s.id} className="space-y-2">
-                                <label htmlFor={`speaker${index}_name`} className="text-sm font-medium text-slate-300">Speaker {index + 1} Name</label>
-                                <input id={`speaker${index}_name`} type="text" value={s.name} onChange={(e) => handleSpeakerChange(index, 'name', e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2 text-white" />
-                                <label htmlFor={`speaker${index}_voice`} className="text-sm font-medium text-slate-300">Speaker {index + 1} Voice</label>
-                                <select id={`speaker${index}_voice`} value={s.voice} onChange={(e) => handleSpeakerChange(index, 'voice', e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2 text-white">
-                                    {TTS_VOICES.map(v => <option key={v} value={v}>{v}</option>)}
-                                </select>
+                            <div key={s.id} className="space-y-6">
+                                <div>
+                                    <label htmlFor={`speaker${index}_name`} className="block text-sm font-medium text-slate-300 mb-3">Speaker {index + 1} Name</label>
+                                    <input id={`speaker${index}_name`} type="text" value={s.name} onChange={(e) => handleSpeakerChange(index, 'name', e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition" />
+                                </div>
+                                <div>
+                                    <label htmlFor={`speaker${index}_voice`} className="block text-sm font-medium text-slate-300 mb-3">Speaker {index + 1} Voice</label>
+                                    <select id={`speaker${index}_voice`} value={s.voice} onChange={(e) => handleSpeakerChange(index, 'voice', e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition">
+                                        {TTS_VOICES.map(v => <option key={v} value={v}>{v}</option>)}
+                                    </select>
+                                </div>
                             </div>
                         ))}
                     </div>
                 )}
-                <textarea 
-                    rows={5} 
-                    value={text} 
-                    onChange={(e) => setText(e.target.value)} 
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500" 
-                    placeholder={ttsMode === 'single' ? 'Type text here...' : `${speakers[0].name}: Hello, how are you?\n${speakers[1].name}: I'm doing great, thanks!`}
-                />
+                <div>
+                    <label htmlFor="tts-text" className="block text-sm font-medium text-slate-300 mb-2">{ttsMode === 'single' ? 'Text to Speak' : 'Conversation Script'}</label>
+                    <textarea 
+                        id="tts-text"
+                        rows={5} 
+                        value={text} 
+                        onChange={(e) => setText(e.target.value)} 
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500" 
+                        placeholder={ttsMode === 'single' ? 'Type text here...' : `${speakers[0].name}: Hello, how are you?\n${speakers[1].name}: I'm doing great, thanks!`}
+                    />
+                </div>
+                
                 {ttsMode === 'single' && (
                     <div>
                         <label htmlFor="voice-select" className="block text-sm font-medium text-slate-300 mb-2">Voice</label>
@@ -175,18 +185,24 @@ const SfxTab: React.FC<TabProps> = ({ onShare }) => {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             <p className="text-sm text-slate-400">Describe a sound effect for a designer to create.</p>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A laser blast" />
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                    {SOUND_EFFECT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600">
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                    <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A laser blast" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Category</label>
+                    <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
+                        {SOUND_EFFECT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+                <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 transition-colors">
                     {loading ? 'Generating...' : 'Generate Description'}
                 </button>
             </form>
-            <div className="min-h-[150px] bg-slate-800 rounded-lg p-4 prose prose-invert max-w-none relative border border-slate-700">
+            <div className="min-h-[150px] bg-slate-800 rounded-lg p-6 prose prose-invert max-w-none relative border border-slate-700">
                 {loading && <Loader />}
                 {result && (
                     <>
@@ -229,18 +245,24 @@ const MusicTab: React.FC<TabProps> = ({ onShare }) => {
     };
 
      return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             <p className="text-sm text-slate-400">Generate musical concepts, lyrics, or instrumentation ideas.</p>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A hero's journey" />
-                <select value={style} onChange={(e) => setStyle(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                    {MUSIC_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600">
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Concept / Theme</label>
+                    <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A hero's journey" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Style</label>
+                    <select value={style} onChange={(e) => setStyle(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
+                        {MUSIC_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </div>
+                <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 transition-colors">
                     {loading ? 'Generating...' : 'Generate Idea'}
                 </button>
             </form>
-            <div className="min-h-[150px] bg-slate-800 rounded-lg p-4 prose prose-invert max-w-none relative border border-slate-700">
+            <div className="min-h-[150px] bg-slate-800 rounded-lg p-6 prose prose-invert max-w-none relative border border-slate-700">
                 {loading && <Loader />}
                 {result && (
                     <>
@@ -275,8 +297,8 @@ const SoundStudio: React.FC<TabProps> = ({ onShare }) => {
     }
 
     return (
-        <div className="max-w-3xl mx-auto">
-             <div className="flex bg-slate-700 rounded-lg p-1 mb-6">
+        <div className="max-w-3xl mx-auto space-y-8">
+             <div className="flex bg-slate-700 rounded-lg p-1 mb-8">
                  <button onClick={() => setMode('tts')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'tts' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Text-to-Speech</button>
                  <button onClick={() => setMode('sfx')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'sfx' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Sound Effects</button>
                  <button onClick={() => setMode('music')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'music' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Music Ideas</button>

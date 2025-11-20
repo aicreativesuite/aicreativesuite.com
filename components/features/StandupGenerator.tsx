@@ -207,7 +207,7 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
                 <div className="w-full lg:w-1/3 space-y-6">
                     <form onSubmit={handleSubmit} className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
                         <h3 className="text-xl font-bold text-white mb-4">Comedy Set Setup</h3>
-                        <fieldset disabled={isLoading}>
+                        <fieldset disabled={isLoading} className="space-y-6">
                             <div>
                                 <label htmlFor="topic" className="block text-sm font-medium text-slate-300 mb-2">Topic</label>
                                 <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., Dating Apps" />
