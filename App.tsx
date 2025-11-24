@@ -30,6 +30,7 @@ import ProductionPlanner from './components/features/ProductionPlanner';
 import GlobalAvatarCreator from './components/features/GlobalAvatarCreator';
 import VibeCoding from './components/features/VibeCoding';
 import SmartQuizGenerator from './components/features/SmartQuizGenerator';
+import CodeReviewer from './components/features/CodeReviewer';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
 
 
@@ -222,6 +223,7 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
+            case 'code-reviewer': return CodeReviewer;
             case 'vibe-coding': return VibeCoding;
             case 'image-generator': return ImageGenerator;
             case 'image-editor': return ImageEditor;

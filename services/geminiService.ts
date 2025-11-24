@@ -49,6 +49,61 @@ export const generateVibeApp = async (prompt: string): Promise<GenerateContentRe
     });
 };
 
+// --- Code Reviewer (Terminal Architect) ---
+
+export const reviewCode = async (code: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const systemPrompt = `You are a world-class Senior Principal Engineer and Security Researcher.
+    Your task is to perform a deep-dive static analysis, security audit, and logic review of the provided code.
+    You are critical, precise, and focused on production-readiness.
+    
+    You must identify:
+    1. **Critical Bugs**: Logic errors that will cause crashes or incorrect behavior.
+    2. **Security Vulnerabilities**: OWASP Top 10 issues (XSS, Injection, etc.).
+    3. **Performance Issues**: Big-O complexity problems or memory leaks.
+    4. **Best Practices**: Clean code violations.
+    
+    You must also provide the **Fixed Code** that resolves these issues while maintaining the original intent.
+    
+    Output strictly as JSON.`;
+
+    const userPrompt = `Review this code:\n\n${code}`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: userPrompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    summary: { type: Type.STRING, description: "A high-level executive summary of the code quality." },
+                    bugScore: { type: Type.INTEGER, description: "0-100 score (100 is perfect)." },
+                    securityScore: { type: Type.INTEGER, description: "0-100 score (100 is secure)." },
+                    issues: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                type: { type: Type.STRING, enum: ["Bug", "Security", "Performance", "Style"] },
+                                line: { type: Type.INTEGER, description: "Approximate line number, or 0 if general." },
+                                severity: { type: Type.STRING, enum: ["Critical", "High", "Medium", "Low"] },
+                                description: { type: Type.STRING, description: "What is broken." },
+                                rootCause: { type: Type.STRING, description: "Why it is broken (deep technical explanation)." },
+                                fix: { type: Type.STRING, description: "Short description of the fix." }
+                            },
+                            required: ["type", "severity", "description", "rootCause", "fix"]
+                        }
+                    },
+                    fixedCode: { type: Type.STRING, description: "The complete, refactored, and fixed version of the code." }
+                },
+                required: ["summary", "bugScore", "securityScore", "issues", "fixedCode"]
+            },
+            thinkingConfig: { thinkingBudget: 16384 } // Use thinking to really analyze deep logic
+        }
+    });
+};
+
 // --- Chat ---
 
 export const createChatSession = (systemInstruction?: string): Chat => {
