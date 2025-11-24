@@ -28,6 +28,8 @@ import PodcastGenerator from './components/features/PodcastGenerator';
 import TrendForecaster from './components/features/TrendForecaster';
 import ProductionPlanner from './components/features/ProductionPlanner';
 import GlobalAvatarCreator from './components/features/GlobalAvatarCreator';
+import VibeCoding from './components/features/VibeCoding';
+import SmartQuizGenerator from './components/features/SmartQuizGenerator';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
 
 
@@ -220,12 +222,14 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
+            case 'vibe-coding': return VibeCoding;
             case 'image-generator': return ImageGenerator;
             case 'image-editor': return ImageEditor;
             case 'video-generator': return VideoGenerator;
             case 'global-avatar': return GlobalAvatarCreator;
             case 'podcast-generator': return PodcastGenerator;
             case 'movie-generator': return MovieGenerator;
+            case 'smart-quiz': return SmartQuizGenerator;
             case 'voice-chat': return VoiceChat;
             case 'chatbot': return Chatbot;
             case 'grounded-search': return GroundedSearch;

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
     generateBrandEssence,
@@ -8,7 +9,7 @@ import {
     generateImage,
 } from '../../services/geminiService';
 import Loader from '../common/Loader';
-import { STRANDS_LEAD_AGENTS, STRANDS_SPECIALIST_AGENTS } from '../../constants';
+import { STRANDS_LEAD_AGENTS, STRANDS_SPECIALIST_AGENTS, AGENT_TYPES } from '../../constants';
 
 // --- Types ---
 interface StrandsGeneratorProps {
@@ -47,6 +48,10 @@ const StrandsGenerator: React.FC<StrandsGeneratorProps> = ({ onShare }) => {
     const [keywords, setKeywords] = useState('');
     const [selectedAgentId, setSelectedAgentId] = useState<string>(STRANDS_LEAD_AGENTS[0].id);
     
+    // New Agent Config
+    const [selectedAgentModel, setSelectedAgentModel] = useState<string | null>(null);
+    const [showAgentConfig, setShowAgentConfig] = useState(false);
+
     // Outputs & State
     const [result, setResult] = useState<Partial<BrandStrands> | null>(null);
     const [logoImage, setLogoImage] = useState<string | null>(null);
@@ -78,8 +83,18 @@ const StrandsGenerator: React.FC<StrandsGeneratorProps> = ({ onShare }) => {
             const leadAgent = STRANDS_LEAD_AGENTS.find(agent => agent.id === selectedAgentId);
             if (!leadAgent) throw new Error("Selected agent not found.");
 
+            let instruction = leadAgent.systemInstruction;
+            
+            // Enhance instruction with selected Agent Model if present
+            if (selectedAgentModel) {
+                const agentType = AGENT_TYPES.find(a => a.id === selectedAgentModel);
+                if (agentType) {
+                    instruction = `You are acting as a ${agentType.name}. ${agentType.description}\n\n${instruction}`;
+                }
+            }
+
             // 1. Strategist generates Brand Essence
-            const essenceResponse = await generateBrandEssence(concept, audience, keywords, leadAgent.systemInstruction);
+            const essenceResponse = await generateBrandEssence(concept, audience, keywords, instruction);
             const { brandEssence } = JSON.parse(essenceResponse.text);
             setResult({ brandEssence });
             setAgentProgress(prev => ({ ...prev!, strategist: 'done', namer: 'working' }));
@@ -257,6 +272,40 @@ const StrandsGenerator: React.FC<StrandsGeneratorProps> = ({ onShare }) => {
                                 ))}
                             </div>
                         </div>
+
+                        {/* Advanced Config Toggle */}
+                        <div>
+                            <button
+                                type="button"
+                                onClick={() => setShowAgentConfig(!showAgentConfig)}
+                                className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center space-x-1"
+                            >
+                                <span>{showAgentConfig ? 'Hide' : 'Show'} Advanced Agent Config</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transform transition ${showAgentConfig ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                            </button>
+                            
+                            {showAgentConfig && (
+                                <div className="mt-3 p-3 bg-slate-800 rounded-lg border border-slate-700 animate-fadeIn">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Decision Engine Model</label>
+                                    <select 
+                                        value={selectedAgentModel || ''} 
+                                        onChange={(e) => setSelectedAgentModel(e.target.value || null)}
+                                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm"
+                                    >
+                                        <option value="">Default (Persona Based)</option>
+                                        {AGENT_TYPES.map(type => (
+                                            <option key={type.id} value={type.id}>{type.name}</option>
+                                        ))}
+                                    </select>
+                                    {selectedAgentModel && (
+                                        <p className="text-[10px] text-slate-400 mt-2 italic">
+                                            {AGENT_TYPES.find(a => a.id === selectedAgentModel)?.description}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
                         <button type="submit" className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300 flex items-center justify-center space-x-2">
                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M11.94 1.94a1 1 0 00-1.88 0l-1.33 4.02-4.02 1.33a1 1 0 000 1.88l4.02 1.33 1.33 4.02a1 1 0 001.88 0l1.33-4.02 4.02-1.33a1 1 0 000-1.88l-4.02-1.33-1.33-4.02zM5.94 9.94a1 1 0 00-1.88 0l-1.33 4.02-4.02 1.33a1 1 0 000 1.88l4.02 1.33 1.33 4.02a1 1 0 001.88 0l1.33-4.02 4.02-1.33a1 1 0 000-1.88l-4.02-1.33-1.33-4.02z" /></svg>
                             <span>{loading ? 'Working...' : 'Assemble Agent Team'}</span>

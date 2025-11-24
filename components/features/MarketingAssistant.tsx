@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { createChatSession, generateBulkEmails, generateBulkSms, generateAbTestCopy } from '../../services/geminiService';
+import { createChatSession, generateBulkEmails, generateBulkSms, generateAbTestCopy, generateText } from '../../services/geminiService';
 import { Chat, GenerateContentResponse } from '@google/genai';
 import Loader from '../common/Loader';
 import { Remarkable } from 'remarkable';
+import { AGENT_TYPES } from '../../constants';
 
 const md = new Remarkable({ html: true });
 
@@ -36,7 +37,7 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     
-    const [activeTool, setActiveTool] = useState<'email' | 'sms' | 'ab-test' | null>(null);
+    const [activeTool, setActiveTool] = useState<'email' | 'sms' | 'ab-test' | 'agent-explorer' | null>(null);
 
     // Email/SMS state
     const [emailSmsTemplate, setEmailSmsTemplate] = useState('');
@@ -49,6 +50,10 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
     const [abAudience, setAbAudience] = useState('');
     const [parsedAbTestResult, setParsedAbTestResult] = useState<AbTestCopy[] | null>(null);
     
+    // Agent Explorer state
+    const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+    const [agentStrategyResult, setAgentStrategyResult] = useState<string | null>(null);
+
     // Common tool state
     const [rawToolResult, setRawToolResult] = useState('');
     const [toolLoading, setToolLoading] = useState(false);
@@ -154,6 +159,25 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
         }
     }
 
+    const handleAgentStrategyGenerate = async () => {
+        if (!selectedAgentId) return;
+        const agent = AGENT_TYPES.find(a => a.id === selectedAgentId);
+        if (!agent) return;
+
+        setToolLoading(true);
+        setAgentStrategyResult(null);
+        try {
+            const prompt = `Explain how a "${agent.name}" (${agent.description}) can be applied in a modern marketing context. Provide a specific, hypothetical scenario where using this type of agent would significantly improve decision-making or campaign performance compared to traditional methods.`;
+            const response = await generateText(prompt, 'gemini-2.5-flash');
+            setAgentStrategyResult(response.text);
+        } catch (err) {
+            console.error(err);
+            setAgentStrategyResult("Failed to generate strategy.");
+        } finally {
+            setToolLoading(false);
+        }
+    };
+
     const handleDeleteItem = (index: number, type: 'email' | 'sms' | 'ab') => {
         if (type === 'email' && parsedBulkResult) {
             setParsedBulkResult(parsedBulkResult.filter((_, i) => i !== index));
@@ -177,6 +201,43 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
 
     const renderToolForm = () => {
         if (!activeTool) return null;
+        
+        if (activeTool === 'agent-explorer') {
+            const selectedAgent = AGENT_TYPES.find(a => a.id === selectedAgentId);
+            return (
+                <div className="space-y-4 bg-slate-900/50 p-4 rounded-lg border border-slate-800">
+                    <h3 className="text-lg font-bold">Agentic AI Explorer</h3>
+                    <p className="text-sm text-slate-400 -mt-2">Discover how different AI agent architectures can revolutionize marketing.</p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                        {AGENT_TYPES.map(agent => (
+                            <button
+                                key={agent.id}
+                                onClick={() => { setSelectedAgentId(agent.id); setAgentStrategyResult(null); }}
+                                className={`text-left p-3 rounded-lg border transition-all text-sm ${selectedAgentId === agent.id ? 'bg-purple-900/40 border-purple-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                            >
+                                <div className="font-bold">{agent.name}</div>
+                            </button>
+                        ))}
+                    </div>
+
+                    {selectedAgent && (
+                        <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 animate-fadeIn">
+                            <h4 className="font-bold text-white mb-2">{selectedAgent.name}</h4>
+                            <p className="text-slate-300 text-sm mb-4">{selectedAgent.description}</p>
+                            <button 
+                                onClick={handleAgentStrategyGenerate}
+                                disabled={toolLoading}
+                                className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                {toolLoading ? 'Analyzing...' : 'Generate Marketing Use Case'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         if (activeTool === 'ab-test') {
              return (
                  <form onSubmit={handleToolSubmit} className="space-y-4 bg-slate-900/50 p-4 rounded-lg border border-slate-800">
@@ -191,6 +252,7 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
                 </form>
             );
         }
+        
         return (
              <form onSubmit={handleToolSubmit} className="space-y-4 bg-slate-900/50 p-4 rounded-lg border border-slate-800">
                 <h3 className="text-lg font-bold">Bulk {activeTool === 'email' ? 'Email' : 'SMS'} Generator</h3>
@@ -243,15 +305,29 @@ const MarketingAssistant: React.FC<MarketingAssistantProps> = ({ onShare }) => {
                 </div>
             </div>
             <div className="lg:w-1/2 space-y-4">
-                <div className="flex bg-slate-700 rounded-lg p-1">
-                    <button onClick={() => setActiveTool('email')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${activeTool === 'email' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Bulk Email</button>
-                    <button onClick={() => setActiveTool('sms')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${activeTool === 'sms' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Bulk SMS</button>
-                    <button onClick={() => setActiveTool('ab-test')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${activeTool === 'ab-test' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>A/B Test Copy</button>
+                <div className="flex bg-slate-700 rounded-lg p-1 overflow-x-auto">
+                    <button onClick={() => setActiveTool('email')} className={`flex-1 p-2 rounded-md text-xs sm:text-sm font-semibold whitespace-nowrap transition ${activeTool === 'email' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Bulk Email</button>
+                    <button onClick={() => setActiveTool('sms')} className={`flex-1 p-2 rounded-md text-xs sm:text-sm font-semibold whitespace-nowrap transition ${activeTool === 'sms' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Bulk SMS</button>
+                    <button onClick={() => setActiveTool('ab-test')} className={`flex-1 p-2 rounded-md text-xs sm:text-sm font-semibold whitespace-nowrap transition ${activeTool === 'ab-test' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>A/B Test</button>
+                    <button onClick={() => setActiveTool('agent-explorer')} className={`flex-1 p-2 rounded-md text-xs sm:text-sm font-semibold whitespace-nowrap transition ${activeTool === 'agent-explorer' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Agent Explorer</button>
                 </div>
                 {renderToolForm()}
                  <div className="min-h-[200px] bg-slate-900/50 rounded-lg p-4 prose-sm prose-invert max-w-none border border-slate-800">
                     {toolLoading && <Loader />}
-                    {parsedAbTestResult ? (
+                    {agentStrategyResult ? (
+                        <div className="animate-fadeIn">
+                            <div dangerouslySetInnerHTML={{ __html: md.render(agentStrategyResult) }} />
+                            <div className="mt-4 pt-4 border-t border-slate-700 flex justify-end">
+                                <button
+                                    onClick={() => onShare({ contentText: agentStrategyResult, contentType: 'text' })}
+                                    className="inline-flex items-center space-x-1 bg-purple-600 text-white font-semibold text-xs py-1.5 px-3 rounded-md hover:bg-purple-700 transition-colors"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
+                                    <span>Share Strategy</span>
+                                </button>
+                            </div>
+                        </div>
+                    ) : parsedAbTestResult ? (
                         <div className="space-y-4 not-prose">
                             {parsedAbTestResult.map((item, index) => (
                                 <div key={index} className="bg-slate-800 p-4 rounded-lg border border-slate-700 relative group">

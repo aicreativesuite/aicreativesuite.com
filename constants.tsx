@@ -30,6 +30,8 @@ const PodcastGeneratorIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmln
 const TrendForecasterIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>;
 const ProductionPlannerIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M3 3h18v18H3V3zm16 16V5H5v14h14zm-6-8h4v2h-4v-2zm-6 0h4v2H7v-2zm6-4h4v2h-4V7zm-6 0h4v2H7V7zm6 8h4v2h-4v-2zm-6 0h4v2H7v-2z"/></svg>;
 const GlobalAvatarCreatorIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>;
+const VibeCodingIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path fillRule="evenodd" d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z" clipRule="evenodd" /></svg>;
+const SmartQuizIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 017 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/></svg>;
 
 export const PricingIcon: React.FC<{className?: string}> = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-4 w-4"} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.47-2.45-2.9v-1.2h-1.71v1.11c-1.02.3-1.84 1.15-1.84 2.23 0 1.44 1.23 2.25 2.91 2.65 1.9.45 2.34.94 2.34 1.67 0-.92-.86-1.52-2.14-1.52-1.44 0-2.23.75-2.23 1.51H8.3c.05-1.41.9-2.62 2.6-3.01v-1.2h1.71v1.13c1.02.29 1.84 1.13 1.84 2.23 0 1.44-1.23 2.25-2.91 2.65z"/></svg>;
 
@@ -42,6 +44,7 @@ const IconInitials = ({ initials, color = "#334155" }: { initials: string, color
 
 // --- Feature Definitions ---
 export const FEATURES = [
+    { id: 'vibe-coding', title: 'Vibe Coding', description: 'Turn ideas into working web apps instantly.', icon: <VibeCodingIcon />, category: 'Create & Edit' },
     { id: 'image-generator', title: 'Image Generator', description: 'Create stunning visuals from text descriptions.', icon: <ImageGeneratorIcon />, category: 'Create & Edit' },
     { id: 'image-editor', title: 'Image Editor', description: 'Edit and transform your images with AI.', icon: <ImageEditorIcon />, category: 'Create & Edit' },
     { id: 'video-generator', title: 'Video Generator', description: 'Generate short video clips from text or images.', icon: <VideoGeneratorIcon />, category: 'Create & Edit' },
@@ -49,6 +52,7 @@ export const FEATURES = [
     { id: 'production-planner', title: 'Production Planner', description: 'All-in-one video production planning for your whole team.', icon: <ProductionPlannerIcon />, category: 'Create & Edit' },
     { id: 'podcast-generator', title: 'Podcast Generator', description: 'Turn topics or text into a multi-speaker audio show.', icon: <PodcastGeneratorIcon />, category: 'Create & Edit' },
     { id: 'movie-generator', title: 'Movie Generator', description: 'Pre-production toolkit for your next blockbuster.', icon: <MovieGeneratorIcon />, category: 'Create & Edit' },
+    { id: 'smart-quiz', title: 'Smart Quiz Generator', description: 'Turn any text or topic into a gamified interactive quiz.', icon: <SmartQuizIcon />, category: 'Assist & Analyze' },
     { id: 'voice-chat', title: 'Voice Chat', description: 'Have a real-time voice conversation with an AI.', icon: <VoiceChatIcon />, category: 'Assist & Analyze' },
     { id: 'chatbot', title: 'AI Assistant', description: 'Chat with a knowledgeable AI assistant.', icon: <ChatbotIcon />, category: 'Assist & Analyze' },
     { id: 'grounded-search', title: 'Grounded Search', description: 'Get real-time answers from the web and maps.', icon: <GroundedSearchIcon />, category: 'Assist & Analyze' },
@@ -196,6 +200,20 @@ export const STRANDS_SPECIALIST_AGENTS = {
     artDirector: { name: 'Art Director', icon: '🎨', systemInstruction: 'Define visual identities, color palettes, and logo concepts.' },
     marketer: { name: 'Marketer', icon: '📢', systemInstruction: 'Develop go-to-market strategies and campaign angles.' }
 };
+
+// --- Agent Types ---
+export const AGENT_TYPES = [
+    { id: 'task-specific', name: 'Task-Specific AI Agent', description: 'Built for one focused task like summarizing or translating. It follows a fixed process with no learning or adaptation.' },
+    { id: 'reactive', name: 'Reactive Agent', description: 'Responds to immediate input without using memory or history. Think of it like a reflex - it reacts, not plans.' },
+    { id: 'model-based', name: 'Model-Based Agent', description: 'Builds an internal map of its environment. Simulates outcomes before acting to make smarter, context-aware decisions.' },
+    { id: 'goal-based', name: 'Goal-Based Agent', description: 'Starts with a goal and works backward. It plans steps, simulates paths, and selects the route that achieves the goal.' },
+    { id: 'utility-based', name: 'Utility-Based Agent', description: 'Chooses actions based on how beneficial they are. It weighs all options and picks the one with the highest value.' },
+    { id: 'learning', name: 'Learning Agent', description: 'Improves over time by learning from past actions. Adjusts its strategy using feedback and stores new knowledge.' },
+    { id: 'planning', name: 'Planning Agent', description: 'Focuses on long-term strategy. It defines a goal, maps out steps, and adjusts based on progress not just reaction.' },
+    { id: 'reflex-memory', name: 'Reflex Agent with Memory', description: 'Uses preset rules but with added memory of past inputs. Helps respond better when situations repeat or evolve.' },
+    { id: 'multi-agent', name: 'Multi-Agent System', description: 'Works with or against other agents. They share environments, negotiate roles, and coordinate to reach a bigger goal.' },
+    { id: 'rational', name: 'Rational Agent', description: 'Always selects the most logical option. It analyzes the full picture, predicts outcomes, and chooses the smartest path.' },
+];
 
 // --- Dance Generator ---
 export const DANCE_STYLES = ['Ballet', 'Hip Hop', 'Salsa', 'Tango', 'Breakdance', 'Robot', 'Contemporary', 'Disco'];

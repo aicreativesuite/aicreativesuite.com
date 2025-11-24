@@ -26,6 +26,29 @@ export const generateTextWithThinking = async (prompt: string): Promise<Generate
     });
 };
 
+// --- Vibe Coding ---
+
+export const generateVibeApp = async (prompt: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const systemPrompt = `You are an expert frontend engineer and UI/UX designer.
+    Your task is to generate a complete, single-file HTML application based on the user's description.
+    
+    Requirements:
+    1.  Return ONLY the raw HTML code. Do not wrap it in markdown code blocks (like \`\`\`html).
+    2.  Include all CSS in <style> tags and JS in <script> tags.
+    3.  Use Tailwind CSS via CDN (https://cdn.tailwindcss.com) for styling.
+    4.  Ensure the design is modern, clean, and responsive. Use a dark mode theme by default unless specified otherwise.
+    5.  The app should be interactive and functional.
+    6.  If the user asks for a game, make it playable. If a tool, make it work.
+    
+    User Description: ${prompt}`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: systemPrompt,
+    });
+};
+
 // --- Chat ---
 
 export const createChatSession = (systemInstruction?: string): Chat => {
@@ -891,5 +914,95 @@ export const generateDomainAndHostingRecommendations = async (description: strin
                 required: ["domains", "hosting"],
             },
         },
+    });
+};
+
+// --- Smart Quiz Generator ---
+export const generateSmartQuiz = async (content: string, fromTopic: boolean = false): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    
+    const baseInstruction = `You are an expert quiz creator who transforms educational materials into engaging, interactive quizzes with a modern aesthetic.
+    
+    Analyze the provided ${fromTopic ? 'topic' : 'content'} and generate a visually appealing quiz.
+    Include a mix of question types (recall, application, analysis) progressing from easier to more challenging.
+    
+    The output MUST be a strictly valid JSON object with the following schema:
+    {
+        "title": "Quiz Title with thematic emoji",
+        "questions": [
+            {
+                "id": 1,
+                "question": "Question text here (include an emoji like 📝, 🎯, 💡, etc.)",
+                "options": [
+                    { "text": "Option 1", "isCorrect": boolean, "feedback": "Immediate feedback explaining why this is right/wrong" },
+                    { "text": "Option 2", "isCorrect": boolean, "feedback": "Feedback..." },
+                    { "text": "Option 3", "isCorrect": boolean, "feedback": "Feedback..." },
+                    { "text": "Option 4", "isCorrect": boolean, "feedback": "Feedback..." }
+                ],
+                "difficulty": "Easy" | "Medium" | "Hard",
+                "type": "Recall" | "Application" | "Analysis"
+            }
+        ],
+        "summary": {
+            "perfectMessage": "Message for 100% score (with emojis like 🏆)",
+            "goodMessage": "Message for >70% score (with emojis like 🌟)",
+            "averageMessage": "Message for <70% score (with emojis like 💪)"
+        }
+    }
+    `;
+
+    const userPrompt = fromTopic 
+        ? `Generate a smart quiz about the topic: "${content}". Use your internal knowledge to create accurate and engaging questions.`
+        : `Generate a smart quiz based on the following content:\n\n"${content}"`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: userPrompt,
+        config: {
+            systemInstruction: baseInstruction,
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING },
+                    questions: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                id: { type: Type.INTEGER },
+                                question: { type: Type.STRING },
+                                options: {
+                                    type: Type.ARRAY,
+                                    items: {
+                                        type: Type.OBJECT,
+                                        properties: {
+                                            text: { type: Type.STRING },
+                                            isCorrect: { type: Type.BOOLEAN },
+                                            feedback: { type: Type.STRING }
+                                        },
+                                        required: ["text", "isCorrect", "feedback"]
+                                    }
+                                },
+                                difficulty: { type: Type.STRING },
+                                type: { type: Type.STRING }
+                            },
+                            required: ["id", "question", "options", "difficulty", "type"]
+                        }
+                    },
+                    summary: {
+                        type: Type.OBJECT,
+                        properties: {
+                            perfectMessage: { type: Type.STRING },
+                            goodMessage: { type: Type.STRING },
+                            averageMessage: { type: Type.STRING }
+                        },
+                        required: ["perfectMessage", "goodMessage", "averageMessage"]
+                    }
+                },
+                required: ["title", "questions", "summary"]
+            },
+            ...(fromTopic ? { tools: [{ googleSearch: {} }] } : {}) // Use search if generating from topic
+        }
     });
 };
