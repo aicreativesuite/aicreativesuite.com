@@ -1061,3 +1061,123 @@ export const generateSmartQuiz = async (content: string, fromTopic: boolean = fa
         }
     });
 };
+
+// --- Slide Deck Generator ---
+export const generateSlideDeckStructure = async (
+    topic: string, 
+    audience: string, 
+    count: number, 
+    tone: string,
+    format: string,
+    language: string,
+    length: string,
+    context?: { data: string, mimeType: string }
+): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const promptText = `Create a ${length.toLowerCase()} ${format.toLowerCase()} in ${language}.
+    Topic: "${topic}"
+    Audience: "${audience}"
+    Tone: "${tone}"
+    Number of Slides: ${count}
+
+    For each slide, provide:
+    1. Title
+    2. A list of 3-4 key bullet points
+    3. A detailed visual description for an image that would go on the slide (for an AI image generator)
+    4. Speaker notes
+
+    Return strictly as a JSON array of slide objects.`;
+
+    const contents = context ? {
+        parts: [
+            { text: promptText },
+            { inlineData: context }
+        ]
+    } : {
+        parts: [{ text: promptText }]
+    };
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: contents,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        title: { type: Type.STRING },
+                        bullets: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        visualDescription: { type: Type.STRING },
+                        speakerNotes: { type: Type.STRING }
+                    },
+                    required: ["title", "bullets", "visualDescription", "speakerNotes"]
+                }
+            }
+        }
+    });
+};
+
+export const generateReportContent = async (topic: string, type: string, length: string, language: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Write a ${length} ${type} about "${topic}" in ${language}. Format it using Markdown with headers, bullet points, and clear sections. Ensure the tone is professional and the content is comprehensive.`;
+    return ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: prompt,
+    });
+};
+
+export const generateInfographicConcepts = async (topic: string, style: string, language: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Create a concept for a ${style} infographic about "${topic}" in ${language}.
+    Provide:
+    1. A title for the infographic.
+    2. A detailed description of the visual layout.
+    3. 5 key data points or facts to include.
+    
+    Return strictly as JSON.`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING },
+                    visualLayout: { type: Type.STRING },
+                    dataPoints: { type: Type.ARRAY, items: { type: Type.STRING } }
+                },
+                required: ["title", "visualLayout", "dataPoints"]
+            }
+        }
+    });
+};
+
+export const generateFlashcards = async (topic: string, count: number, language: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const prompt = `Create ${count} flashcards about "${topic}" in ${language}.
+    Each card should have a "front" (question/term) and a "back" (answer/definition).
+    Return strictly as a JSON array.`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        front: { type: Type.STRING },
+                        back: { type: Type.STRING }
+                    },
+                    required: ["front", "back"]
+                }
+            }
+        }
+    });
+};

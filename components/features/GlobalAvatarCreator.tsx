@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { generateText, generateImage, generateSpeech, generateVideoFromImage, pollVideoOperation } from '../../services/geminiService';
-import { TTS_VOICES, VEO_LOADING_MESSAGES, BACKGROUND_OPTIONS, AVATAR_EXPRESSIONS } from '../../constants';
+import { TTS_VOICES, VEO_LOADING_MESSAGES, BACKGROUND_OPTIONS, AVATAR_EXPRESSIONS, SUPPORTED_LANGUAGES } from '../../constants';
 import Loader from '../common/Loader';
 import ApiKeyDialog from '../common/ApiKeyDialog';
 import { pcmToWav, decode } from '../../utils';
@@ -9,27 +9,6 @@ import { pcmToWav, decode } from '../../utils';
 interface GlobalAvatarCreatorProps {
     onShare: (options: { contentUrl: string; contentText: string; contentType: 'video' }) => void;
 }
-
-const SUPPORTED_LANGUAGES = [
-    "Abkhaz", "Afar", "Afrikaans", "Akan", "Albanian", "Amharic", "Arabic", "Aragonese", "Armenian", "Assamese", 
-    "Avaric", "Avestan", "Aymara", "Azerbaijani", "Bambara", "Bashkir", "Basque", "Belarusian", "Bengali", "Bihari", 
-    "Bislama", "Bosnian", "Breton", "Bulgarian", "Burmese", "Catalan", "Chamorro", "Chechen", "Chichewa", "Chinese", 
-    "Chuvash", "Cornish", "Corsican", "Cree", "Croatian", "Czech", "Danish", "Divehi", "Dutch", "Dzongkha", "English", 
-    "Esperanto", "Estonian", "Ewe", "Faroese", "Fijian", "Finnish", "French", "Fula", "Galician", "Ganda", "Georgian", 
-    "German", "Greek", "Guarani", "Gujarati", "Haitian", "Hausa", "Hebrew", "Herero", "Hindi", "Hiri Motu", "Hungarian", 
-    "Icelandic", "Ido", "Igbo", "Indonesian", "Interlingua", "Interlingue", "Inuktitut", "Inupiaq", "Irish", "Italian", 
-    "Japanese", "Javanese", "Kalaallisut", "Kannada", "Kanuri", "Kashmiri", "Kazakh", "Khmer", "Kikuyu", "Kinyarwanda", 
-    "Kirghiz", "Komi", "Kongo", "Korean", "Kurdish", "Kwanyama", "Lao", "Latin", "Latvian", "Limburgish", "Lingala", 
-    "Lithuanian", "Luba-Katanga", "Luxembourgish", "Macedonian", "Malagasy", "Malay", "Malayalam", "Maltese", "Manx", 
-    "Maori", "Marathi", "Marshallese", "Mongolian", "Nauru", "Navajo", "Ndebele", "Ndonga", "Nepali", "North Ndebele", 
-    "Northern Sami", "Norwegian", "Norwegian Bokmal", "Norwegian Nynorsk", "Nuosu", "Occitan", "Ojibwa", "Oriya", "Oromo", 
-    "Ossetian", "Pali", "Pashto", "Persian", "Polish", "Portuguese", "Punjabi", "Quechua", "Romanian", "Romansh", "Rundi", 
-    "Russian", "Samoan", "Sango", "Sanskrit", "Sardinian", "Scottish Gaelic", "Serbian", "Shona", "Sindhi", "Sinhala", 
-    "Slovak", "Slovenian", "Somali", "Sotho", "Spanish", "Sundanese", "Swahili", "Swati", "Swedish", "Tagalog", "Tahitian", 
-    "Tajik", "Tamil", "Tatar", "Telugu", "Thai", "Tibetan", "Tigrinya", "Tonga", "Tsonga", "Tswana", "Turkish", "Turkmen", 
-    "Twi", "Uighur", "Ukrainian", "Urdu", "Uzbek", "Venda", "Vietnamese", "Volapuk", "Walloon", "Welsh", "Western Frisian", 
-    "Wolof", "Xhosa", "Yiddish", "Yoruba", "Zhuang", "Zulu"
-];
 
 const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) => {
     // Inputs

@@ -30,7 +30,7 @@ import ProductionPlanner from './components/features/ProductionPlanner';
 import GlobalAvatarCreator from './components/features/GlobalAvatarCreator';
 import VibeCoding from './components/features/VibeCoding';
 import SmartQuizGenerator from './components/features/SmartQuizGenerator';
-import CodeReviewer from './components/features/CodeReviewer';
+import SlideDeckGenerator from './components/features/SlideDeckGenerator';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
 
 
@@ -178,7 +178,7 @@ export const TrafficBoosterModal: React.FC<TrafficBoosterModalProps> = ({ show, 
 };
 
 
-const FeatureCard: React.FC<{ feature: typeof FEATURES[0]; onClick: () => void }> = ({ feature, onClick }) => (
+const FeatureCard: React.FC<{ feature: typeof FEATURES[number]; onClick: () => void }> = ({ feature, onClick }) => (
     <div
         className="group relative bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 flex flex-col items-start transition-all duration-300 cursor-pointer overflow-hidden border border-slate-800 hover:border-cyan-500/50"
         onClick={onClick}
@@ -223,8 +223,8 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
-            case 'code-reviewer': return CodeReviewer;
             case 'vibe-coding': return VibeCoding;
+            case 'slide-deck': return SlideDeckGenerator;
             case 'image-generator': return ImageGenerator;
             case 'image-editor': return ImageEditor;
             case 'video-generator': return VideoGenerator;
