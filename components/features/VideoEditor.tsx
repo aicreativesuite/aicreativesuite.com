@@ -245,8 +245,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
                             
                              <button 
                                 onClick={() => setActiveMode('extend')}
-                                disabled={!initialVideoUrl}
-                                className={`text-left px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-between group ${activeMode === 'extend' ? 'bg-purple-500/10 border-purple-500/50 text-purple-400 shadow-lg shadow-purple-900/20' : 'bg-slate-800/50 border-slate-700 text-slate-400'} ${!initialVideoUrl ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-800 hover:text-slate-200'}`}
+                                className={`text-left px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-between group ${activeMode === 'extend' ? 'bg-purple-500/10 border-purple-500/50 text-purple-400 shadow-lg shadow-purple-900/20' : 'bg-slate-800/50 border-slate-700 text-slate-400'} hover:bg-slate-800 hover:text-slate-200`}
                             >
                                 <div>
                                     <span className="text-[10px] font-bold uppercase tracking-wider opacity-70 block mb-0.5">Step 2</span>

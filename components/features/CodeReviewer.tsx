@@ -122,7 +122,7 @@ const CodeReviewer: React.FC<CodeReviewerProps> = ({ onShare }) => {
                         <span className="text-slate-500 text-xs">source_code.js</span>
                         <button 
                             onClick={handleReview}
-                            disabled={scanning || !code.trim()}
+                            disabled={scanning}
                             className="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded transition disabled:opacity-50"
                         >
                             {scanning ? 'SCANNING...' : 'RUN AUDIT'}

@@ -178,7 +178,7 @@ const SpeechStudio: React.FC<TabProps> = ({ onShare }) => {
                                 <button 
                                     type="button" 
                                     onClick={handleGenerateScript}
-                                    disabled={generatingScript || !sourceText.trim()}
+                                    disabled={generatingScript}
                                     className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg transition disabled:opacity-50"
                                 >
                                     {generatingScript ? 'Writing Script...' : 'Generate Script'}
@@ -197,7 +197,7 @@ const SpeechStudio: React.FC<TabProps> = ({ onShare }) => {
 
                         <button 
                             type="submit" 
-                            disabled={loading || (speechMode === 'podcast' && podcastScript.length === 0)}
+                            disabled={loading}
                             className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 rounded-xl shadow-lg transition disabled:opacity-50 flex justify-center items-center space-x-2"
                         >
                             {loading ? (

@@ -199,8 +199,7 @@ const AppLaunchpad: React.FC<AppLaunchpadProps> = ({ onShare }) => {
                                             {status === 'idle' && (
                                                 <button 
                                                     onClick={() => handlePublish(platform.id)}
-                                                    disabled={apiKeyStatus !== 'active'}
-                                                    className="w-full py-2 px-3 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition"
+                                                    className="w-full py-2 px-3 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-lg transition"
                                                 >
                                                     {apiKeyStatus === 'active' ? 'Publish' : 'Config Required'}
                                                 </button>

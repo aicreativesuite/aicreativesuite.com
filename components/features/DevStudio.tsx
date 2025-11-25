@@ -274,7 +274,7 @@ const DevStudio: React.FC<DevStudioProps> = ({ onShare }) => {
                             </div>
                             <button 
                                 onClick={handleAudit} 
-                                disabled={isAuditing || !code}
+                                disabled={isAuditing}
                                 className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg disabled:opacity-50 disabled:bg-slate-700"
                             >
                                 {isAuditing ? 'Scanning...' : 'Run Audit'}
@@ -572,8 +572,7 @@ const DevStudio: React.FC<DevStudioProps> = ({ onShare }) => {
                                                 {status === 'idle' && (
                                                     <button 
                                                         onClick={() => handlePublish(platform.id)}
-                                                        disabled={apiKeyStatus !== 'active'}
-                                                        className="w-full py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition"
+                                                        className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition"
                                                     >
                                                         {apiKeyStatus === 'active' ? 'Publish' : 'Config Required'}
                                                     </button>
