@@ -245,7 +245,7 @@ export const performGroundedSearch = async (prompt: string, useMaps: boolean, lo
 // --- Text-to-Speech ---
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string | null> => {
-    const ai = new GoogleGenAI({});
+    const ai = getGeminiAI();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
         contents: [{ parts: [{ text }] }],
@@ -267,7 +267,7 @@ export const generateMultiSpeakerSpeech = async (
     text: string,
     speakers: { speaker: string; voiceName: string }[]
 ): Promise<string | null> => {
-    const ai = new GoogleGenAI({});
+    const ai = getGeminiAI();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
         contents: [{ parts: [{ text }] }],
@@ -1091,17 +1091,25 @@ export const generateSlideDeckStructure = async (
                     },
                     required: ["title", "bullets", "visualDescription", "speakerNotes"]
                 }
-            }
+            },
+            thinkingConfig: { thinkingBudget: 2048 }
         }
     });
 };
 
 export const generateReportContent = async (topic: string, type: string, length: string, language: string): Promise<GenerateContentResponse> => {
     const ai = getGeminiAI();
-    const prompt = `Write a ${length} ${type} about "${topic}" in ${language}. Format it using Markdown with headers, bullet points, and clear sections. Ensure the tone is professional and the content is comprehensive.`;
+    const prompt = `Write a ${length} ${type} about "${topic}" in ${language}. 
+    Format it using Markdown with headers, bullet points, and clear sections. 
+    Ensure the tone is professional and the content is comprehensive.
+    Cite sources where possible.`;
+    
     return ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: prompt,
+        config: {
+            tools: [{ googleSearch: {} }],
+        }
     });
 };
 

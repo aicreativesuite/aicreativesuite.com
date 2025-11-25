@@ -46,9 +46,9 @@ const Pricing: React.FC<PricingProps> = () => {
         },
         {
             name: 'Enterprise',
-            price: { monthly: 'Custom', yearly: 'Custom' },
-            features: ['All Studio features', 'Dedicated agent', 'Custom model training', 'Advanced security'],
-            cta: 'Contact Sales'
+            price: { monthly: 'Pay on Use', yearly: 'Pay on Use' },
+            features: ['All Studio features', 'Dedicated agent', 'Custom model training', 'Integrated Payment Gateway', 'Link Credit/Debit Card'],
+            cta: 'Link Payment Method'
         }
     ];
     
@@ -66,7 +66,7 @@ const Pricing: React.FC<PricingProps> = () => {
             />
 
             <h2 className="text-3xl font-bold text-white mb-4">Choose Your Plan</h2>
-            <p className="text-slate-400 mb-8">This is a demonstration page. Subscriptions are not available.</p>
+            <p className="text-slate-400 mb-8">Select the perfect plan for your creative needs. Enterprise options now support flexible pay-on-use billing.</p>
             
             <div className="flex justify-center items-center space-x-4 mb-10">
                 <span className={billingCycle === 'monthly' ? 'text-white' : 'text-slate-400'}>Monthly</span>
@@ -106,25 +106,23 @@ const Pricing: React.FC<PricingProps> = () => {
                                 </li>
                             ))}
                         </ul>
-                        {plan.name === 'Enterprise' ? (
-                            <a 
-                                href="mailto:sales@aicreativesuite.com?subject=Inquiry about Enterprise Plan"
-                                className="w-full block text-center py-3 px-4 rounded-lg font-bold text-white transition-colors duration-300 bg-cyan-500 hover:bg-cyan-600"
-                            >
-                                {plan.cta}
-                            </a>
-                        ) : (
-                            <button 
-                                onClick={() => handleChoosePlan(plan)}
-                                className="w-full py-3 px-4 rounded-lg font-bold text-white transition-colors duration-300 bg-cyan-500 hover:bg-cyan-600"
-                            >
-                                {plan.cta}
-                            </button>
-                        )}
+                        <button 
+                            onClick={() => handleChoosePlan(plan)}
+                            className="w-full py-3 px-4 rounded-lg font-bold text-white transition-colors duration-300 bg-cyan-500 hover:bg-cyan-600"
+                        >
+                            {plan.cta}
+                        </button>
                     </div>
                 ))}
             </div>
-             <p className="text-xs text-slate-500 mt-8">Payments would be handled via a secure gateway supporting all major credit and debit cards.</p>
+             <div className="mt-8 p-4 bg-slate-800/50 rounded-xl border border-slate-700 inline-block">
+                <div className="flex items-center space-x-3 text-sm text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span>Integrated Payment Gateway supports Visa, Mastercard, Amex, and corporate cards.</span>
+                </div>
+             </div>
         </div>
     );
 };

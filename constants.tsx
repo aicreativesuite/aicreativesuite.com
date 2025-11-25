@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 // --- SVG Icons for UI ---
@@ -34,9 +35,11 @@ const ProductionIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="htt
 const GlobalAvatarIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>;
 const QuizIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>;
 const SlideDeckIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>;
+const CodeIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path fillRule="evenodd" d="M14.447 3.026a.75.75 0 0 1 .527.921l-4.5 16.5a.75.75 0 0 1-1.448-.394l4.5-16.5a.75.75 0 0 1 .921-.527zM16.72 6.22a.75.75 0 0 1 1.06 0l5.25 5.25a.75.75 0 0 1 0 1.06l-5.25 5.25a.75.75 0 1 1-1.06-1.06L21.44 12l-4.72-4.72a.75.75 0 0 1 0-1.06zm-9.44 0a.75.75 0 0 1 0 1.06L2.56 12l4.72 4.72a.75.75 0 0 1-1.06 1.06L.97 12.53a.75.75 0 0 1 0-1.06l5.25-5.25a.75.75 0 0 1 1.06 0z" clipRule="evenodd" /></svg>;
 
 // --- Feature Configuration ---
 export const FEATURES = [
+    { id: 'dev-studio', title: 'Dev Studio', description: 'Build, audit, and deploy apps in one workflow.', category: 'Create & Edit', icon: <CodeIcon /> },
     { id: 'image-generator', title: 'Image Generator', description: 'Create stunning images from text prompts.', category: 'Create & Edit', icon: <ImageGeneratorIcon /> },
     { id: 'image-editor', title: 'Image Editor', description: 'Edit and refine your images with AI.', category: 'Create & Edit', icon: <ImageEditorIcon /> },
     { id: 'slide-deck', title: 'Slide Deck Generator', description: 'Create comprehensive slide decks, reports, and visual aids.', category: 'Create & Edit', icon: <SlideDeckIcon /> },
@@ -241,16 +244,16 @@ const TelegramIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" classNam
 const SnapchatIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M12.003 2c-2.965 0-5.382 2.235-5.423 5.155 0 .193-.024.384-.133.519-.615.834-2.363 1.966-2.292 3.941.022 1.075.76 1.92 1.673 2.191.312.094.426.337.336.666-.171.636-.374 1.295-.374 1.964 0 .712.225 1.336.555 1.893.298.474.795.52 1.192.337.397-.18.705-.285.93-.27.405.03 1.02.36 1.665.66 1.185.57 1.245.585 1.86.585.6 0 .675-.015 1.845-.585.645-.3 1.26-.63 1.665-.66.225-.015.54.09.93.27.39.18.885.135 1.185-.33.33-.555.555-1.185.555-1.89 0-.675-.21-1.32-.375-1.965-.09-.33.03-.57.33-.66.915-.27 1.65-.112 1.68-2.19.075-1.98-1.665-3.105-2.295-3.945-.105-.135-.12-.33-.12-.525C17.388 4.235 14.973 2 12.003 2z"/></svg>;
 
 export const PLATFORMS: Platform[] = [
-    { name: 'Twitter / X', icon: <TwitterIcon />, category: 'Social & Micro', shareUrl: (url, text) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}` },
-    { name: 'Facebook', icon: <FacebookIcon />, category: 'Social & Micro', shareUrl: (url) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
+    { name: 'Facebook', icon: <FacebookIcon />, category: 'Social & Micro', shareUrl: (url, text) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}` },
+    { name: 'Twitter', icon: <TwitterIcon />, category: 'Social & Micro', shareUrl: (url, text) => `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}` },
     { name: 'LinkedIn', icon: <LinkedInIcon />, category: 'Professional & News', shareUrl: (url, text) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}` },
-    { name: 'Pinterest', icon: <PinterestIcon />, category: 'Video & Visual', shareUrl: (url, text, type) => type === 'image' || type === 'video' ? `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(url)}&media=${encodeURIComponent(url)}&description=${encodeURIComponent(text)}` : '#' },
+    { name: 'Pinterest', icon: <PinterestIcon />, category: 'Video & Visual', shareUrl: (url, text, type) => `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(url)}&description=${encodeURIComponent(text)}&media=${type === 'image' ? encodeURIComponent(url) : ''}` },
     { name: 'Reddit', icon: <RedditIcon />, category: 'Social & Micro', shareUrl: (url, text) => `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(text)}` },
+    { name: 'Instagram', icon: <InstagramIcon />, category: 'Video & Visual', shareUrl: () => '#' }, // Instagram doesn't support direct web share link easily
+    { name: 'YouTube', icon: <YouTubeIcon />, category: 'Video & Visual', shareUrl: () => '#' }, // Usually upload
+    { name: 'TikTok', icon: <TikTokIcon />, category: 'Video & Visual', shareUrl: () => '#' }, // Usually upload
     { name: 'WhatsApp', icon: <WhatsAppIcon />, category: 'Messaging', shareUrl: (url, text) => `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}` },
+    { name: 'Messenger', icon: <MessengerIcon />, category: 'Messaging', shareUrl: (url) => `fb-messenger://share/?link=${encodeURIComponent(url)}` }, // Mobile only mostly
     { name: 'Telegram', icon: <TelegramIcon />, category: 'Messaging', shareUrl: (url, text) => `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}` },
-    { name: 'Instagram', icon: <InstagramIcon />, category: 'Video & Visual', shareUrl: () => '#' }, // Direct sharing not supported via URL
-    { name: 'TikTok', icon: <TikTokIcon />, category: 'Video & Visual', shareUrl: () => '#' }, // Direct sharing not supported via URL
-    { name: 'YouTube', icon: <YouTubeIcon />, category: 'Video & Visual', shareUrl: () => '#' }, // Direct upload only
-    { name: 'Snapchat', icon: <SnapchatIcon />, category: 'Video & Visual', shareUrl: () => '#' }, // Mobile only via kit
-    { name: 'Messenger', icon: <MessengerIcon />, category: 'Messaging', shareUrl: (url) => `fb-messenger://share/?link=${encodeURIComponent(url)}` },
+    { name: 'Snapchat', icon: <SnapchatIcon />, category: 'Messaging', shareUrl: (url) => `https://www.snapchat.com/scan?attachmentUrl=${encodeURIComponent(url)}` },
 ];

@@ -7,6 +7,7 @@ import ImageUploader from '../common/ImageUploader';
 import { fileToBase64 } from '../../utils';
 import { Remarkable } from 'remarkable';
 import QRCode from 'qrcode';
+import { GroundingChunk } from '@google/genai';
 
 const md = new Remarkable({ html: true });
 
@@ -58,6 +59,7 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
 
     // Report Specific
     const [reportType, setReportType] = useState(REPORT_TYPES[0]);
+    const [reportSources, setReportSources] = useState<GroundingChunk[]>([]);
 
     // Infographic Specific
     const [infographicStyle, setInfographicStyle] = useState(INFOGRAPHIC_STYLES[0]);
@@ -129,7 +131,7 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
         if (!infographicData) return;
         try {
             const prompt = `An infographic titled "${infographicData.title}". Visual layout: ${infographicData.visualLayout}. Style: ${infographicStyle}, ${designStyle}. Include visual representations for: ${infographicData.dataPoints.join(', ')}. High resolution, professional information design.`;
-            const imageBytes = await generateImage(prompt, aspectRatio === '16:9' ? '16:9' : '3:4'); // Infographics usually vertical, but let's respect ratio or default to portrait-ish if needed
+            const imageBytes = await generateImage(prompt, aspectRatio === '16:9' ? '16:9' : '3:4');
             const imageUrl = await addQrCodeToImage(imageBytes);
             setInfographicData(prev => prev ? { ...prev, generatedImage: imageUrl } : null);
         } catch (err) {
@@ -159,19 +161,12 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
             } else if (activeTab === 'report') {
                 const response = await generateReportContent(topic, reportType, length, language);
                 setReportContent(response.text);
+                setReportSources(response.candidates?.[0]?.groundingMetadata?.groundingChunks || []);
             } else if (activeTab === 'infographic') {
                 const response = await generateInfographicConcepts(topic, infographicStyle, language);
                 setInfographicData(JSON.parse(response.text));
-            } else if (activeTab === 'flashcards') {
+            } else if (activeTab === 'flashcards' || activeTab === 'quiz') {
                 const response = await generateFlashcards(topic, 10, language);
-                setFlashcards(JSON.parse(response.text));
-            } else if (activeTab === 'quiz') {
-                // Reuse existing SmartQuizGenerator Logic via separate component or redirection, 
-                // but here we implement a simple version for the suite consistency
-                // For now, let's just handle it via the separate Smart Quiz tool or basic generation here?
-                // The request asked to Integrate features. Let's use a simple placeholder that points to the dedicated tool or generates a simple text list.
-                // Actually, let's generate flashcards as a "Quiz" mode alternative for now, or generate text Q&A.
-                const response = await generateFlashcards(topic, 10, language); // reusing flashcard structure for simple Q&A
                 setFlashcards(JSON.parse(response.text));
             }
 
@@ -197,7 +192,7 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
             {/* Sidebar Controls */}
             <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
                 <div className="flex flex-wrap gap-2 mb-6">
-                    {['slides', 'report', 'infographic', 'flashcards'].map(tab => (
+                    {['slides', 'report', 'infographic', 'flashcards', 'quiz'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab as OutputType)}
@@ -394,8 +389,24 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
                     )}
 
                     {!loading && activeTab === 'report' && reportContent && (
-                        <div className="max-w-4xl mx-auto bg-white text-slate-900 p-10 rounded-xl shadow-2xl min-h-full">
-                            <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: md.render(reportContent) }} />
+                        <div className="max-w-4xl mx-auto bg-white text-slate-900 p-10 rounded-xl shadow-2xl min-h-full flex flex-col">
+                            <div className="prose prose-slate max-w-none flex-grow" dangerouslySetInnerHTML={{ __html: md.render(reportContent) }} />
+                            
+                            {reportSources && reportSources.length > 0 && (
+                                <div className="mt-8 pt-8 border-t border-slate-200">
+                                    <h4 className="text-sm font-bold text-slate-500 uppercase mb-3">Sources</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {reportSources.map((source, idx) => (
+                                            source.web ? (
+                                                <a key={idx} href={source.web.uri} target="_blank" rel="noreferrer" className="block p-2 bg-slate-50 hover:bg-slate-100 rounded border border-slate-200 text-xs text-slate-600 truncate transition">
+                                                    <span className="font-bold block text-slate-800 truncate">{source.web.title}</span>
+                                                    {source.web.uri}
+                                                </a>
+                                            ) : null
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -416,7 +427,7 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
                         </div>
                     )}
 
-                    {!loading && activeTab === 'flashcards' && flashcards.length > 0 && (
+                    {!loading && (activeTab === 'flashcards' || activeTab === 'quiz') && flashcards.length > 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                             {flashcards.map((card, i) => (
                                 <div key={i} className="aspect-[3/2] perspective cursor-pointer group" onClick={() => {
