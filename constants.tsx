@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 // --- SVG Icons for UI ---
@@ -27,18 +28,15 @@ const DanceIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://w
 const PitchIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>;
 const StrategyIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-10 2h3v2h-3V5zm-5 2h3v4H6V7zm0 6h3v4H6v-4zm5 0h3v4h-3v-4zm5-6h3v10h-3V7zm-5-2h3v2h-3V5z"/></svg>;
 const MemeIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21 1.01.33 2.05.33 3.12 0 4.41-3.59 8-8 8z"/></svg>;
-const AudioOverviewIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM7 9a1 1 0 0 0-1 1v2a6 6 0 0 0 5 5.91V21h2v-3.09A6 6 0 0 0 18 12v-2a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v2a4 4 0 0 1-4 4 4 4 0 0 1-4-4v-2a1 1 0 0 0-1-1H7z"/></svg>;
 const TrendIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>;
 const ProductionIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M4 6h16v2H4zm2 4h12v2H6zm2 4h8v2H8zm-4 4h16v2H4z"/></svg>;
 const GlobalAvatarIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>;
 const QuizIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>;
 const SlideDeckIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>;
-const CodeIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path fillRule="evenodd" d="M14.447 3.026a.75.75 0 0 1 .527.921l-4.5 16.5a.75.75 0 0 1-1.448-.394l4.5-16.5a.75.75 0 0 1 .921-.527zM16.72 6.22a.75.75 0 0 1 1.06 0l5.25 5.25a.75.75 0 0 1 0 1.06l-5.25 5.25a.75.75 0 1 1-1.06-1.06L21.44 12l-4.72-4.72a.75.75 0 0 1 0-1.06zm-9.44 0a.75.75 0 0 1 0 1.06L2.56 12l4.72 4.72a.75.75 0 0 1-1.06 1.06L.97 12.53a.75.75 0 0 1 0-1.06l5.25-5.25a.75.75 0 0 1 1.06 0z" clipRule="evenodd" /></svg>;
 
 // --- Feature Configuration ---
 export const FEATURES = [
-    { id: 'dev-studio', title: 'Dev Studio', description: 'Build, audit, and deploy apps in one workflow.', category: 'Create & Edit', icon: <CodeIcon /> },
-    { id: 'audio-overview', title: 'Audio Overview', description: 'Generate deep-dive audio conversations from text.', category: 'Create & Edit', icon: <AudioOverviewIcon /> },
+    { id: 'sound-studio', title: 'Sound Studio', description: 'All-in-one audio suite: Text-to-Speech, Podcasts, SFX, and Music.', category: 'Create & Edit', icon: <SoundStudioIcon /> },
     { id: 'image-generator', title: 'Image Generator', description: 'Create stunning images from text prompts.', category: 'Create & Edit', icon: <ImageGeneratorIcon /> },
     { id: 'image-editor', title: 'Image Editor', description: 'Edit and refine your images with AI.', category: 'Create & Edit', icon: <ImageEditorIcon /> },
     { id: 'slide-deck', title: 'Slide Deck Generator', description: 'Create comprehensive slide decks, reports, and visual aids.', category: 'Create & Edit', icon: <SlideDeckIcon /> },
@@ -51,10 +49,8 @@ export const FEATURES = [
     { id: 'grounded-search', title: 'Grounded Search', description: 'Get real-time, fact-checked information.', category: 'Assist & Analyze', icon: <GroundedSearchIcon /> },
     { id: 'trend-forecaster', title: 'Trend Forecaster', description: 'Predict future trends with real-time data.', category: 'Assist & Analyze', icon: <TrendIcon /> },
     { id: 'media-analyzer', title: 'Media Analyzer', description: 'Analyze images, videos, and audio files.', category: 'Assist & Analyze', icon: <MediaAnalyzerIcon /> },
-    { id: 'text-to-speech', title: 'Text to Speech', description: 'Convert text into lifelike speech.', category: 'Create & Edit', icon: <TextToSpeechIcon /> },
     { id: 'avatar-generator', title: 'Avatar Generator', description: 'Create custom character avatars.', category: 'Create & Edit', icon: <AvatarIcon /> },
     { id: 'video-editor', title: 'Video Editor', description: 'Extend and edit your generated videos.', category: 'Create & Edit', icon: <VideoEditorIcon /> },
-    { id: 'sound-studio', title: 'Sound Studio', description: 'Generate sound effects and voiceovers.', category: 'Create & Edit', icon: <SoundStudioIcon /> },
     { id: 'songs-generator', title: 'Songwriter', description: 'Compose lyrics and musical concepts.', category: 'Create & Edit', icon: <MusicIcon /> },
     { id: 'marketing-assistant', title: 'Marketing Agent', description: 'Generate copy, strategy, and campaigns.', category: 'Assist & Analyze', icon: <MarketingIcon /> },
     { id: 'content-generator', title: 'Content Generator', description: 'Expand ideas into full articles or posts.', category: 'Create & Edit', icon: <ContentIcon /> },

@@ -1,49 +1,85 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { generateSpeech, generateMultiSpeakerSpeech, generateText } from '../../services/geminiService';
+import { generateSpeech, generateMultiSpeakerSpeech, generateText, generatePodcastScript } from '../../services/geminiService';
 import Loader from '../common/Loader';
 import { SOUND_EFFECT_CATEGORIES, MUSIC_STYLES, TTS_VOICES } from '../../constants';
 import { Remarkable } from 'remarkable';
-import { pcmToWav, decode } from '../../utils';
+import { pcmToWav, decode, fileToBase64 } from '../../utils';
+import AudioUploader from '../common/AudioUploader';
 
 const md = new Remarkable();
 
-type Mode = 'tts' | 'sfx' | 'music';
+type Mode = 'speech' | 'sfx' | 'music';
+type SpeechMode = 'single' | 'podcast';
 
 interface TabProps {
     onShare: (options: any) => void;
 }
 
-const TextToSpeechTab: React.FC<TabProps> = ({ onShare }) => {
-    const [ttsMode, setTtsMode] = useState<'single' | 'multi'>('single');
+interface ScriptLine {
+    speaker: string;
+    text: string;
+}
+
+const SpeechStudio: React.FC<TabProps> = ({ onShare }) => {
+    const [speechMode, setSpeechMode] = useState<SpeechMode>('single');
     const [text, setText] = useState('');
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
+    
     // Single speaker state
     const [voice, setVoice] = useState(TTS_VOICES[0]);
-
-    // Multi-speaker state
-    const [speakers, setSpeakers] = useState([
-        { id: 1, name: 'Joe', voice: TTS_VOICES[0] },
-        { id: 2, name: 'Jane', voice: TTS_VOICES[1] },
-    ]);
+    
+    // Podcast state
+    const [sourceText, setSourceText] = useState('');
+    const [podcastScript, setPodcastScript] = useState<ScriptLine[]>([]);
+    const [generatingScript, setGeneratingScript] = useState(false);
+    
+    // Shared state
+    const [referenceAudioFile, setReferenceAudioFile] = useState<File | null>(null);
 
     useEffect(() => {
         return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); };
     }, [audioUrl]);
-    
-    const handleSpeakerChange = (index: number, field: 'name' | 'voice', value: string) => {
-        const newSpeakers = [...speakers];
-        newSpeakers[index] = { ...newSpeakers[index], [field]: value };
-        setSpeakers(newSpeakers);
+
+    const handleGenerateScript = async () => {
+        if (!sourceText.trim()) {
+            setError('Please enter a topic or source text for the podcast.');
+            return;
+        }
+        setGeneratingScript(true);
+        setError(null);
+        try {
+            const response = await generatePodcastScript(sourceText);
+            const parsedScript = JSON.parse(response.text);
+            if (Array.isArray(parsedScript)) {
+                setPodcastScript(parsedScript);
+            } else {
+                throw new Error("Invalid script format.");
+            }
+        } catch (err) {
+            setError('Failed to generate script. Please try again.');
+            console.error(err);
+        } finally {
+            setGeneratingScript(false);
+        }
+    };
+
+    const handleScriptChange = (index: number, newText: string) => {
+        const updated = [...podcastScript];
+        updated[index].text = newText;
+        setPodcastScript(updated);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!text.trim()) {
-            setError('Please enter some text.');
+        if (speechMode === 'single' && !text.trim()) {
+            setError('Please enter text to speak.');
+            return;
+        }
+        if (speechMode === 'podcast' && podcastScript.length === 0) {
+            setError('Please generate a podcast script first.');
             return;
         }
 
@@ -54,23 +90,21 @@ const TextToSpeechTab: React.FC<TabProps> = ({ onShare }) => {
 
         try {
             let base64Audio: string | null = null;
-            if (ttsMode === 'single') {
-                base64Audio = await generateSpeech(text, voice);
+            let referenceAudioBase64: string | undefined = undefined;
+
+            if (referenceAudioFile) {
+                referenceAudioBase64 = await fileToBase64(referenceAudioFile);
+            }
+
+            if (speechMode === 'single') {
+                base64Audio = await generateSpeech(text, voice, referenceAudioBase64);
             } else {
-                const speakerNames = speakers.map(s => s.name.trim()).filter(Boolean);
-                if (speakerNames.length !== 2 || new Set(speakerNames).size !== 2) {
-                    setError('Please define two unique speaker names.');
-                    setLoading(false);
-                    return;
-                }
-                const speakerRegex = new RegExp(`^(${speakerNames.join('|')}):`, 'gm');
-                if (!speakerRegex.test(text)) {
-                    setError(`Script lines must start with a defined speaker name followed by a colon (e.g., "${speakers[0].name}: Hello.").`);
-                    setLoading(false);
-                    return;
-                }
-                const speakerPayload = speakers.map(s => ({ speaker: s.name, voiceName: s.voice }));
-                base64Audio = await generateMultiSpeakerSpeech(text, speakerPayload);
+                const fullText = podcastScript.map(line => `${line.speaker}: ${line.text}`).join('\n');
+                const speakerConfig = [
+                    { speaker: "Alex", voiceName: TTS_VOICES[0] }, // Map to first available
+                    { speaker: "Jamie", voiceName: TTS_VOICES[1] } // Map to second available
+                ];
+                base64Audio = await generateMultiSpeakerSpeech(fullText, speakerConfig, referenceAudioBase64);
             }
 
             if (base64Audio) {
@@ -81,7 +115,7 @@ const TextToSpeechTab: React.FC<TabProps> = ({ onShare }) => {
                 throw new Error("API did not return audio data.");
             }
         } catch (err: any) {
-            setError(err.message || 'Failed to generate speech.');
+            setError(err.message || 'Failed to generate audio.');
             console.error(err);
         } finally {
             setLoading(false);
@@ -89,76 +123,148 @@ const TextToSpeechTab: React.FC<TabProps> = ({ onShare }) => {
     };
 
     return (
-        <div className="space-y-8">
-             <div className="flex bg-slate-800/50 rounded-lg p-1">
-                <button onClick={() => setTtsMode('single')} className={`w-1/2 p-2 rounded-md text-sm font-semibold transition ${ttsMode === 'single' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>Single Speaker</button>
-                <button onClick={() => setTtsMode('multi')} className={`w-1/2 p-2 rounded-md text-sm font-semibold transition ${ttsMode === 'multi' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>Multi-Speaker</button>
+        <div className="space-y-6">
+            {/* Mode Toggle */}
+            <div className="flex bg-slate-800 p-1 rounded-lg mb-6 w-full md:w-auto self-start">
+                <button
+                    onClick={() => setSpeechMode('single')}
+                    className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-bold transition ${speechMode === 'single' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                    Single Voice
+                </button>
+                <button
+                    onClick={() => setSpeechMode('podcast')}
+                    className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-bold transition ${speechMode === 'podcast' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                    Podcast / Overview
+                </button>
             </div>
-            
-            <p className="text-sm text-slate-400">
-                {ttsMode === 'single' ? 'Generate speech from text using a single voice.' : 'Generate a conversation from a script with two distinct voices.'}
-            </p>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-                {ttsMode === 'multi' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-900/50 p-8 rounded-xl border border-slate-700">
-                        {speakers.map((s, index) => (
-                            <div key={s.id} className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Configuration Panel */}
+                <div className="lg:col-span-1 space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-5 bg-slate-900/50 p-6 rounded-xl border border-slate-800">
+                        {speechMode === 'single' ? (
+                            <>
                                 <div>
-                                    <label htmlFor={`speaker${index}_name`} className="block text-sm font-medium text-slate-300 mb-3">Speaker {index + 1} Name</label>
-                                    <input id={`speaker${index}_name`} type="text" value={s.name} onChange={(e) => handleSpeakerChange(index, 'name', e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition" />
-                                </div>
-                                <div>
-                                    <label htmlFor={`speaker${index}_voice`} className="block text-sm font-medium text-slate-300 mb-3">Speaker {index + 1} Voice</label>
-                                    <select id={`speaker${index}_voice`} value={s.voice} onChange={(e) => handleSpeakerChange(index, 'voice', e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Voice</label>
+                                    <select value={voice} onChange={(e) => setVoice(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500">
                                         {TTS_VOICES.map(v => <option key={v} value={v}>{v}</option>)}
                                     </select>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <div>
-                    <label htmlFor="tts-text" className="block text-sm font-medium text-slate-300 mb-2">{ttsMode === 'single' ? 'Text to Speak' : 'Conversation Script'}</label>
-                    <textarea 
-                        id="tts-text"
-                        rows={5} 
-                        value={text} 
-                        onChange={(e) => setText(e.target.value)} 
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500" 
-                        placeholder={ttsMode === 'single' ? 'Type text here...' : `${speakers[0].name}: Hello, how are you?\n${speakers[1].name}: I'm doing great, thanks!`}
-                    />
-                </div>
-                
-                {ttsMode === 'single' && (
-                    <div>
-                        <label htmlFor="voice-select" className="block text-sm font-medium text-slate-300 mb-2">Voice</label>
-                        <select id="voice-select" value={voice} onChange={(e) => setVoice(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500">
-                            {TTS_VOICES.map(v => <option key={v} value={v}>{v}</option>)}
-                        </select>
-                    </div>
-                )}
-                <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 transition-colors flex items-center justify-center space-x-2">
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
-                     <span>{loading ? 'Generating...' : 'Generate Speech'}</span>
-                </button>
-                {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-            </form>
-            {loading && <Loader />}
-            {audioUrl && (
-                 <div className="w-full space-y-4 pt-4 border-t border-slate-700">
-                    <audio controls src={audioUrl} className="w-full" />
-                    <div className="text-center">
-                        <button
-                            onClick={() => onShare({ contentUrl: audioUrl, contentText: text, contentType: 'audio' })}
-                            className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Input Text</label>
+                                    <textarea 
+                                        rows={6} 
+                                        value={text} 
+                                        onChange={(e) => setText(e.target.value)} 
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 resize-none" 
+                                        placeholder="Type text to convert to speech..."
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Podcast Topic / Source</label>
+                                    <textarea 
+                                        rows={6}
+                                        value={sourceText}
+                                        onChange={(e) => setSourceText(e.target.value)}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 resize-none"
+                                        placeholder="Paste an article or describe a topic..."
+                                    />
+                                </div>
+                                <button 
+                                    type="button" 
+                                    onClick={handleGenerateScript}
+                                    disabled={generatingScript || !sourceText.trim()}
+                                    className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg transition disabled:opacity-50"
+                                >
+                                    {generatingScript ? 'Writing Script...' : 'Generate Script'}
+                                </button>
+                            </>
+                        )}
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">User Reference Audio (Optional)</label>
+                            <AudioUploader 
+                                onAudioUpload={setReferenceAudioFile} 
+                                onAudioClear={() => setReferenceAudioFile(null)} 
+                            />
+                            <p className="text-[10px] text-slate-500 mt-1">Upload a voice sample to guide style (if supported).</p>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            disabled={loading || (speechMode === 'podcast' && podcastScript.length === 0)}
+                            className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 rounded-xl shadow-lg transition disabled:opacity-50 flex justify-center items-center space-x-2"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
-                            <span>Share & Promote</span>
+                            {loading ? (
+                                <Loader />
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
+                                    <span>Generate Audio</span>
+                                </>
+                            )}
                         </button>
+                        {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+                    </form>
+                </div>
+
+                {/* Output / Script Panel */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Audio Player */}
+                    <div className={`bg-slate-900/50 p-6 rounded-xl border border-slate-800 flex flex-col items-center justify-center transition-all ${audioUrl ? 'min-h-[150px]' : 'min-h-[100px] opacity-60'}`}>
+                        {audioUrl ? (
+                            <div className="w-full space-y-4 animate-fadeIn">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-white">Generated Audio</h3>
+                                    <button 
+                                        onClick={() => onShare({ contentUrl: audioUrl, contentText: speechMode === 'single' ? text : "Podcast Audio", contentType: 'audio' })}
+                                        className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition"
+                                    >
+                                        Share
+                                    </button>
+                                </div>
+                                <audio controls src={audioUrl} className="w-full" />
+                            </div>
+                        ) : (
+                            <div className="text-center text-slate-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                                <p>Audio output will appear here.</p>
+                            </div>
+                        )}
                     </div>
-                 </div>
-            )}
+
+                    {/* Script Editor (Podcast Mode Only) */}
+                    {speechMode === 'podcast' && podcastScript.length > 0 && (
+                        <div className="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden flex flex-col max-h-[500px]">
+                            <div className="p-4 bg-slate-900 border-b border-slate-800">
+                                <h3 className="font-bold text-white">Podcast Script</h3>
+                            </div>
+                            <div className="flex-grow overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                                {podcastScript.map((line, idx) => (
+                                    <div key={idx} className="flex gap-4 group">
+                                        <div className={`w-16 flex-shrink-0 font-bold text-xs pt-3 text-right uppercase tracking-wider ${line.speaker === 'Alex' ? 'text-cyan-400' : 'text-purple-400'}`}>
+                                            {line.speaker}
+                                        </div>
+                                        <div className="flex-grow">
+                                            <textarea 
+                                                value={line.text}
+                                                onChange={(e) => handleScriptChange(idx, e.target.value)}
+                                                className="w-full bg-slate-800/50 border border-transparent focus:border-slate-600 rounded p-3 text-slate-300 text-sm resize-none focus:ring-0 transition"
+                                                rows={Math.max(2, Math.ceil(line.text.length / 80))}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };
@@ -185,38 +291,39 @@ const SfxTab: React.FC<TabProps> = ({ onShare }) => {
     };
 
     return (
-        <div className="space-y-6">
-            <p className="text-sm text-slate-400">Describe a sound effect for a designer to create.</p>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
-                    <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A laser blast" />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Category</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                        {SOUND_EFFECT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                </div>
-                <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 transition-colors">
-                    {loading ? 'Generating...' : 'Generate Description'}
-                </button>
-            </form>
-            <div className="min-h-[150px] bg-slate-800 rounded-lg p-6 prose prose-invert max-w-none relative border border-slate-700">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 bg-slate-900/50 p-6 rounded-xl border border-slate-800 h-fit">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Description</label>
+                        <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500" placeholder="e.g., A laser blast" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Category</label>
+                        <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500">
+                            {SOUND_EFFECT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
+                    <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50">
+                        {loading ? 'Generating...' : 'Generate SFX Idea'}
+                    </button>
+                </form>
+            </div>
+            <div className="lg:col-span-2 bg-slate-900/50 p-6 rounded-xl border border-slate-800 min-h-[300px]">
                 {loading && <Loader />}
+                {!loading && !result && <div className="h-full flex items-center justify-center text-slate-500">SFX description will appear here.</div>}
                 {result && (
-                    <>
-                        <div className="absolute top-4 right-4 not-prose">
+                    <div className="relative">
+                         <div className="absolute top-0 right-0">
                              <button
                                 onClick={() => onShare({ contentText: result, contentType: 'text' })}
-                                className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
+                                className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
-                                <span>Share</span>
+                                Share
                             </button>
                         </div>
-                        <div dangerouslySetInnerHTML={{ __html: md.render(result) }} />
-                    </>
+                        <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: md.render(result) }} />
+                    </div>
                 )}
             </div>
         </div>
@@ -245,38 +352,39 @@ const MusicTab: React.FC<TabProps> = ({ onShare }) => {
     };
 
      return (
-        <div className="space-y-6">
-            <p className="text-sm text-slate-400">Generate musical concepts, lyrics, or instrumentation ideas.</p>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Concept / Theme</label>
-                    <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A hero's journey" />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Style</label>
-                    <select value={style} onChange={(e) => setStyle(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                        {MUSIC_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                </div>
-                <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 transition-colors">
-                    {loading ? 'Generating...' : 'Generate Idea'}
-                </button>
-            </form>
-            <div className="min-h-[150px] bg-slate-800 rounded-lg p-6 prose prose-invert max-w-none relative border border-slate-700">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 bg-slate-900/50 p-6 rounded-xl border border-slate-800 h-fit">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Concept</label>
+                        <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500" placeholder="e.g., Epic hero's journey" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Style</label>
+                        <select value={style} onChange={(e) => setStyle(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500">
+                            {MUSIC_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
+                    <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50">
+                        {loading ? 'Composing...' : 'Generate Music Idea'}
+                    </button>
+                </form>
+            </div>
+            <div className="lg:col-span-2 bg-slate-900/50 p-6 rounded-xl border border-slate-800 min-h-[300px]">
                 {loading && <Loader />}
+                {!loading && !result && <div className="h-full flex items-center justify-center text-slate-500">Musical concepts will appear here.</div>}
                 {result && (
-                    <>
-                         <div className="absolute top-4 right-4 not-prose">
+                    <div className="relative">
+                         <div className="absolute top-0 right-0">
                              <button
                                 onClick={() => onShare({ contentText: result, contentType: 'text' })}
-                                className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
+                                className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
-                                <span>Share</span>
+                                Share
                             </button>
                         </div>
-                        <div dangerouslySetInnerHTML={{ __html: md.render(result) }} />
-                    </>
+                        <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: md.render(result) }} />
+                    </div>
                 )}
             </div>
         </div>
@@ -285,25 +393,38 @@ const MusicTab: React.FC<TabProps> = ({ onShare }) => {
 
 
 const SoundStudio: React.FC<TabProps> = ({ onShare }) => {
-    const [mode, setMode] = useState<Mode>('tts');
-
-    const renderContent = () => {
-        switch(mode) {
-            case 'tts': return <TextToSpeechTab onShare={onShare} />;
-            case 'sfx': return <SfxTab onShare={onShare} />;
-            case 'music': return <MusicTab onShare={onShare} />;
-            default: return null;
-        }
-    }
+    const [activeTab, setActiveTab] = useState<Mode>('speech');
 
     return (
-        <div className="max-w-3xl mx-auto space-y-8">
-             <div className="flex bg-slate-700 rounded-lg p-1 mb-8">
-                 <button onClick={() => setMode('tts')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'tts' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Text-to-Speech</button>
-                 <button onClick={() => setMode('sfx')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'sfx' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Sound Effects</button>
-                 <button onClick={() => setMode('music')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'music' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Music Ideas</button>
+        <div className="max-w-6xl mx-auto space-y-8 h-full">
+             <div className="flex justify-center border-b border-slate-800 pb-1">
+                 <div className="flex space-x-8">
+                    <button 
+                        onClick={() => setActiveTab('speech')} 
+                        className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition ${activeTab === 'speech' ? 'text-cyan-400 border-cyan-400' : 'text-slate-500 border-transparent hover:text-white'}`}
+                    >
+                        Speech & Podcast
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('sfx')} 
+                        className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition ${activeTab === 'sfx' ? 'text-cyan-400 border-cyan-400' : 'text-slate-500 border-transparent hover:text-white'}`}
+                    >
+                        Sound Effects
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('music')} 
+                        className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition ${activeTab === 'music' ? 'text-cyan-400 border-cyan-400' : 'text-slate-500 border-transparent hover:text-white'}`}
+                    >
+                        Music Ideas
+                    </button>
+                 </div>
              </div>
-             {renderContent()}
+             
+             <div className="animate-fadeIn">
+                {activeTab === 'speech' && <SpeechStudio onShare={onShare} />}
+                {activeTab === 'sfx' && <SfxTab onShare={onShare} />}
+                {activeTab === 'music' && <MusicTab onShare={onShare} />}
+             </div>
         </div>
     );
 };

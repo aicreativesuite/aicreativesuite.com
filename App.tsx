@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { FEATURES, FeatureId, CATEGORY_DETAILS, PricingIcon, AccountIcon } from './constants';
 import ImageGenerator from './components/features/ImageGenerator';
@@ -7,7 +8,6 @@ import VoiceChat from './components/features/VoiceChat';
 import Chatbot from './components/features/Chatbot';
 import GroundedSearch from './components/features/GroundedSearch';
 import MediaAnalyzer from './components/features/MediaAnalyzer';
-import TextToSpeech from './components/features/TextToSpeech';
 import AvatarGenerator from './components/features/AvatarGenerator';
 import VideoEditor from './components/features/VideoEditor';
 import SoundStudio from './components/features/SoundStudio';
@@ -23,13 +23,11 @@ import DanceGenerator from './components/features/DanceGenerator';
 import TrafficBooster from './components/features/TrafficBooster';
 import AiTrafficBooster from './components/features/AiTrafficBooster';
 import ViralMemeGenerator from './components/features/ViralMemeGenerator';
-import PodcastGenerator from './components/features/PodcastGenerator';
 import TrendForecaster from './components/features/TrendForecaster';
 import ProductionPlanner from './components/features/ProductionPlanner';
 import GlobalAvatarCreator from './components/features/GlobalAvatarCreator';
 import SmartQuizGenerator from './components/features/SmartQuizGenerator';
 import SlideDeckGenerator from './components/features/SlideDeckGenerator';
-import DevStudio from './components/features/DevStudio';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
 
 
@@ -222,8 +220,6 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
-            case 'dev-studio': return DevStudio;
-            case 'audio-overview': return PodcastGenerator;
             case 'slide-deck': return SlideDeckGenerator;
             case 'image-generator': return ImageGenerator;
             case 'image-editor': return ImageEditor;
@@ -236,7 +232,6 @@ const App: React.FC = () => {
             case 'grounded-search': return GroundedSearch;
             case 'trend-forecaster': return TrendForecaster;
             case 'media-analyzer': return MediaAnalyzer;
-            case 'text-to-speech': return TextToSpeech;
             case 'avatar-generator': return AvatarGenerator;
             case 'video-editor': return VideoEditor;
             case 'sound-studio': return SoundStudio;

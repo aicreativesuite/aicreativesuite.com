@@ -257,11 +257,20 @@ export const performGroundedSearch = async (prompt: string, useMaps: boolean, lo
 
 // --- Text-to-Speech ---
 
-export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string | null> => {
+export const generateSpeech = async (text: string, voiceName: string = 'Kore', referenceAudioBase64?: string): Promise<string | null> => {
     const ai = getGeminiAI();
+    
+    const parts: any[] = [{ text }];
+    if (referenceAudioBase64) {
+        // Although current gemini-2.5-flash-preview-tts primarily uses prebuiltVoiceConfig, 
+        // passing audio context (if supported by model/endpoint) is done via inlineData.
+        // Note: This is experimental/contextual.
+        parts.push({ inlineData: { mimeType: 'audio/mp3', data: referenceAudioBase64 } });
+    }
+
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
-        contents: [{ parts: [{ text }] }],
+        contents: [{ parts }],
         config: {
             responseModalities: [Modality.AUDIO],
             speechConfig: {
@@ -278,12 +287,19 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
 
 export const generateMultiSpeakerSpeech = async (
     text: string,
-    speakers: { speaker: string; voiceName: string }[]
+    speakers: { speaker: string; voiceName: string }[],
+    referenceAudioBase64?: string
 ): Promise<string | null> => {
     const ai = getGeminiAI();
+    
+    const parts: any[] = [{ text }];
+    if (referenceAudioBase64) {
+        parts.push({ inlineData: { mimeType: 'audio/mp3', data: referenceAudioBase64 } });
+    }
+
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
-        contents: [{ parts: [{ text }] }],
+        contents: [{ parts }],
         config: {
             responseModalities: [Modality.AUDIO],
             speechConfig: {
