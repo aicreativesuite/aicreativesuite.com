@@ -26,29 +26,6 @@ export const generateTextWithThinking = async (prompt: string): Promise<Generate
     });
 };
 
-// --- Vibe Coding ---
-
-export const generateVibeApp = async (prompt: string): Promise<GenerateContentResponse> => {
-    const ai = getGeminiAI();
-    const systemPrompt = `You are an expert frontend engineer and UI/UX designer.
-    Your task is to generate a complete, single-file HTML application based on the user's description.
-    
-    Requirements:
-    1.  Return ONLY the raw HTML code. Do not wrap it in markdown code blocks (like \`\`\`html).
-    2.  Include all CSS in <style> tags and JS in <script> tags.
-    3.  Use Tailwind CSS via CDN (https://cdn.tailwindcss.com) for styling.
-    4.  Ensure the design is modern, clean, and responsive. Use a dark mode theme by default unless specified otherwise.
-    5.  The app should be interactive and functional.
-    6.  If the user asks for a game, make it playable. If a tool, make it work.
-    
-    User Description: ${prompt}`;
-
-    return ai.models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: systemPrompt,
-    });
-};
-
 // --- Code Reviewer (Terminal Architect) ---
 
 export const reviewCode = async (code: string): Promise<GenerateContentResponse> => {
@@ -1179,5 +1156,30 @@ export const generateFlashcards = async (topic: string, count: number, language:
                 }
             }
         }
+    });
+};
+
+export const generateVibeApp = async (prompt: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    const systemInstruction = `You are an expert full-stack web developer.
+    Your goal is to generate a fully functional, single-file HTML application based on the user's prompt.
+    The file should contain:
+    - HTML structure
+    - Modern CSS (using internal <style> tags or Tailwind via CDN)
+    - Interactive JavaScript (using internal <script> tags)
+    
+    Rules:
+    1. Output ONLY the raw HTML code. Do not wrap it in markdown code blocks (e.g. \`\`\`html).
+    2. Make the design modern, clean, and visually appealing ("vibe" coding).
+    3. Ensure the app is interactive and functional.
+    4. Handle errors gracefully.`;
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: prompt,
+        config: {
+            systemInstruction,
+            thinkingConfig: { thinkingBudget: 4096 },
+        },
     });
 };

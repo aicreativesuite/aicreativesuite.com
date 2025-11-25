@@ -28,7 +28,6 @@ import PodcastGenerator from './components/features/PodcastGenerator';
 import TrendForecaster from './components/features/TrendForecaster';
 import ProductionPlanner from './components/features/ProductionPlanner';
 import GlobalAvatarCreator from './components/features/GlobalAvatarCreator';
-import VibeCoding from './components/features/VibeCoding';
 import SmartQuizGenerator from './components/features/SmartQuizGenerator';
 import SlideDeckGenerator from './components/features/SlideDeckGenerator';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
@@ -223,7 +222,6 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
-            case 'vibe-coding': return VibeCoding;
             case 'slide-deck': return SlideDeckGenerator;
             case 'image-generator': return ImageGenerator;
             case 'image-editor': return ImageEditor;
@@ -260,7 +258,7 @@ const App: React.FC = () => {
     const activeFeatureDetails = FEATURES.find(f => f.id === activeFeature);
 
     const categorizedFeatures = useMemo(() => {
-        const categories: { [key: string]: (typeof FEATURES[0])[] } = {
+        const categories: { [key: string]: (typeof FEATURES[number])[] } = {
             'Create & Edit': [],
             'Assist & Analyze': [],
         };
