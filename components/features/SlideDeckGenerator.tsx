@@ -1,13 +1,36 @@
-
-import React, { useState } from 'react';
-import { generateSlideDeckStructure, generateReportContent, generateInfographicConcepts, generateFlashcards, generateImage } from '../../services/geminiService';
-import { SLIDE_DECK_THEMES, SLIDE_DECK_AUDIENCES, SLIDE_DECK_TONES, SLIDE_FORMATS, CONTENT_LENGTHS, REPORT_TYPES, INFOGRAPHIC_STYLES, SUPPORTED_LANGUAGES, ASPECT_RATIOS, DESIGN_STYLES, ARTISTIC_STYLES } from '../../constants';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+    generateSlideDeckStructure, 
+    generateReportContent, 
+    generateInfographicConcepts, 
+    generateFlashcards, 
+    generateImage,
+    generatePodcastScript,
+    generateMultiSpeakerSpeech,
+    generateVideoFromPrompt,
+    pollVideoOperation
+} from '../../services/geminiService';
+import { 
+    SLIDE_DECK_THEMES, 
+    SLIDE_DECK_AUDIENCES, 
+    SLIDE_DECK_TONES, 
+    SLIDE_FORMATS, 
+    CONTENT_LENGTHS, 
+    REPORT_TYPES, 
+    INFOGRAPHIC_STYLES, 
+    SUPPORTED_LANGUAGES, 
+    ASPECT_RATIOS, 
+    DESIGN_STYLES, 
+    ARTISTIC_STYLES,
+    VEO_LOADING_MESSAGES
+} from '../../constants';
 import Loader from '../common/Loader';
 import ImageUploader from '../common/ImageUploader';
-import { fileToBase64 } from '../../utils';
+import { fileToBase64, pcmToWav, decode } from '../../utils';
 import { Remarkable } from 'remarkable';
 import QRCode from 'qrcode';
 import { GroundingChunk } from '@google/genai';
+import ApiKeyDialog from '../common/ApiKeyDialog';
 
 const md = new Remarkable({ html: true });
 
@@ -32,11 +55,16 @@ interface Flashcard {
     isFlipped?: boolean;
 }
 
-interface SlideDeckGeneratorProps {
-    onShare: (options: { contentUrl?: string; contentText: string; contentType: 'text' | 'image' }) => void;
+interface ScriptLine {
+    speaker: string;
+    text: string;
 }
 
-type OutputType = 'slides' | 'report' | 'infographic' | 'quiz' | 'flashcards';
+interface SlideDeckGeneratorProps {
+    onShare: (options: { contentUrl?: string; contentText: string; contentType: 'text' | 'image' | 'audio' | 'video' }) => void;
+}
+
+type OutputType = 'slides' | 'report' | 'infographic' | 'quiz' | 'flashcards' | 'audio' | 'video';
 
 const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
     // General Inputs
@@ -70,10 +98,33 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
     const [infographicData, setInfographicData] = useState<Infographic | null>(null);
     const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
     
+    // Audio Overview State
+    const [audioScript, setAudioScript] = useState<ScriptLine[]>([]);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    
+    // Video Overview State
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [videoLoadingMessage, setVideoLoadingMessage] = useState('');
+    const pollIntervalRef = useRef<number | null>(null);
+    const messageIntervalRef = useRef<number | null>(null);
+    
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+    
+    // API Key for Video
+    const [apiKeyReady, setApiKeyReady] = useState(false);
+    const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+
+    useEffect(() => {
+        return () => {
+            if (audioUrl) URL.revokeObjectURL(audioUrl);
+            if (videoUrl) URL.revokeObjectURL(videoUrl);
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
+        };
+    }, [audioUrl, videoUrl]);
 
     // Helpers
     const addQrCodeToImage = (imageBase64: string): Promise<string> => {
@@ -138,6 +189,36 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
             console.error("Failed to generate infographic image", err);
         }
     };
+    
+    const handleSelectKey = async () => {
+        // @ts-ignore
+        if (window.aistudio) {
+            // @ts-ignore
+            await window.aistudio.openSelectKey();
+            setApiKeyReady(true);
+            setShowApiKeyDialog(false);
+        }
+    };
+
+    const startVideoLoadingMessages = () => {
+        let i = 0;
+        setVideoLoadingMessage(VEO_LOADING_MESSAGES[0]);
+        messageIntervalRef.current = window.setInterval(() => {
+            i = (i + 1) % VEO_LOADING_MESSAGES.length;
+            setVideoLoadingMessage(VEO_LOADING_MESSAGES[i]);
+        }, 3000);
+    };
+
+    const stopVideoLoading = () => {
+        if (messageIntervalRef.current) {
+            clearInterval(messageIntervalRef.current);
+            messageIntervalRef.current = null;
+        }
+        if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -145,6 +226,23 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
             setError('Please enter a topic or upload a file.');
             return;
         }
+        
+        // For Video, check key
+        if (activeTab === 'video') {
+             // @ts-ignore
+            if (!apiKeyReady && typeof window.aistudio !== 'undefined') {
+                // Check if key exists first
+                // @ts-ignore
+                const hasKey = await window.aistudio.hasSelectedApiKey();
+                if(!hasKey) {
+                    setShowApiKeyDialog(true);
+                    return;
+                } else {
+                    setApiKeyReady(true);
+                }
+            }
+        }
+
         setLoading(true);
         setError(null);
         
@@ -168,12 +266,71 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
             } else if (activeTab === 'flashcards' || activeTab === 'quiz') {
                 const response = await generateFlashcards(topic, 10, language);
                 setFlashcards(JSON.parse(response.text));
+            } else if (activeTab === 'audio') {
+                // Audio Overview Logic
+                const promptText = contextData ? `Topic: ${topic}\n\n(See attached image context)` : topic;
+                const scriptResponse = await generatePodcastScript(promptText);
+                const script: ScriptLine[] = JSON.parse(scriptResponse.text);
+                setAudioScript(script);
+                
+                // Generate Audio
+                const fullText = script.map(line => `${line.speaker}: ${line.text}`).join('\n');
+                const speakerConfig = [
+                    { speaker: "Alex", voiceName: "Fenrir" },
+                    { speaker: "Jamie", voiceName: "Puck" }
+                ];
+                const base64Audio = await generateMultiSpeakerSpeech(fullText, speakerConfig);
+                if (base64Audio) {
+                    const bytes = decode(base64Audio);
+                    const blob = pcmToWav(bytes, 24000, 1, 16);
+                    setAudioUrl(URL.createObjectURL(blob));
+                }
+            } else if (activeTab === 'video') {
+                // Video Overview Logic
+                setVideoUrl(null);
+                startVideoLoadingMessages();
+                const videoPrompt = `A professional cinematic video presentation about "${topic}". The video should visually summarize the key concepts suitable for an audience of ${audience}. Style: ${designStyle}.`;
+                
+                const operation = await generateVideoFromPrompt(videoPrompt, aspectRatio === '9:16' ? '9:16' : '16:9', false);
+                
+                let op = operation;
+                pollIntervalRef.current = window.setInterval(async () => {
+                    try {
+                        op = await pollVideoOperation(op);
+                        if (op.done) {
+                            stopVideoLoading();
+                            setLoading(false);
+                            const uri = op.response?.generatedVideos?.[0]?.video?.uri;
+                            if (uri) {
+                                const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
+                                const blob = await response.blob();
+                                setVideoUrl(URL.createObjectURL(blob));
+                            } else {
+                                setError('Video generation finished, but no video URL was returned.');
+                            }
+                        }
+                    } catch (err: any) {
+                        stopVideoLoading();
+                        setLoading(false);
+                        if(err.message?.includes("Requested entity was not found")) {
+                            setError("An API Key error occurred. Please select a valid key.");
+                            setApiKeyReady(false);
+                            setShowApiKeyDialog(true);
+                        } else {
+                            setError('An error occurred while checking video status.');
+                        }
+                    }
+                }, 10000);
+                // Return early to avoid setting loading to false immediately
+                return;
             }
 
         } catch (err: any) {
             setError(err.message || 'Generation failed. Please try again.');
         } finally {
-            setLoading(false);
+            if (activeTab !== 'video') {
+                setLoading(false);
+            }
         }
     };
 
@@ -188,17 +345,22 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
     };
 
     return (
+        <>
+        <ApiKeyDialog show={showApiKeyDialog} onSelectKey={handleSelectKey} />
         <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
             {/* Sidebar Controls */}
             <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
                 <div className="flex flex-wrap gap-2 mb-6">
-                    {['slides', 'report', 'infographic', 'flashcards', 'quiz'].map(tab => (
+                    {['slides', 'report', 'infographic', 'flashcards', 'quiz', 'audio', 'video'].map(tab => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab as OutputType)}
+                            onClick={() => {
+                                setActiveTab(tab as OutputType);
+                                setError(null);
+                            }}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === tab ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                         >
-                            {tab}
+                            {tab === 'audio' ? 'Audio Overview' : tab === 'video' ? 'Video Overview' : tab}
                         </button>
                     ))}
                 </div>
@@ -215,11 +377,13 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Context Upload (Optional)</label>
-                        <ImageUploader onImageUpload={setContextFile} onImageClear={() => setContextFile(null)} />
-                        <p className="text-[10px] text-slate-500 mt-1">Upload charts, images, or text screenshots for context.</p>
-                    </div>
+                    {activeTab !== 'video' && (
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Context Upload (Optional)</label>
+                            <ImageUploader onImageUpload={setContextFile} onImageClear={() => setContextFile(null)} />
+                            <p className="text-[10px] text-slate-500 mt-1">Upload charts, images, or text screenshots for context.</p>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -228,12 +392,14 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
                                 {SUPPORTED_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Length</label>
-                            <select value={length} onChange={(e) => setLength(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
-                                {CONTENT_LENGTHS.map(l => <option key={l} value={l}>{l}</option>)}
-                            </select>
-                        </div>
+                        {activeTab !== 'audio' && activeTab !== 'video' && (
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Length</label>
+                                <select value={length} onChange={(e) => setLength(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+                                    {CONTENT_LENGTHS.map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {activeTab === 'slides' && (
@@ -277,26 +443,28 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
                         </div>
                     )}
 
-                    <div className="pt-4 border-t border-slate-800">
-                        <h4 className="text-xs font-bold text-cyan-500 uppercase mb-3">Visual Settings</h4>
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                            <select value={designStyle} onChange={(e) => setDesignStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
-                                {DESIGN_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                            <select value={artisticStyle} onChange={(e) => setArtisticStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
-                                {ARTISTIC_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                    {(activeTab === 'slides' || activeTab === 'infographic' || activeTab === 'video') && (
+                        <div className="pt-4 border-t border-slate-800">
+                            <h4 className="text-xs font-bold text-cyan-500 uppercase mb-3">Visual Settings</h4>
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                                <select value={designStyle} onChange={(e) => setDesignStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+                                    {DESIGN_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                <select value={artisticStyle} onChange={(e) => setArtisticStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+                                    {ARTISTIC_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+                                    {ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
+                                </select>
+                                <input type="text" placeholder="Background (e.g., office)" value={background} onChange={(e) => setBackground(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white" />
+                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
-                                {ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                            <input type="text" placeholder="Background (e.g., office)" value={background} onChange={(e) => setBackground(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white" />
-                        </div>
-                    </div>
+                    )}
 
                     <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg transition shadow-lg disabled:opacity-50 flex justify-center items-center">
-                        {loading ? <Loader /> : `Generate ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
+                        {loading ? <Loader /> : `Generate ${activeTab === 'audio' ? 'Podcast' : activeTab === 'video' ? 'Video' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
                     </button>
                     {error && <p className="text-red-400 text-xs text-center">{error}</p>}
                 </form>
@@ -308,23 +476,28 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
                 <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
                     <h3 className="font-bold text-white">{topic || 'Untitled Project'}</h3>
                     <div className="flex gap-2">
-                        <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded hover:bg-slate-800 ${isEditing ? 'text-cyan-400' : 'text-slate-400'}`} title="Edit">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
-                        </button>
+                        {activeTab === 'slides' && (
+                            <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded hover:bg-slate-800 ${isEditing ? 'text-cyan-400' : 'text-slate-400'}`} title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
+                            </button>
+                        )}
                         <button onClick={() => {
                             let content = '';
                             if(activeTab === 'slides') content = JSON.stringify(slides, null, 2);
                             else if(activeTab === 'report') content = reportContent;
                             else if(activeTab === 'infographic') content = JSON.stringify(infographicData, null, 2);
+                            else if(activeTab === 'audio') content = JSON.stringify(audioScript, null, 2);
+                            else if(activeTab === 'video') return; // Video download is separate
                             else content = JSON.stringify(flashcards, null, 2);
                             handleDownload(activeTab === 'report' ? 'md' : 'json', content);
                         }} className="p-2 rounded hover:bg-slate-800 text-slate-400" title="Download">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                         </button>
-                        <button onClick={() => window.location.href = `mailto:?subject=${encodeURIComponent(topic)}&body=Check out this content.`} className="p-2 rounded hover:bg-slate-800 text-slate-400" title="Email">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>
-                        </button>
-                        <button onClick={() => onShare({ contentText: activeTab === 'report' ? reportContent : JSON.stringify({ slides, infographicData, flashcards }), contentType: 'text' })} className="p-2 rounded hover:bg-slate-800 text-purple-400" title="Share">
+                        <button onClick={() => onShare({ 
+                            contentText: activeTab === 'report' ? reportContent : JSON.stringify({ slides, infographicData, flashcards, audioScript }), 
+                            contentUrl: activeTab === 'audio' ? (audioUrl || undefined) : activeTab === 'video' ? (videoUrl || undefined) : undefined,
+                            contentType: activeTab === 'video' ? 'video' : activeTab === 'audio' ? 'audio' : 'text' 
+                        })} className="p-2 rounded hover:bg-slate-800 text-purple-400" title="Share">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
                         </button>
                     </div>
@@ -332,7 +505,7 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
 
                 {/* Content View */}
                 <div className="flex-grow overflow-y-auto p-8 bg-slate-950/50">
-                    {loading && <div className="h-full flex items-center justify-center"><Loader message="Generating creative content..." /></div>}
+                    {loading && <div className="h-full flex flex-col items-center justify-center"><Loader message={activeTab === 'video' ? videoLoadingMessage : "Generating creative content..."} /></div>}
                     
                     {!loading && activeTab === 'slides' && slides.length > 0 && (
                         <div className="flex flex-col items-center space-y-6">
@@ -450,7 +623,50 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
                         </div>
                     )}
 
-                    {!loading && !slides.length && !reportContent && !infographicData && !flashcards.length && (
+                    {!loading && activeTab === 'audio' && (audioScript.length > 0 || audioUrl) && (
+                        <div className="flex flex-col items-center justify-center h-full space-y-6">
+                            {audioUrl && (
+                                <div className="w-full max-w-md p-6 bg-slate-800 rounded-2xl border border-slate-700 shadow-xl">
+                                    <div className="flex items-center space-x-4 mb-4">
+                                        <div className="p-3 bg-cyan-900 rounded-full text-cyan-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3V4a1 1 0 00-1-1z" /></svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-white">Audio Overview</h3>
+                                            <p className="text-xs text-slate-400">Deep Dive Podcast</p>
+                                        </div>
+                                    </div>
+                                    <audio controls src={audioUrl} className="w-full" />
+                                </div>
+                            )}
+                            {audioScript.length > 0 && (
+                                <div className="w-full max-w-2xl bg-slate-900 rounded-xl border border-slate-700 p-6">
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase mb-4">Generated Script</h4>
+                                    <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                                        {audioScript.map((line, i) => (
+                                            <div key={i} className="flex gap-3 text-sm">
+                                                <span className={`font-bold flex-shrink-0 ${line.speaker === 'Alex' ? 'text-cyan-400' : 'text-purple-400'}`}>{line.speaker}:</span>
+                                                <span className="text-slate-300">{line.text}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {!loading && activeTab === 'video' && videoUrl && (
+                        <div className="flex flex-col items-center justify-center h-full">
+                            <div className="w-full max-w-4xl relative aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-slate-700">
+                                <video src={videoUrl} controls className="w-full h-full" />
+                            </div>
+                            <div className="mt-6 flex gap-4">
+                                <a href={videoUrl} download="video_overview.mp4" className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-2 rounded-lg font-bold transition">Download MP4</a>
+                            </div>
+                        </div>
+                    )}
+
+                    {!loading && !slides.length && !reportContent && !infographicData && !flashcards.length && !audioUrl && !videoUrl && (
                         <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                             <p className="text-lg">Select a format and generate content.</p>
@@ -459,6 +675,7 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
                 </div>
             </div>
         </div>
+        </>
     );
 };
 

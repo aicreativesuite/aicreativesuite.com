@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { generatePodcastScript, generateMultiSpeakerSpeech } from '../../services/geminiService';
 import Loader from '../common/Loader';
@@ -105,8 +107,8 @@ const PodcastGenerator: React.FC<PodcastGeneratorProps> = ({ onShare }) => {
         <div className="flex flex-col lg:flex-row gap-8">
             <div className="w-full lg:w-1/3 space-y-6">
                 <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 className="text-xl font-bold text-white">Create Podcast</h3>
-                    <p className="text-sm text-slate-400">Enter a topic or paste text, and we'll turn it into an engaging audio show.</p>
+                    <h3 className="text-xl font-bold text-white">Audio Overview</h3>
+                    <p className="text-sm text-slate-400">Generate a deep-dive audio conversation between two AI hosts about any topic.</p>
                     
                     <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">Source Material</label>
@@ -134,7 +136,7 @@ const PodcastGenerator: React.FC<PodcastGeneratorProps> = ({ onShare }) => {
                 {/* Script Editor / View */}
                 {script.length > 0 && (
                     <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6 space-y-4 max-h-[500px] overflow-y-auto">
-                        <h3 className="font-bold text-lg text-white mb-2">Podcast Script</h3>
+                        <h3 className="font-bold text-lg text-white mb-2">Conversation Script</h3>
                         <div className="space-y-4">
                             {script.map((line, idx) => (
                                 <div key={idx} className="flex gap-4">
@@ -166,11 +168,11 @@ const PodcastGenerator: React.FC<PodcastGeneratorProps> = ({ onShare }) => {
                                 <div className="flex justify-center gap-4">
                                     <button onClick={handleGenerateAudio} className="text-sm text-slate-400 hover:text-white underline">Regenerate Audio</button>
                                     <button 
-                                        onClick={() => onShare({ contentUrl: audioUrl, contentText: `Podcast on: ${sourceText}`, contentType: 'audio' })}
+                                        onClick={() => onShare({ contentUrl: audioUrl, contentText: `Audio Overview: ${sourceText}`, contentType: 'audio' })}
                                         className="flex items-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition"
                                     >
                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
-                                         <span>Share Podcast</span>
+                                         <span>Share Overview</span>
                                     </button>
                                 </div>
                             </div>
@@ -180,7 +182,7 @@ const PodcastGenerator: React.FC<PodcastGeneratorProps> = ({ onShare }) => {
                                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition shadow-lg flex items-center space-x-2"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                <span>Generate Audio</span>
+                                <span>Generate Audio Overview</span>
                             </button>
                         )}
                     </div>

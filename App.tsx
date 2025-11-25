@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { FEATURES, FeatureId, CATEGORY_DETAILS, PricingIcon, AccountIcon } from './constants';
 import ImageGenerator from './components/features/ImageGenerator';
@@ -225,12 +223,12 @@ const App: React.FC = () => {
         if (!activeFeature) return null;
         switch (activeFeature) {
             case 'dev-studio': return DevStudio;
+            case 'audio-overview': return PodcastGenerator;
             case 'slide-deck': return SlideDeckGenerator;
             case 'image-generator': return ImageGenerator;
             case 'image-editor': return ImageEditor;
             case 'video-generator': return VideoGenerator;
             case 'global-avatar': return GlobalAvatarCreator;
-            case 'podcast-generator': return PodcastGenerator;
             case 'movie-generator': return MovieGenerator;
             case 'smart-quiz': return SmartQuizGenerator;
             case 'voice-chat': return VoiceChat;

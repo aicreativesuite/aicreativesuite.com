@@ -153,6 +153,19 @@ export const analyzeVideoFrame = async (prompt: string, imageBase64: string, mim
     });
 };
 
+export const analyzeVideo = async (prompt: string, videoBase64: string, mimeType: string): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    return ai.models.generateContent({
+        model: 'gemini-2.5-flash', // Multimodal model capable of video understanding
+        contents: {
+            parts: [
+                { text: prompt },
+                { inlineData: { data: videoBase64, mimeType } },
+            ],
+        },
+    });
+};
+
 export const transcribeAudio = async (audioBase64: string, mimeType: string, prompt: string = "Transcribe the following audio recording."): Promise<GenerateContentResponse> => {
     const ai = getGeminiAI();
     return ai.models.generateContent({
