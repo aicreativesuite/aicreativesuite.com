@@ -1,377 +1,565 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { generateImage, generateDialogueSnippet, generateCharacterSituations, generateSpeech, generateStoryOutline, generateMusicCues } from '../../services/geminiService';
-import { MOVIE_GENRES, VISUAL_STYLES, DIRECTOR_STYLES_DESCRIPTIVE } from '../../constants';
+import { 
+    generateMovieConcept, 
+    generateDetailedStory, 
+    generateDetailedCharacters,
+    generateScreenplayScene,
+    generateVisualPrompts,
+    generateImage,
+    generateVideoFromPrompt,
+    pollVideoOperation,
+    generateSpeech,
+    generateProductionPlan,
+    generateMarketingAssets,
+    generateText,
+    generateCharacterSheet,
+    generateWorldDetails,
+    analyzeStoryStructure,
+    generateSceneBreakdown
+} from '../../services/geminiService';
+import { 
+    MOVIE_GENRES, 
+    VISUAL_STYLES, 
+    DIRECTOR_STYLES_DESCRIPTIVE, 
+    TTS_VOICES,
+    BACKGROUND_OPTIONS,
+    ASPECT_RATIOS
+} from '../../constants';
 import Loader from '../common/Loader';
+import { Remarkable } from 'remarkable';
+import ApiKeyDialog from '../common/ApiKeyDialog';
 import { pcmToWav, decode } from '../../utils';
-import QRCode from 'qrcode';
+
+const md = new Remarkable({ html: true });
 
 // --- Types ---
-type Scene = { id: number; title: string; description: string; backgroundImage?: string; };
-type Music = { id: number; title: string; description: string; };
-type ScriptPart = { id: number; character: string; action: string; dialogue: string; audioUrl?: string; audioType?: 'ai' | 'user'; };
-type StoryPoint = { id: number; title: string; description: string; };
-type CharacterSituation = { id: number; characterName: string; description: string; };
-type Tab = 'concept' | 'story' | 'script' | 'visuals' | 'sound';
+type Phase = 'concept' | 'story' | 'screenplay' | 'characters' | 'visuals' | 'animation' | 'audio' | 'production' | 'post' | 'branding';
+
+interface CharacterData {
+    name: string;
+    role: string;
+    bio: string;
+    visual: string;
+    sheet?: any;
+    image?: string;
+}
+
+interface MovieState {
+    title: string;
+    logline: string;
+    genre: string;
+    tone: string;
+    duration: string;
+    worldSetting: string;
+    storyStructure: any;
+    characters: CharacterData[];
+    screenplayScenes: {id: string, title: string, content: string}[];
+    visualPrompts: {sceneId: string, prompt: string, image?: string}[];
+    animationClips: {prompt: string, videoUrl?: string}[];
+    audioTracks: {type: 'dialogue'|'music'|'sfx', prompt: string, audioUrl?: string}[];
+    productionDocs: string;
+    marketingCopy: string;
+    worldDetails?: any;
+    storyAnalysis?: any;
+    sceneBreakdowns: Record<string, any>;
+}
 
 interface MovieGeneratorProps { onShare: (options: any) => void; }
 
-// Add helper
-const addQrCodeToImage = (imageBase64: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-        const verificationUrl = `https://aicreativesuite.dev/verify?id=${uniqueId}`;
-        const baseImage = new Image();
-        baseImage.crossOrigin = 'anonymous';
-        baseImage.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = baseImage.width;
-            canvas.height = baseImage.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return reject('Could not get canvas context');
-            ctx.drawImage(baseImage, 0, 0);
-            QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: 'H', margin: 1, width: 128 }, (err, qrUrl) => {
-                if (err) return reject(err);
-                const qrImage = new Image();
-                qrImage.crossOrigin = 'anonymous';
-                qrImage.onload = () => {
-                    const qrSize = Math.max(64, Math.floor(baseImage.width * 0.1));
-                    const padding = qrSize * 0.1;
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                    ctx.fillRect(canvas.width - qrSize - padding - (padding/2), canvas.height - qrSize - padding - (padding/2), qrSize + padding, qrSize + padding);
-                    ctx.drawImage(qrImage, canvas.width - qrSize - padding, canvas.height - qrSize - padding, qrSize, qrSize);
-                    resolve(canvas.toDataURL('image/jpeg'));
-                };
-                qrImage.onerror = reject;
-                qrImage.src = qrUrl;
-            });
-        };
-        baseImage.onerror = reject;
-        baseImage.src = `data:image/jpeg;base64,${imageBase64}`;
-    });
-};
-
-// --- Generic Modal ---
-interface FieldDef { name: string; label?: string; type?: 'text' | 'textarea'; placeholder?: string; list?: string; }
-interface GenericEditorModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (data: any) => void;
-    initialData: any;
-    title: string;
-    fields: FieldDef[];
-    datalists?: Record<string, string[]>;
-}
-
-const GenericEditorModal: React.FC<GenericEditorModalProps> = ({ isOpen, onClose, onSave, initialData, title, fields, datalists }) => {
-    const [formData, setFormData] = useState<any>({});
-
-    useEffect(() => {
-        if (isOpen) {
-            setFormData(initialData || fields.reduce((acc, f) => ({ ...acc, [f.name]: '' }), {}));
-        }
-    }, [initialData, isOpen, fields]);
-
-    if (!isOpen) return null;
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSave = () => {
-        onSave({ ...(initialData || {}), id: initialData?.id || Date.now(), ...formData });
-        onClose();
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-            <div className="bg-slate-800 rounded-lg p-8 max-w-lg w-full mx-4 border border-slate-700 shadow-2xl">
-                <h2 className="text-2xl font-bold text-white mb-4">{title}</h2>
-                <div className="space-y-4">
-                    {fields.map((field) => (
-                        <div key={field.name}>
-                            {field.type === 'textarea' ? (
-                                <textarea
-                                    name={field.name}
-                                    rows={5}
-                                    value={formData[field.name] || ''}
-                                    onChange={handleChange}
-                                    placeholder={field.placeholder}
-                                    className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white"
-                                />
-                            ) : (
-                                <>
-                                    <input
-                                        type="text"
-                                        name={field.name}
-                                        value={formData[field.name] || ''}
-                                        onChange={handleChange}
-                                        placeholder={field.placeholder}
-                                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white"
-                                        list={field.list}
-                                    />
-                                    {field.list && datalists?.[field.list] && (
-                                        <datalist id={field.list}>
-                                            {datalists[field.list].map(opt => <option key={opt} value={opt} />)}
-                                        </datalist>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    ))}
-                </div>
-                <div className="flex justify-end space-x-4 mt-6">
-                    <button onClick={onClose} className="py-2 px-4 rounded-lg text-slate-300 hover:bg-slate-700 transition">Cancel</button>
-                    <button onClick={handleSave} className="py-2 px-4 rounded-lg bg-cyan-500 text-white font-bold hover:bg-cyan-600 transition">Save</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const TabButton: React.FC<{ isActive: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean; }> = ({ isActive, onClick, children, disabled }) => (
-    <button onClick={onClick} disabled={disabled} className={`flex items-center justify-center flex-1 p-3 text-sm font-semibold transition-colors duration-200 border-b-2 ${isActive ? 'text-cyan-400 border-cyan-400' : 'text-slate-400 border-transparent hover:text-white hover:border-slate-500'} disabled:text-slate-600 disabled:border-transparent disabled:cursor-not-allowed`}>
-        {children}
-    </button>
-);
-
 const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
-    // State
-    const [title, setTitle] = useState('');
-    const [logline, setLogline] = useState('');
-    const [genre, setGenre] = useState(MOVIE_GENRES[0]);
-    const [visualStyle, setVisualStyle] = useState('');
-    const [directorStyle, setDirectorStyle] = useState('');
-    const [aspectRatio, setAspectRatio] = useState('3:4');
-    const [addQr, setAddQr] = useState(true);
-    const [poster, setPoster] = useState<string | null>(null);
+    const [activePhase, setActivePhase] = useState<Phase>('concept');
+    const [movie, setMovie] = useState<MovieState>({
+        title: '', logline: '', genre: MOVIE_GENRES[0], tone: 'Dramatic', duration: '120 min',
+        worldSetting: '', storyStructure: null, characters: [],
+        screenplayScenes: [], visualPrompts: [], animationClips: [], audioTracks: [],
+        productionDocs: '', marketingCopy: '', sceneBreakdowns: {}
+    });
+
+    // UI State
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [projectSaveStatus, setProjectSaveStatus] = useState('');
-    const [activeTab, setActiveTab] = useState<Tab>('concept');
-
-    const [scenes, setScenes] = useState<Scene[]>([]);
-    const [musicTracks, setMusicTracks] = useState<Music[]>([]);
-    const [scriptParts, setScriptParts] = useState<ScriptPart[]>([]);
-    const [storyPoints, setStoryPoints] = useState<StoryPoint[]>([]);
-    const [characterSituations, setCharacterSituations] = useState<CharacterSituation[]>([]);
-
-    // Modal States
-    const [activeModal, setActiveModal] = useState<'scene'|'music'|'script'|'story'|'char'|null>(null);
-    const [editingItem, setEditingItem] = useState<any>(null);
-
-    const [generatingBackgroundForSceneId, setGeneratingBackgroundForSceneId] = useState<number | null>(null);
-    const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
-    const [isGeneratingSnippet, setIsGeneratingSnippet] = useState(false);
-    const [isGeneratingStory, setIsGeneratingStory] = useState(false);
-    const [isGeneratingCharacters, setIsGeneratingCharacters] = useState(false);
+    const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+    const [apiKeyReady, setApiKeyReady] = useState(false);
     
-    // Voice Dubbing
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordingForPartId, setRecordingForPartId] = useState<number | null>(null);
-    const [generatingVoiceForPartId, setGeneratingVoiceForPartId] = useState<number | null>(null);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
+    // Refs
+    const pollIntervalRef = useRef<number | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!title || !logline) return setError('Please enter a title and logline.');
+    // Inputs for current operations
+    const [currentInput, setCurrentInput] = useState(''); 
+    const [selectedOption, setSelectedOption] = useState('');
+    const [selectedSubTab, setSelectedSubTab] = useState<string>(''); // Generic sub-tab state
+
+    useEffect(() => {
+        return () => {
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            movie.animationClips.forEach(c => c.videoUrl && URL.revokeObjectURL(c.videoUrl));
+            movie.audioTracks.forEach(t => t.audioUrl && URL.revokeObjectURL(t.audioUrl));
+        };
+    }, []);
+
+    const updateMovie = (updates: Partial<MovieState>) => setMovie(prev => ({ ...prev, ...updates }));
+
+    // --- Phase 1: Concept & World ---
+    const handleGenerateConcept = async () => {
+        if (!movie.genre || !currentInput) return setError("Please enter a topic/premise.");
         setLoading(true);
-        setError(null);
         try {
-            const posterPrompt = `Cinematic movie poster for ${genre} film "${title}". Logline: "${logline}". Style: ${visualStyle || 'photorealistic'}. ${directorStyle ? `Director: ${directorStyle}.` : ''} Epic visual.`;
-            const imageBytes = await generateImage(posterPrompt, aspectRatio);
-            setPoster(addQr ? await addQrCodeToImage(imageBytes) : `data:image/jpeg;base64,${imageBytes}`);
-        } catch (err) { setError('Failed to generate concept.'); console.error(err); } finally { setLoading(false); }
+            const res = await generateMovieConcept(movie.genre, movie.tone, currentInput);
+            const data = JSON.parse(res.text);
+            updateMovie({ 
+                title: data.title, 
+                logline: data.logline, 
+                worldSetting: data.worldDescription 
+            });
+            // Auto-generate world details if successful
+            const worldRes = await generateWorldDetails(data.worldDescription);
+            updateMovie({ worldDetails: JSON.parse(worldRes.text) });
+            setActivePhase('story');
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
     };
 
-    const resetAll = () => {
-        setTitle(''); setLogline(''); setGenre(MOVIE_GENRES[0]); setVisualStyle(''); setDirectorStyle(''); setAspectRatio('3:4');
-        setPoster(null); setLoading(false); setError(null); setScenes([]); setMusicTracks([]); setScriptParts([]);
-        setStoryPoints([]); setCharacterSituations([]); setProjectSaveStatus(''); setActiveTab('concept');
+    // --- Phase 2: Story ---
+    const handleGenerateStory = async () => {
+        setLoading(true);
+        try {
+            const structRes = await generateDetailedStory(movie.title, movie.logline, movie.genre);
+            const structure = JSON.parse(structRes.text);
+            updateMovie({ storyStructure: structure });
+            
+            // Analyze story immediately
+            const analysisRes = await analyzeStoryStructure(JSON.stringify(structure));
+            updateMovie({ storyAnalysis: JSON.parse(analysisRes.text) });
+            
+            setActivePhase('characters');
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
     };
 
-    const handleSaveProject = () => {
-        const fullConcept = { details: { title, logline, genre, visualStyle, directorStyle, aspectRatio }, poster, story: storyPoints, characters: characterSituations, script: scriptParts.map(({ audioUrl, ...rest }) => rest), scenes, music: musicTracks };
-        const blob = new Blob([JSON.stringify(fullConcept, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'movie'}.json`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-        setProjectSaveStatus('Saved!'); setTimeout(() => setProjectSaveStatus(''), 3000);
+    // --- Phase 3: Characters ---
+    const handleGenerateCast = async () => {
+        setLoading(true);
+        try {
+            const charRes = await generateDetailedCharacters(movie.title, movie.logline);
+            const charsRaw = JSON.parse(charRes.text);
+            const characters = charsRaw.map((c: any) => ({ name: c.name, role: c.role, bio: c.backstory, visual: c.visualDescription }));
+            updateMovie({ characters });
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
     };
 
-    // Generic Handlers
-    const handleSaveItem = (setter: React.Dispatch<React.SetStateAction<any[]>>, item: any) => {
-        setter(prev => prev.some(i => i.id === item.id) ? prev.map(i => i.id === item.id ? item : i) : [...prev, item]);
-    };
-    const handleDeleteItem = (setter: React.Dispatch<React.SetStateAction<any[]>>, id: number) => setter(prev => prev.filter(i => i.id !== id));
+    const handleCharacterDeepDive = async (char: CharacterData, index: number) => {
+        setLoading(true);
+        try {
+            const sheetRes = await generateCharacterSheet(char.name, char.bio);
+            const sheet = JSON.parse(sheetRes.text);
+            
+            // Generate Visual
+            const imgBytes = await generateImage(`Character portrait of ${char.name}, ${char.role}. ${char.visual}. ${sheet.costumeDetails}. High quality, cinematic lighting.`, "9:16");
+            const imageUrl = `data:image/jpeg;base64,${imgBytes}`;
 
-    const handleGenerateList = async (type: 'story' | 'char' | 'script' | 'music') => {
-        if (!title || (!logline && type !== 'music') || (!genre && type === 'music')) return setError("Please provide project details first.");
-        
-        const setFlag = (v: boolean) => {
-            if(type==='story') setIsGeneratingStory(v);
-            else if(type==='char') setIsGeneratingCharacters(v);
-            else if(type==='script') setIsGeneratingSnippet(v);
-            else setIsGeneratingMusic(v);
+            const newChars = [...movie.characters];
+            newChars[index] = { ...char, sheet, image: imageUrl };
+            updateMovie({ characters: newChars });
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
+    };
+
+    // --- Phase 4: Screenplay ---
+    const handleGenerateScreenplay = async () => {
+        if (!selectedOption) return setError("Select a scene/beat to write.");
+        setLoading(true);
+        try {
+            const res = await generateScreenplayScene(movie.title, selectedOption, currentInput || 'Standard'); 
+            updateMovie({ 
+                screenplayScenes: [...movie.screenplayScenes, { 
+                    id: Date.now().toString(), 
+                    title: selectedOption.substring(0, 30) + '...', 
+                    content: res.text 
+                }] 
+            });
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
+    };
+
+    // --- Phase 5: Visuals ---
+    const handleGenerateVisuals = async () => {
+        if (!selectedOption) return setError("Select a visual style.");
+        setLoading(true);
+        try {
+            const scenes = movie.screenplayScenes.map(s => s.title).slice(0, 3);
+            const res = await generateVisualPrompts(movie.title, selectedOption, scenes.length ? scenes : [movie.logline]);
+            const prompts: any[] = JSON.parse(res.text);
+            
+            if (prompts.length > 0) {
+                const imgBytes = await generateImage(prompts[0].prompt, '16:9');
+                const imageUrl = `data:image/jpeg;base64,${imgBytes}`;
+                prompts[0].image = imageUrl;
+            }
+            
+            updateMovie({ visualPrompts: [...movie.visualPrompts, ...prompts] });
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
+    };
+
+    // --- Phase 6: Animation ---
+    const handleGenerateAnimation = async (type: 'standard' | 'action' | 'lipsync') => {
+        // @ts-ignore
+        if (!apiKeyReady && typeof window.aistudio !== 'undefined') {
+             // @ts-ignore
+             const hasKey = await window.aistudio.hasSelectedApiKey();
+             if(!hasKey) { setShowApiKeyDialog(true); return; }
+             else setApiKeyReady(true);
         }
-        setFlag(true); setError(null);
 
+        if (!currentInput) return setError("Describe the action.");
+        setLoading(true);
+        
         try {
-            let response;
-            if(type === 'story') response = await generateStoryOutline(title, logline, genre);
-            else if(type === 'char') response = await generateCharacterSituations(title, logline, genre);
-            else if(type === 'script') response = await generateDialogueSnippet(title, logline, genre);
-            else response = await generateMusicCues(title, genre, scenes.map(({title, description}) => ({title, description})));
+            let fullPrompt = currentInput;
+            if (type === 'action') fullPrompt += " Dynamic camera movement, high intensity action, stunt simulation.";
+            if (type === 'lipsync') fullPrompt += " Close up, precise lip synchronization, talking head.";
 
-            const newItems = JSON.parse(response.text);
-            if (Array.isArray(newItems)) {
-                const mapFn = (item: any) => ({ id: Date.now() + Math.random(), ...item });
-                const mapped = newItems.map(mapFn);
-                if(type==='story') setStoryPoints(p => [...p, ...mapped]);
-                else if(type==='char') setCharacterSituations(p => [...p, ...mapped]);
-                else if(type==='script') setScriptParts(p => [...p, ...mapped]);
-                else setMusicTracks(p => [...p, ...mapped]);
+            const op = await generateVideoFromPrompt(fullPrompt, '16:9', false);
+            const newClip = { prompt: currentInput, videoUrl: undefined };
+            const clipIndex = movie.animationClips.length;
+            updateMovie({ animationClips: [...movie.animationClips, newClip] });
+
+            let operation = op;
+            pollIntervalRef.current = window.setInterval(async () => {
+                try {
+                    operation = await pollVideoOperation(operation);
+                    if (operation.done) {
+                        clearInterval(pollIntervalRef.current!);
+                        setLoading(false);
+                        const uri = operation.response?.generatedVideos?.[0]?.video?.uri;
+                        if(uri) {
+                            const res = await fetch(`${uri}&key=${process.env.API_KEY}`);
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            setMovie(prev => {
+                                const clips = [...prev.animationClips];
+                                clips[clipIndex] = { ...clips[clipIndex], videoUrl: url };
+                                return { ...prev, animationClips: clips };
+                            });
+                        }
+                    }
+                } catch(e) { clearInterval(pollIntervalRef.current!); setLoading(false); }
+            }, 5000);
+        } catch(e:any) { setLoading(false); setError(e.message); }
+    };
+
+    // --- Phase 7: Audio ---
+    const handleGenerateAudio = async (type: 'dialogue' | 'music' | 'sfx') => {
+        if (!currentInput) return setError("Enter dialogue or description.");
+        setLoading(true);
+        try {
+            let audioUrl: string | undefined;
+            if (type === 'dialogue') {
+                const voice = TTS_VOICES[Math.floor(Math.random() * TTS_VOICES.length)]; 
+                const base64 = await generateSpeech(currentInput, voice);
+                if (base64) audioUrl = URL.createObjectURL(pcmToWav(decode(base64), 24000, 1, 16));
+            } else {
+                // Generate a text plan for now as specialized music generation isn't directly in this gemini subset
+                // But we can simulate the "Plan" generation
+                const res = await generateText(`Compose a detailed description for ${type} track: "${currentInput}". Include instruments, tempo, key, and mood changes.`, 'gemini-2.5-flash');
+                // In a real app with Music Gen, we'd call that here. For now, we store the plan.
             }
-        } catch (err) { console.error(err); setError(`Failed to generate ${type}.`); } finally { setFlag(false); }
+            updateMovie({ audioTracks: [...movie.audioTracks, { type, prompt: currentInput, audioUrl }] });
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
     };
 
-    const handleGenerateBackground = async (sceneId: number) => {
-        const scene = scenes.find(s => s.id === sceneId);
-        if (!scene) return;
-        setGeneratingBackgroundForSceneId(sceneId);
+    // --- Phase 8: Production ---
+    const handleSceneBreakdown = async () => {
+        if (!currentInput) return;
+        setLoading(true);
         try {
-            const prompt = `Cinematic background shot for "${scene.title}": "${scene.description}". Wide shot, no characters. Style: ${visualStyle}.`;
-            const imageBytes = await generateImage(prompt, '16:9');
-            setScenes(s => s.map(sc => sc.id === sceneId ? { ...sc, backgroundImage: `data:image/jpeg;base64,${imageBytes}` } : sc));
-        } catch (err) { console.error(err); } finally { setGeneratingBackgroundForSceneId(null); }
+            const res = await generateSceneBreakdown(currentInput);
+            const breakdown = JSON.parse(res.text);
+            updateMovie({ sceneBreakdowns: { ...movie.sceneBreakdowns, [currentInput.substring(0, 20)]: breakdown } });
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
     };
 
-    const handleGenerateVoice = async (partId: number) => {
-        const part = scriptParts.find(p => p.id === partId);
-        if (!part?.dialogue) return;
-        setGeneratingVoiceForPartId(partId);
+    // --- Phase 10: Marketing ---
+    const handleGenerateMarketing = async () => {
+        setLoading(true);
         try {
-            const base64Audio = await generateSpeech(part.dialogue);
-            if (base64Audio) {
-                if (part.audioUrl) URL.revokeObjectURL(part.audioUrl);
-                setScriptParts(prev => prev.map(p => p.id === partId ? { ...p, audioUrl: URL.createObjectURL(pcmToWav(decode(base64Audio), 24000, 1, 16)), audioType: 'ai' } : p));
-            }
-        } catch (err) { console.error(err); } finally { setGeneratingVoiceForPartId(null); }
+            const res = await generateMarketingAssets(movie.title, movie.logline, selectedOption || 'Poster Concept');
+            updateMovie({ marketingCopy: res.text });
+        } catch(e:any) { setError(e.message); } finally { setLoading(false); }
     };
 
-    const handleStartRecording = async (partId: number) => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorderRef.current = new MediaRecorder(stream);
-            audioChunksRef.current = [];
-            mediaRecorderRef.current.ondataavailable = e => audioChunksRef.current.push(e.data);
-            mediaRecorderRef.current.onstop = () => {
-                const part = scriptParts.find(p => p.id === recordingForPartId);
-                if(part?.audioUrl) URL.revokeObjectURL(part.audioUrl);
-                setScriptParts(prev => prev.map(p => p.id === recordingForPartId ? { ...p, audioUrl: URL.createObjectURL(new Blob(audioChunksRef.current, { type: 'audio/webm' })), audioType: 'user' } : p));
-                stream.getTracks().forEach(t => t.stop());
-            };
-            mediaRecorderRef.current.start();
-            setIsRecording(true);
-            setRecordingForPartId(partId);
-        } catch (err) { setError("Mic access denied."); }
-    };
+    // --- Components ---
+    const SidebarItem = ({ id, icon, label }: { id: Phase, icon: string, label: string }) => (
+        <button 
+            onClick={() => { setActivePhase(id); setError(null); setCurrentInput(''); setSelectedOption(''); setSelectedSubTab(''); }}
+            className={`w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 transition ${activePhase === id ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+        >
+            <span className="text-lg">{icon}</span>
+            <span className="text-sm font-medium">{label}</span>
+        </button>
+    );
 
-    const handleStopRecording = () => { if (mediaRecorderRef.current) { mediaRecorderRef.current.stop(); setIsRecording(false); setRecordingForPartId(null); } };
-
-    const renderTabContent = () => {
-        switch(activeTab) {
-            case 'concept': return (
-                <form onSubmit={handleSubmit} className="space-y-4 bg-slate-900/50 p-4 rounded-lg">
-                    <fieldset disabled={loading} className="space-y-4">
-                        <input value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-700 rounded p-3 text-white border border-slate-600" placeholder="Movie Title" />
-                        <textarea value={logline} onChange={e => setLogline(e.target.value)} className="w-full bg-slate-700 rounded p-3 text-white border border-slate-600" placeholder="Logline" rows={4} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <select value={genre} onChange={e => setGenre(e.target.value)} className="bg-slate-700 rounded p-3 text-white border border-slate-600">{MOVIE_GENRES.map(g => <option key={g} value={g}>{g}</option>)}</select>
-                            <select value={aspectRatio} onChange={e => setAspectRatio(e.target.value)} className="bg-slate-700 rounded p-3 text-white border border-slate-600"><option value="2:3">2:3</option><option value="3:4">3:4</option></select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <select value={visualStyle} onChange={e => setVisualStyle(e.target.value)} className="bg-slate-700 rounded p-3 text-white border border-slate-600"><option value="">Visual Style</option>{VISUAL_STYLES.map(s => <option key={s} value={s}>{s}</option>)}</select>
-                            <select value={directorStyle} onChange={e => setDirectorStyle(e.target.value)} className="bg-slate-700 rounded p-3 text-white border border-slate-600"><option value="">Director Style</option>{DIRECTOR_STYLES_DESCRIPTIVE.map(d => <option key={d.name} value={d.value}>{d.name}</option>)}</select>
-                        </div>
-                        <label className="flex items-center text-sm text-slate-300"><input type="checkbox" checked={addQr} onChange={e => setAddQr(e.target.checked)} className="mr-2" />Add verification QR code</label>
-                        <button type="submit" className="w-full bg-cyan-500 text-white font-bold py-3 rounded hover:bg-cyan-600 disabled:opacity-50">{loading ? 'Generating...' : (poster ? 'Update Concept' : 'Generate Concept')}</button>
-                        {error && <p className="text-red-400 text-sm">{error}</p>}
-                    </fieldset>
-                </form>
-            );
-            case 'story': return (
-                <div className="space-y-6">
-                    <Section title="Story / Plot" onAdd={() => { setEditingItem(null); setActiveModal('story'); }} onGen={() => handleGenerateList('story')} isGen={isGeneratingStory} items={storyPoints} renderItem={p => <><p className="font-bold text-slate-200">{p.title}</p><p className="text-slate-400 text-sm mt-1">{p.description}</p></>} onEdit={i => { setEditingItem(i); setActiveModal('story'); }} onDelete={id => handleDeleteItem(setStoryPoints, id)} />
-                    <Section title="Characters" onAdd={() => { setEditingItem(null); setActiveModal('char'); }} onGen={() => handleGenerateList('char')} isGen={isGeneratingCharacters} items={characterSituations} renderItem={c => <><p className="font-bold text-slate-200">{c.characterName}</p><p className="text-slate-400 text-sm mt-1">{c.description}</p></>} onEdit={i => { setEditingItem(i); setActiveModal('char'); }} onDelete={id => handleDeleteItem(setCharacterSituations, id)} />
-                </div>
-            );
-            case 'script': return (
-                <div className="space-y-4 bg-slate-900/50 p-4 rounded-lg">
-                    <div className="flex justify-between items-center"><h3 className="text-lg font-bold">Script</h3><div className="flex gap-2"><button onClick={() => handleGenerateList('script')} disabled={isGeneratingSnippet} className="bg-purple-600 text-white text-xs py-1 px-3 rounded-full">{isGeneratingSnippet ? '...' : 'Snippet'}</button><button onClick={() => { setEditingItem(null); setActiveModal('script'); }} className="bg-slate-700 text-sm text-cyan-400 font-semibold py-2 px-3 rounded">+ Add</button></div></div>
-                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                        {scriptParts.map(part => (
-                            <div key={part.id} className="bg-slate-800 p-3 rounded-lg">
-                                <div className="flex justify-between"><div className="text-sm"><p className="font-bold text-slate-200">{part.character}</p><p className="text-slate-300">{part.dialogue}</p></div><div className="flex gap-2"><button onClick={() => { setEditingItem(part); setActiveModal('script'); }} className="text-cyan-400">Edit</button><button onClick={() => handleDeleteItem(setScriptParts, part.id)} className="text-red-500">Del</button></div></div>
-                                <div className="mt-2 pt-2 border-t border-slate-700 flex gap-2">
-                                    {part.audioUrl && <audio src={part.audioUrl} controls className="h-8 w-32" />}
-                                    <button onClick={() => handleGenerateVoice(part.id)} disabled={!!generatingVoiceForPartId} className="text-xs bg-purple-600 text-white px-2 rounded">{generatingVoiceForPartId === part.id ? '...' : 'AI Voice'}</button>
-                                    <button onClick={() => isRecording && recordingForPartId === part.id ? handleStopRecording() : handleStartRecording(part.id)} className={`text-xs px-2 rounded text-white ${isRecording && recordingForPartId === part.id ? 'bg-red-600' : 'bg-slate-700'}`}>{isRecording && recordingForPartId === part.id ? 'Stop' : 'Record'}</button>
-                                </div>
-                            </div>
+    const PhaseLayout = ({ title, children, actions, subTabs }: any) => (
+        <div className="flex flex-col h-full animate-fadeIn">
+            <div className="mb-4 border-b border-slate-800 pb-4">
+                <h2 className="text-2xl font-bold text-white mb-1">{title}</h2>
+                {movie.title && <p className="text-xs text-cyan-400 font-mono tracking-widest uppercase">PROJECT: {movie.title}</p>}
+                {subTabs && (
+                    <div className="flex space-x-2 mt-4 overflow-x-auto pb-1">
+                        {subTabs.map((tab: string) => (
+                            <button 
+                                key={tab}
+                                onClick={() => setSelectedSubTab(tab)}
+                                className={`px-3 py-1 text-xs font-bold rounded-full transition ${selectedSubTab === tab ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+                            >
+                                {tab}
+                            </button>
                         ))}
                     </div>
-                </div>
-            );
-            case 'visuals': return <Section title="Scene List" onAdd={() => { setEditingItem(null); setActiveModal('scene'); }} items={scenes} renderItem={s => <div><p className="font-bold text-slate-200">{s.title}</p><p className="text-slate-400 text-sm">{s.description}</p><div className="mt-2 border-t border-slate-700 pt-2"><div className="flex justify-between mb-2"><span className="text-xs font-bold uppercase text-slate-500">Storyboard</span><button onClick={() => handleGenerateBackground(s.id)} disabled={generatingBackgroundForSceneId === s.id} className="text-xs bg-slate-700 text-cyan-400 px-2 py-1 rounded">{generatingBackgroundForSceneId === s.id ? '...' : 'Generate'}</button></div>{s.backgroundImage && <img src={s.backgroundImage} className="w-full rounded" alt="bg" />}</div></div>} onEdit={i => { setEditingItem(i); setActiveModal('scene'); }} onDelete={id => handleDeleteItem(setScenes, id)} />;
-            case 'sound': return <Section title="Music Cues" onAdd={() => { setEditingItem(null); setActiveModal('music'); }} onGen={() => handleGenerateList('music')} isGen={isGeneratingMusic} items={musicTracks} renderItem={m => <><p className="font-bold text-slate-200">{m.title}</p><p className="text-slate-400 text-sm">{m.description}</p></>} onEdit={i => { setEditingItem(i); setActiveModal('music'); }} onDelete={id => handleDeleteItem(setMusicTracks, id)} />;
-            default: return null;
-        }
-    };
-
-    return (
-        <div className="flex flex-col md:flex-row gap-8">
-            <GenericEditorModal isOpen={activeModal === 'scene'} onClose={() => setActiveModal(null)} onSave={d => handleSaveItem(setScenes, d)} initialData={editingItem} title={editingItem ? "Edit Scene" : "New Scene"} fields={[{ name: 'title', placeholder: 'Scene Title' }, { name: 'description', type: 'textarea', placeholder: 'Description' }]} />
-            <GenericEditorModal isOpen={activeModal === 'music'} onClose={() => setActiveModal(null)} onSave={d => handleSaveItem(setMusicTracks, d)} initialData={editingItem} title={editingItem ? "Edit Music" : "New Track"} fields={[{ name: 'title', placeholder: 'Title' }, { name: 'description', type: 'textarea', placeholder: 'Description' }]} />
-            <GenericEditorModal isOpen={activeModal === 'script'} onClose={() => setActiveModal(null)} onSave={d => handleSaveItem(setScriptParts, d)} initialData={editingItem} title={editingItem ? "Edit Part" : "New Part"} fields={[{ name: 'character', placeholder: 'Character', list: 'chars' }, { name: 'action', placeholder: 'Action' }, { name: 'dialogue', type: 'textarea', placeholder: 'Dialogue' }]} datalists={{ chars: characterSituations.map(c => c.characterName) }} />
-            <GenericEditorModal isOpen={activeModal === 'story'} onClose={() => setActiveModal(null)} onSave={d => handleSaveItem(setStoryPoints, d)} initialData={editingItem} title={editingItem ? "Edit Point" : "New Point"} fields={[{ name: 'title', placeholder: 'Title' }, { name: 'description', type: 'textarea', placeholder: 'Description' }]} />
-            <GenericEditorModal isOpen={activeModal === 'char'} onClose={() => setActiveModal(null)} onSave={d => handleSaveItem(setCharacterSituations, d)} initialData={editingItem} title={editingItem ? "Edit Character" : "New Character"} fields={[{ name: 'characterName', placeholder: 'Name' }, { name: 'description', type: 'textarea', placeholder: 'Description' }]} />
-
-            <div className="w-full md:w-1/3 space-y-4">
-                <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700 space-y-2">
-                    <h3 className="text-xl font-bold">Pre-production</h3>
-                    <div className="flex gap-2"><button onClick={handleSaveProject} className="flex-1 text-sm bg-green-700 text-white py-2 rounded">Save</button><button onClick={() => window.confirm("Delete?") && resetAll()} className="flex-1 text-sm bg-red-800 text-white py-2 rounded">Reset</button></div>
-                    {projectSaveStatus && <span className="text-xs text-green-400 block text-center">{projectSaveStatus}</span>}
-                </div>
-                <div className="flex bg-slate-800 rounded-t-lg border-x border-t border-slate-700 overflow-hidden"><TabButton isActive={activeTab === 'concept'} onClick={() => setActiveTab('concept')}>Concept</TabButton><TabButton isActive={activeTab === 'story'} onClick={() => setActiveTab('story')}>Story</TabButton><TabButton isActive={activeTab === 'script'} onClick={() => setActiveTab('script')}>Script</TabButton></div>
-                <div className="flex bg-slate-800 rounded-b-lg border-x border-b border-slate-700 overflow-hidden -mt-4"><TabButton isActive={activeTab === 'visuals'} onClick={() => setActiveTab('visuals')}>Visuals</TabButton><TabButton isActive={activeTab === 'sound'} onClick={() => setActiveTab('sound')}>Sound</TabButton></div>
-                <div className="flex-grow">{renderTabContent()}</div>
+                )}
             </div>
-            <div className="w-full md:w-2/3 flex flex-col items-center justify-center bg-slate-900/50 rounded-lg border-2 border-dashed border-slate-700 min-h-[400px] p-4">
-                {loading ? <Loader message="Generating..." /> : poster ? <><img src={poster} alt="Poster" className="max-h-[70vh] rounded shadow-2xl" /><button onClick={() => onShare({ contentUrl: poster, contentText: `${title}: ${logline}`, contentType: 'image' })} className="mt-4 bg-purple-600 text-white font-bold py-2 px-4 rounded hover:bg-purple-700">Share Poster</button></> : <p className="text-slate-500">Poster will appear here</p>}
+            <div className="flex-grow overflow-y-auto pr-2 space-y-6 custom-scrollbar">
+                {children}
             </div>
+            {actions && <div className="mt-4 pt-4 border-t border-slate-800">{actions}</div>}
         </div>
     );
-};
 
-const Section = ({ title, onAdd, onGen, isGen, items, renderItem, onEdit, onDelete }: any) => (
-    <div className="space-y-4 bg-slate-900/50 p-4 rounded-lg">
-        <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold">{title}</h3>
-            <div className="flex gap-2">{onGen && <button onClick={onGen} disabled={isGen} className="bg-purple-600 text-white text-xs py-1 px-3 rounded-full">{isGen ? '...' : 'Auto'}</button>}<button onClick={onAdd} className="bg-slate-700 text-sm text-cyan-400 font-semibold py-2 px-3 rounded">+ Add</button></div>
-        </div>
-        <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-            {items.length === 0 && <p className="text-slate-500 text-sm text-center py-4">No items yet.</p>}
-            {items.map((item: any) => (
-                <div key={item.id} className="bg-slate-800 p-3 rounded-lg flex justify-between items-start">
-                    <div className="flex-grow">{renderItem(item)}</div>
-                    <div className="flex gap-2 ml-2"><button onClick={() => onEdit(item)} className="text-cyan-400">Edit</button><button onClick={() => onDelete(item.id)} className="text-red-500">Del</button></div>
+    return (
+        <>
+            <ApiKeyDialog show={showApiKeyDialog} onSelectKey={async () => { 
+                // @ts-ignore
+                await window.aistudio.openSelectKey(); 
+                setApiKeyReady(true); 
+                setShowApiKeyDialog(false); 
+            }} />
+            
+            <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-120px)] min-h-[600px]">
+                {/* Navigation */}
+                <div className="w-full lg:w-64 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-slate-800 flex flex-col overflow-hidden">
+                    <div className="p-4 bg-slate-950 border-b border-slate-800">
+                        <h3 className="font-bold text-slate-200 text-xs uppercase tracking-wider">Master Prompt List</h3>
+                    </div>
+                    <div className="flex-grow overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                        <SidebarItem id="concept" icon="💡" label="1. Concept & World" />
+                        <SidebarItem id="story" icon="📖" label="2. Story Development" />
+                        <SidebarItem id="screenplay" icon="✍️" label="3. Screenplay" />
+                        <SidebarItem id="characters" icon="👥" label="4. Characters" />
+                        <SidebarItem id="visuals" icon="🎨" label="5. Visual Dev" />
+                        <SidebarItem id="animation" icon="🎬" label="6. Animation" />
+                        <SidebarItem id="audio" icon="🔊" label="7. Audio Studio" />
+                        <SidebarItem id="production" icon="📋" label="8. Production" />
+                        <SidebarItem id="post" icon="✂️" label="9. Post-Prod" />
+                        <SidebarItem id="branding" icon="🚀" label="10. Marketing" />
+                    </div>
                 </div>
-            ))}
-        </div>
-    </div>
-);
+
+                {/* Workspace */}
+                <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 p-6 relative overflow-hidden flex flex-col">
+                    {error && <div className="absolute top-4 right-4 z-50 bg-red-900/80 text-white px-4 py-2 rounded shadow-lg text-sm border border-red-500">{error} <button onClick={() => setError(null)} className="ml-2 font-bold">×</button></div>}
+                    
+                    {activePhase === 'concept' && (
+                        <PhaseLayout title="Movie Concept & World" actions={
+                            <button onClick={handleGenerateConcept} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded-lg font-bold transition disabled:opacity-50">{loading ? <Loader /> : 'Generate Concept & World'}</button>
+                        }>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-4">
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Genre</label><select className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" value={movie.genre} onChange={e => updateMovie({genre: e.target.value})}>{MOVIE_GENRES.map(g => <option key={g}>{g}</option>)}</select></div>
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Tone</label><input className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" placeholder="e.g. Dark, Gritty" value={movie.tone} onChange={e => updateMovie({tone: e.target.value})} /></div>
+                                </div>
+                                <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Premise</label><textarea className="w-full h-32 bg-slate-800 border border-slate-700 rounded p-3 text-white resize-none" placeholder="Describe your movie idea..." value={currentInput} onChange={e => setCurrentInput(e.target.value)} /></div>
+                            </div>
+                            {movie.worldDetails && (
+                                <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mt-4">
+                                    <h4 className="text-purple-400 font-bold mb-2">World Building</h4>
+                                    <p className="text-sm text-slate-300 mb-2">{movie.worldDetails.environmentDescription}</p>
+                                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                                        <div><strong className="text-slate-500">Rules/Magic:</strong> {movie.worldDetails.uniqueRulesOrMagic}</div>
+                                        <div><strong className="text-slate-500">Vehicles:</strong> {movie.worldDetails.vehicleDesigns?.join(', ')}</div>
+                                    </div>
+                                </div>
+                            )}
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'story' && (
+                        <PhaseLayout title="Story Development" actions={
+                            <button onClick={handleGenerateStory} disabled={loading || !movie.title} className="w-full bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-lg font-bold transition disabled:opacity-50">{loading ? <Loader /> : 'Generate Structure & Analysis'}</button>
+                        }>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                    <h4 className="text-lg font-bold text-white mb-4">Structure</h4>
+                                    {movie.storyStructure ? (
+                                        <div className="space-y-4 text-sm">
+                                            {movie.storyStructure.acts.map((act: any, i: number) => (
+                                                <div key={i} className="bg-slate-900 p-3 rounded">
+                                                    <div className="font-bold text-cyan-400">{act.name}</div>
+                                                    <ul className="list-disc pl-4 text-slate-300 mt-1">{act.beats.map((b: string, j: number) => <li key={j}>{b}</li>)}</ul>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : <div className="text-slate-500 italic text-center py-8">Generate concept first.</div>}
+                                </div>
+                                <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                    <h4 className="text-lg font-bold text-white mb-4">AI Analysis</h4>
+                                    {movie.storyAnalysis ? (
+                                        <div className="space-y-3 text-sm">
+                                            <div><strong className="text-purple-400">Tension Curve:</strong> <p className="text-slate-300">{movie.storyAnalysis.tensionCurve}</p></div>
+                                            <div><strong className="text-purple-400">Plot Twists:</strong> <ul className="list-disc pl-4 text-slate-300">{movie.storyAnalysis.plotTwists?.map((t:string,i:number)=><li key={i}>{t}</li>)}</ul></div>
+                                            <div><strong className="text-purple-400">Relationships:</strong> <ul className="list-disc pl-4 text-slate-300">{movie.storyAnalysis.characterRelationships?.map((r:string,i:number)=><li key={i}>{r}</li>)}</ul></div>
+                                        </div>
+                                    ) : <div className="text-slate-500 italic text-center py-8">Analysis will appear here.</div>}
+                                </div>
+                            </div>
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'screenplay' && (
+                        <PhaseLayout title="Screenplay Writer" actions={
+                            <button onClick={handleGenerateScreenplay} disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg font-bold transition disabled:opacity-50">{loading ? <Loader /> : 'Write Scene'}</button>
+                        }>
+                            <div className="space-y-4">
+                                <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Select Beat</label><select className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" value={selectedOption} onChange={e => setSelectedOption(e.target.value)}><option value="">-- Select --</option>{movie.storyStructure?.acts?.flatMap((a: any) => a.beats).map((b: string, i: number) => <option key={i} value={b}>{b.substring(0, 60)}...</option>)}<option value="Custom">Custom Scene</option></select></div>
+                                <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Style Instructions</label><input className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" placeholder="e.g., Witty dialogue, Slow burn" value={currentInput} onChange={e => setCurrentInput(e.target.value)} /></div>
+                                <div className="mt-6 space-y-6 h-64 overflow-y-auto custom-scrollbar pr-2">
+                                    {movie.screenplayScenes.map((scene) => (
+                                        <div key={scene.id} className="bg-white text-slate-900 p-6 rounded shadow-xl font-mono text-sm whitespace-pre-wrap border-l-4 border-green-500">
+                                            <h4 className="font-bold mb-4 text-slate-500 uppercase tracking-widest border-b pb-2">{scene.title}</h4>
+                                            {scene.content}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'characters' && (
+                        <PhaseLayout title="Character Design" actions={
+                            <button onClick={handleGenerateCast} disabled={loading || !movie.title} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold transition disabled:opacity-50">{loading ? <Loader /> : 'Generate Initial Cast'}</button>
+                        }>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {movie.characters.map((char, i) => (
+                                    <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col">
+                                        <div className="flex items-center space-x-3 mb-3">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xl font-bold overflow-hidden">
+                                                {char.image ? <img src={char.image} className="w-full h-full object-cover" /> : char.name[0]}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-white">{char.name}</h4>
+                                                <p className="text-xs text-slate-400">{char.role}</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-slate-300 line-clamp-3 mb-3">{char.bio}</p>
+                                        <button onClick={() => handleCharacterDeepDive(char, i)} className="mt-auto w-full py-2 bg-slate-700 hover:bg-slate-600 rounded text-xs font-bold text-cyan-400">Generate Sheet & Visual</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'visuals' && (
+                        <PhaseLayout title="Visual Development">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                                <div className="lg:col-span-1 space-y-4">
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Art Style</label><select className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" value={selectedOption} onChange={e => setSelectedOption(e.target.value)}>{VISUAL_STYLES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                                    <button onClick={handleGenerateVisuals} disabled={loading} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-3 rounded-lg font-bold transition disabled:opacity-50">{loading ? <Loader /> : 'Generate Concepts'}</button>
+                                </div>
+                                <div className="lg:col-span-2 overflow-y-auto grid grid-cols-2 gap-4 p-1 max-h-[400px]">
+                                    {movie.visualPrompts.map((vp, i) => (
+                                        <div key={i} className="group relative rounded-xl overflow-hidden bg-black aspect-video">
+                                            {vp.image ? <img src={vp.image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-600 p-4 text-center text-xs">{vp.prompt}</div>}
+                                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition flex items-end p-4"><p className="text-white text-xs">{vp.prompt}</p></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'animation' && (
+                        <PhaseLayout title="Animation & Action" actions={
+                            <div className="grid grid-cols-3 gap-2">
+                                <button onClick={() => handleGenerateAnimation('standard')} disabled={loading} className="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold text-xs">Standard Motion</button>
+                                <button onClick={() => handleGenerateAnimation('action')} disabled={loading} className="bg-red-700 hover:bg-red-600 text-white py-2 rounded font-bold text-xs">Action/Stunt</button>
+                                <button onClick={() => handleGenerateAnimation('lipsync')} disabled={loading} className="bg-blue-700 hover:bg-blue-600 text-white py-2 rounded font-bold text-xs">Lip Sync</button>
+                            </div>
+                        }>
+                            <textarea className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-white resize-none h-24 mb-4" placeholder="Describe the movement (e.g. Hero jumps across rooftop, Close up speaking...)" value={currentInput} onChange={e => setCurrentInput(e.target.value)} />
+                            <div className="grid grid-cols-2 gap-4">
+                                {movie.animationClips.map((clip, i) => (
+                                    <div key={i} className="bg-black rounded-lg overflow-hidden border border-slate-700 aspect-video">
+                                        {clip.videoUrl ? <video src={clip.videoUrl} controls className="w-full h-full" /> : <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500 text-xs p-4">{loading ? <Loader /> : clip.prompt}</div>}
+                                    </div>
+                                ))}
+                            </div>
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'audio' && (
+                        <PhaseLayout title="Audio Studio">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <textarea className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-white resize-none h-32" placeholder="Dialogue line or sound description..." value={currentInput} onChange={e => setCurrentInput(e.target.value)} />
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleGenerateAudio('dialogue')} disabled={loading} className="flex-1 bg-cyan-600 text-white py-2 rounded font-bold text-xs">Dialogue</button>
+                                        <button onClick={() => handleGenerateAudio('sfx')} disabled={loading} className="flex-1 bg-amber-600 text-white py-2 rounded font-bold text-xs">SFX</button>
+                                        <button onClick={() => handleGenerateAudio('music')} disabled={loading} className="flex-1 bg-purple-600 text-white py-2 rounded font-bold text-xs">Score</button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2 max-h-64 overflow-y-auto">
+                                    {movie.audioTracks.map((track, i) => (
+                                        <div key={i} className="bg-slate-800 p-3 rounded flex items-center gap-3">
+                                            <span className="text-xs bg-slate-900 px-2 py-1 rounded uppercase text-slate-400">{track.type}</span>
+                                            <div className="flex-grow min-w-0"><p className="text-white text-xs truncate">{track.prompt}</p>{track.audioUrl && <audio src={track.audioUrl} controls className="h-6 w-full mt-1" />}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'production' && (
+                        <PhaseLayout title="Production Planning" actions={
+                            <div className="flex gap-2">
+                                <button onClick={async () => { setLoading(true); const r = await generateProductionPlan(movie.title, movie.duration); updateMovie({productionDocs: r.text}); setLoading(false); }} disabled={loading} className="flex-1 bg-slate-700 text-white py-2 rounded font-bold text-xs">Full Plan</button>
+                                <button onClick={handleSceneBreakdown} disabled={loading} className="flex-1 bg-slate-700 text-white py-2 rounded font-bold text-xs">Scene Breakdown</button>
+                            </div>
+                        }>
+                            <input className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white mb-4" placeholder="Scene Heading for Breakdown (e.g. INT. LAB - DAY)" value={currentInput} onChange={e => setCurrentInput(e.target.value)} />
+                            {movie.productionDocs && <div className="bg-white text-black p-4 rounded shadow prose prose-sm max-w-none max-h-64 overflow-y-auto"><div dangerouslySetInnerHTML={{ __html: md.render(movie.productionDocs) }} /></div>}
+                            <div className="grid grid-cols-1 gap-2 mt-4">
+                                {Object.entries(movie.sceneBreakdowns).map(([scene, data], i) => (
+                                    <div key={i} className="bg-slate-800 p-3 rounded border border-slate-700 text-xs">
+                                        <strong className="text-cyan-400">{scene}</strong>
+                                        <div className="mt-1 text-slate-400">Shots: {(data as any).shotList?.length} | VFX: {(data as any).vfxNotes ? 'Yes' : 'No'}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'post' && (
+                        <PhaseLayout title="Post-Production">
+                            <div className="text-center py-12 text-slate-500">
+                                <p className="text-xl mb-2">✂️</p>
+                                <p>Assemble your clips in the Video Editor.</p>
+                                <button onClick={() => alert("Sending assets to Editor...")} className="mt-4 bg-slate-700 text-white px-4 py-2 rounded text-sm">Send Assets to Video Editor</button>
+                            </div>
+                        </PhaseLayout>
+                    )}
+
+                    {activePhase === 'branding' && (
+                        <PhaseLayout title="Branding & Marketing" actions={
+                            <button onClick={handleGenerateMarketing} disabled={loading} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-3 rounded-lg font-bold transition disabled:opacity-50">{loading ? <Loader /> : 'Generate Assets'}</button>
+                        }>
+                            <select className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white mb-4" value={selectedOption} onChange={e => setSelectedOption(e.target.value)}>
+                                <option value="Poster Concept">Poster Concept</option>
+                                <option value="Tagline">Tagline & Hook</option>
+                                <option value="Press Release">Press Release</option>
+                            </select>
+                            {movie.marketingCopy && <div className="bg-slate-800 p-4 rounded border border-slate-700 whitespace-pre-wrap text-slate-300 text-sm">{movie.marketingCopy}</div>}
+                        </PhaseLayout>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+};
 
 export default MovieGenerator;

@@ -186,7 +186,64 @@ export const generateSongConcept = async (genre: string, mood: string, topic: st
     }, 'gemini-2.5-pro'
 );
 
-// --- Movie ---
+// --- Movie (Advanced) ---
+export const generateMovieConcept = async (genre: string, tone: string, topic: string) => generateJsonContent(
+    `Movie Concept for: "${topic}". Genre: ${genre}, Tone: ${tone}. Include title, logline, worldDescription, visualStyleRef.`,
+    { type: Type.OBJECT, properties: { title: { type: Type.STRING }, logline: { type: Type.STRING }, worldDescription: { type: Type.STRING }, visualStyleRef: { type: Type.STRING } }, required: ['title', 'logline', 'worldDescription'] }
+);
+
+export const generateDetailedStory = async (title: string, logline: string, genre: string) => generateJsonContent(
+    `Detailed Story for "${title}" (${genre}): "${logline}". 3-Act Structure. JSON: { acts: [{name, description, beats: [string]}], characterArcSummary: string }.`,
+    { type: Type.OBJECT, properties: { acts: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, description: { type: Type.STRING }, beats: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['name', 'beats'] } }, characterArcSummary: { type: Type.STRING } }, required: ['acts', 'characterArcSummary'] }, 'gemini-2.5-pro'
+);
+
+export const generateDetailedCharacters = async (title: string, logline: string) => generateJsonContent(
+    `Main Characters for "${title}": "${logline}". JSON Array: { name, role, age, backstory, visualDescription, voiceStyle }.`,
+    { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, role: { type: Type.STRING }, age: { type: Type.STRING }, backstory: { type: Type.STRING }, visualDescription: { type: Type.STRING }, voiceStyle: { type: Type.STRING } }, required: ['name', 'visualDescription'] } }, 'gemini-2.5-pro'
+);
+
+export const generateScreenplayScene = async (title: string, sceneBeat: string, style: string) => getGeminiAI().models.generateContent({
+    model: 'gemini-2.5-pro',
+    contents: `Write a full screenplay scene for "${title}". Scene Context: ${sceneBeat}. Style Module: ${style} (e.g. Comedy, Action, Noir). Include INT/EXT, Action lines, Dialogue, and Camera Directions.`
+});
+
+export const generateVisualPrompts = async (title: string, visualStyle: string, scenes: string[]) => generateJsonContent(
+    `Generate Image Prompts for "${title}". Style: ${visualStyle}. Scenes: ${scenes.join(' | ')}. JSON Array: { sceneId, prompt, negativePrompt }.`,
+    { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { sceneId: { type: Type.STRING }, prompt: { type: Type.STRING }, negativePrompt: { type: Type.STRING } }, required: ['prompt'] } }
+);
+
+export const generateProductionPlan = async (title: string, duration: string) => getGeminiAI().models.generateContent({
+    model: 'gemini-2.5-pro',
+    contents: `Generate a Production Plan for "${title}" (${duration}). Include: Shot List (5 key shots), VFX Requirements, Costume Design Brief, Sound Design Notes.`
+});
+
+// New Advanced Movie Features
+export const generateCharacterSheet = async (name: string, description: string) => generateJsonContent(
+    `Character Sheet for "${name}": ${description}. JSON: { personality, strengths, weaknesses, costumeDetails, makeupNotes, keyPoses: [string] }`,
+    { type: Type.OBJECT, properties: { personality: { type: Type.STRING }, strengths: { type: Type.STRING }, weaknesses: { type: Type.STRING }, costumeDetails: { type: Type.STRING }, makeupNotes: { type: Type.STRING }, keyPoses: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['personality', 'costumeDetails', 'keyPoses'] }
+);
+
+export const generateWorldDetails = async (setting: string) => generateJsonContent(
+    `World Building for "${setting}". JSON: { environmentDescription, architectureStyle, uniqueRulesOrMagic, vehicleDesigns: [string], propList: [string] }`,
+    { type: Type.OBJECT, properties: { environmentDescription: { type: Type.STRING }, architectureStyle: { type: Type.STRING }, uniqueRulesOrMagic: { type: Type.STRING }, vehicleDesigns: { type: Type.ARRAY, items: { type: Type.STRING } }, propList: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['environmentDescription', 'uniqueRulesOrMagic'] }
+);
+
+export const analyzeStoryStructure = async (plot: string) => generateJsonContent(
+    `Analyze this story plot: "${plot}". JSON: { tensionCurve: string, plotTwists: [string], characterRelationships: [string], pacingAnalysis: string }`,
+    { type: Type.OBJECT, properties: { tensionCurve: { type: Type.STRING }, plotTwists: { type: Type.ARRAY, items: { type: Type.STRING } }, characterRelationships: { type: Type.ARRAY, items: { type: Type.STRING } }, pacingAnalysis: { type: Type.STRING } }, required: ['tensionCurve', 'plotTwists'] }
+);
+
+export const generateSceneBreakdown = async (scene: string) => generateJsonContent(
+    `Breakdown scene for production: "${scene}". JSON: { shotList: [{type, angle, movement, subject}], vfxNotes: string, soundDesign: string }`,
+    { type: Type.OBJECT, properties: { shotList: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, angle: { type: Type.STRING }, movement: { type: Type.STRING }, subject: { type: Type.STRING } }, required: ['type'] } }, vfxNotes: { type: Type.STRING }, soundDesign: { type: Type.STRING } }, required: ['shotList', 'vfxNotes'] }
+);
+
+export const generateAudioScoreDescription = async (mood: string, action: string) => getGeminiAI().models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: `Describe a musical score for a movie scene. Mood: ${mood}. Action: ${action}. Include instrumentation, tempo, and dynamics.`
+});
+
+// Legacy Movie functions kept for compatibility if needed, but mostly replaced by above
 export const generateDialogueSnippet = async (title: string, logline: string, genre: string) => generateJsonContent(
     `Dialogue snippet (2-4 lines) for ${genre} movie "${title}": "${logline}". Return array of {character, action, dialogue}.`,
     { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { character: { type: Type.STRING }, action: { type: Type.STRING }, dialogue: { type: Type.STRING } }, required: ['character', 'dialogue'] } }
@@ -197,15 +254,20 @@ export const generateCharacterSituations = async (title: string, logline: string
     { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { characterName: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['characterName', 'description'] } }
 );
 
-export const generateStoryOutline = async (title: string, logline: string, genre: string) => generateJsonContent(
-    `3-act outline for ${genre} movie "${title}": "${logline}". Return array of {title, description}.`,
-    { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['title', 'description'] } }
+export const generateStoryBeats = async (title: string, logline: string, genre: string) => generateJsonContent(
+    `Create a detailed beat sheet for movie "${title}". Logline: ${logline}. Genre: ${genre}. Return JSON array of {beatName, description}.`,
+    { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { beatName: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['beatName', 'description'] } }, 'gemini-2.5-pro'
 );
 
-export const generateMusicCues = async (title: string, genre: string, scenes: {title: string, description: string}[]) => generateJsonContent(
-    `2-3 music cues for "${title}" (${genre}). Scenes: ${scenes.map(s => `${s.title}: ${s.description}`).join('; ')}. Return array of {title, description}.`,
-    { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['title', 'description'] } }
-);
+export const generateDetailedScript = async (scene: string, tone: string) => getGeminiAI().models.generateContent({
+    model: 'gemini-2.5-pro',
+    contents: `Write a full movie scene script. Format: Standard Screenplay. Scene: ${scene}. Tone: ${tone}. Include INT/EXT, Action lines, and Dialogue.`
+});
+
+export const generateMarketingAssets = async (title: string, logline: string, type: string) => getGeminiAI().models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: `Create ${type} for movie "${title}": ${logline}.`
+});
 
 // --- Meme ---
 export const generateMemeConcept = async (topic: string, style: string) => generateJsonContent(
@@ -306,7 +368,15 @@ export const generateReportContent = async (topic: string, type: string, len: st
 
 export const generateInfographicConcepts = async (topic: string, style: string, lang: string) => generateJsonContent(
     `Infographic concept for "${topic}" (${lang}, ${style}). JSON {title, visualLayout, dataPoints[]}.`,
-    { type: Type.OBJECT, properties: { title: { type: Type.STRING }, visualLayout: { type: Type.STRING }, dataPoints: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ["title", "visualLayout", "dataPoints"] }
+    {
+        type: Type.OBJECT,
+        properties: {
+            title: { type: Type.STRING },
+            visualLayout: { type: Type.STRING },
+            dataPoints: { type: Type.ARRAY, items: { type: Type.STRING } }
+        },
+        required: ["title", "visualLayout", "dataPoints"]
+    }
 );
 
 export const generateFlashcards = async (topic: string, count: number, lang: string) => generateJsonContent(
