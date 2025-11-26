@@ -10,6 +10,18 @@ interface GlobalAvatarCreatorProps {
     onShare: (options: { contentUrl: string; contentText: string; contentType: 'video' }) => void;
 }
 
+const MOVEMENT_OPTIONS = [
+    { value: 'minimal', label: 'Minimal (News Anchor)' },
+    { value: 'gestures', label: 'Hand Gestures (Presenter)' },
+    { value: 'walking', label: 'Walking (Vlog)' },
+    { value: 'dynamic', label: 'Dynamic Action' }
+];
+
+const LIP_SYNC_OPTIONS = [
+    { value: 'standard', label: 'Standard Sync' },
+    { value: 'enhanced', label: 'Enhanced (Close-up)' }
+];
+
 const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) => {
     // Inputs
     const [avatarDescription, setAvatarDescription] = useState('');
@@ -19,6 +31,11 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
     const [isCustomLanguage, setIsCustomLanguage] = useState(false);
     const [customLanguage, setCustomLanguage] = useState('');
     const [background, setBackground] = useState(BACKGROUND_OPTIONS[0].value);
+    
+    // New Features
+    const [movementType, setMovementType] = useState('minimal');
+    const [lipSyncMode, setLipSyncMode] = useState('standard');
+    const [removeWatermark, setRemoveWatermark] = useState(true);
     
     // Bilingual Settings
     const [isBilingual, setIsBilingual] = useState(false);
@@ -217,7 +234,30 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
                 setLoadingMessage(VEO_LOADING_MESSAGES[i]);
             }, 3000);
 
-            const videoPrompt = `A video of this person speaking naturally, looking directly at the camera. Minimal head movement, realistic facial expressions matching speech. High quality, 8k.`;
+            let videoPrompt = `A video of this person speaking naturally.`;
+
+            if (movementType === 'minimal') {
+                videoPrompt += ` Minimal head movement, professional posture.`;
+            } else if (movementType === 'gestures') {
+                videoPrompt += ` Using expressive hand gestures to emphasize speech, upper body movement.`;
+            } else if (movementType === 'walking') {
+                videoPrompt += ` Walking towards the camera, steady cam, dynamic background.`;
+            } else if (movementType === 'dynamic') {
+                videoPrompt += ` Energetic body language, moving around the frame.`;
+            }
+
+            if (lipSyncMode === 'enhanced') {
+                videoPrompt += ` Focus on mouth, precise lip articulation matching speech patterns, high fidelity facial capture.`;
+            } else {
+                videoPrompt += ` Realistic facial expressions matching speech.`;
+            }
+
+            if (removeWatermark) {
+                videoPrompt += ` Clean footage, no text, no watermarks, high production value.`;
+            }
+
+            videoPrompt += ` Looking directly at the camera. High quality, 8k.`;
+
             const operation = await generateVideoFromImage(videoPrompt, imageBytes, 'image/jpeg', '9:16', false);
             handlePolling(operation);
 
@@ -292,6 +332,41 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
                                     {BACKGROUND_OPTIONS.map((bg) => <option key={bg.label} value={bg.value}>{bg.label}</option>)}
                                 </select>
                             </div>
+                        </div>
+
+                        {/* New Controls for Movement, Lip Sync, Watermark */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Movement Style</label>
+                                <select 
+                                    value={movementType} 
+                                    onChange={(e) => setMovementType(e.target.value)} 
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white text-sm focus:ring-2 focus:ring-cyan-500 transition"
+                                >
+                                    {MOVEMENT_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Lip Sync Priority</label>
+                                <select 
+                                    value={lipSyncMode} 
+                                    onChange={(e) => setLipSyncMode(e.target.value)} 
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white text-sm focus:ring-2 focus:ring-cyan-500 transition"
+                                >
+                                    {LIP_SYNC_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <input 
+                                id="remove-watermark"
+                                type="checkbox" 
+                                checked={removeWatermark} 
+                                onChange={(e) => setRemoveWatermark(e.target.checked)}
+                                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-cyan-500"
+                            />
+                            <label htmlFor="remove-watermark" className="text-sm text-slate-300 cursor-pointer select-none">Remove Watermarks (Clean Output)</label>
                         </div>
 
                         <div>

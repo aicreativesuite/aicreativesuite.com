@@ -58,7 +58,7 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
     const [expression, setExpression] = useState(AVATAR_EXPRESSIONS[0]);
     const [background, setBackground] = useState(BACKGROUND_OPTIONS[0].value);
     const [aspectRatio, setAspectRatio] = useState('1:1');
-    const [addQr, setAddQr] = useState(true);
+    const [addQr, setAddQr] = useState(false);
     const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -214,7 +214,7 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
                         onChange={(e) => setAddQr(e.target.checked)}
                         className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
                     />
-                    <label htmlFor="add-qr" className="ml-2 block text-sm text-slate-300">Add verification QR code</label>
+                    <label htmlFor="add-qr" className="ml-2 block text-sm text-slate-300">Add verification QR code (Watermark)</label>
                 </div>
 
                 <button

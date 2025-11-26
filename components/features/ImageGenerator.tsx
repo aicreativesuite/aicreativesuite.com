@@ -60,7 +60,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
     const [visualEffect, setVisualEffect] = useState(VISUAL_EFFECTS[0]);
     const [background, setBackground] = useState(BACKGROUND_OPTIONS[0].value);
     const [aspectRatio, setAspectRatio] = useState(ASPECT_RATIOS[0]);
-    const [addQr, setAddQr] = useState(true);
+    const [addQr, setAddQr] = useState(false);
     const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -203,7 +203,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
                             onChange={(e) => setAddQr(e.target.checked)}
                             className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
                         />
-                        <label htmlFor="add-qr" className="ml-2 block text-sm text-slate-400">Add verification QR code</label>
+                        <label htmlFor="add-qr" className="ml-2 block text-sm text-slate-400">Add verification QR code (Watermark)</label>
                     </div>
                     {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
                 </form>
