@@ -29,42 +29,6 @@ export const generateTextWithThinking = async (prompt: string): Promise<Generate
     });
 };
 
-// --- Code Reviewer ---
-export const reviewCode = async (code: string): Promise<GenerateContentResponse> => {
-    const prompt = `Review this code:\n\n${code}`;
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            summary: { type: Type.STRING },
-            bugScore: { type: Type.INTEGER },
-            securityScore: { type: Type.INTEGER },
-            issues: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        type: { type: Type.STRING },
-                        line: { type: Type.INTEGER },
-                        severity: { type: Type.STRING },
-                        description: { type: Type.STRING },
-                        rootCause: { type: Type.STRING },
-                        fix: { type: Type.STRING }
-                    },
-                    required: ["type", "severity", "description", "rootCause", "fix"]
-                }
-            },
-            fixedCode: { type: Type.STRING }
-        },
-        required: ["summary", "bugScore", "securityScore", "issues", "fixedCode"]
-    };
-    
-    return getGeminiAI().models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: prompt,
-        config: { responseMimeType: "application/json", responseSchema: schema, thinkingConfig: { thinkingBudget: 16384 } }
-    });
-};
-
 // --- Chat ---
 export const createChatSession = (systemInstruction?: string): Chat => {
     return getGeminiAI().chats.create({
@@ -274,27 +238,6 @@ export const generateAudioScoreDescription = async (mood: string, action: string
     contents: `Describe a musical score for a movie scene. Mood: ${mood}. Action: ${action}. Include instrumentation, tempo, and dynamics.`
 });
 
-// Legacy Movie functions kept for compatibility if needed, but mostly replaced by above
-export const generateDialogueSnippet = async (title: string, logline: string, genre: string) => generateJsonContent(
-    `Dialogue snippet (2-4 lines) for ${genre} movie "${title}": "${logline}". Return array of {character, action, dialogue}.`,
-    { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { character: { type: Type.STRING }, action: { type: Type.STRING }, dialogue: { type: Type.STRING } }, required: ['character', 'dialogue'] } }
-);
-
-export const generateCharacterSituations = async (title: string, logline: string, genre: string) => generateJsonContent(
-    `2-3 main characters for ${genre} movie "${title}": "${logline}". Return array of {characterName, description}.`,
-    { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { characterName: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['characterName', 'description'] } }
-);
-
-export const generateStoryBeats = async (title: string, logline: string, genre: string) => generateJsonContent(
-    `Create a detailed beat sheet for movie "${title}". Logline: ${logline}. Genre: ${genre}. Return JSON array of {beatName, description}.`,
-    { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { beatName: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['beatName', 'description'] } }, 'gemini-2.5-pro'
-);
-
-export const generateDetailedScript = async (scene: string, tone: string) => getGeminiAI().models.generateContent({
-    model: 'gemini-2.5-pro',
-    contents: `Write a full movie scene script. Format: Standard Screenplay. Scene: ${scene}. Tone: ${tone}. Include INT/EXT, Action lines, and Dialogue.`
-});
-
 export const generateMarketingAssets = async (title: string, logline: string, type: string) => getGeminiAI().models.generateContent({
     model: 'gemini-2.5-flash',
     contents: `Create ${type} for movie "${title}": ${logline}.`
@@ -392,11 +335,6 @@ export const generatePodcastScript = async (source: string) => generateJsonConte
 
 export const generateTrendReport = async (topic: string) => getGeminiAI().models.generateContent({ model: 'gemini-2.5-pro', contents: `Trend report for "${topic}". Emerging, Declining, Wildcard. Markdown.`, config: { tools: [{ googleSearch: {} }] } });
 
-export const generateDomainAndHostingRecommendations = async (desc: string, type: string) => generateJsonContent(
-    `Domains & Hosting for "${desc}" (${type}). JSON {domains:[], hosting:[{name, description, bestFor, freeTierFeatures}]}.`,
-    { type: Type.OBJECT, properties: { domains: { type: Type.ARRAY, items: { type: Type.STRING } }, hosting: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, description: { type: Type.STRING }, bestFor: { type: Type.STRING }, freeTierFeatures: { type: Type.STRING } }, required: ["name", "description", "bestFor", "freeTierFeatures"] } } }, required: ["domains", "hosting"] }
-);
-
 // --- Quiz & Deck ---
 export const generateSmartQuiz = async (content: string, fromTopic = false) => generateJsonContent(
     `Smart quiz ${fromTopic ? 'about' : 'from'}: "${content}". JSON {title, questions:[{id, question, options:[{text, isCorrect, feedback}], difficulty, type}], summary:{perfectMessage, goodMessage, averageMessage}}.`,
@@ -435,8 +373,65 @@ export const generateFlashcards = async (topic: string, count: number, lang: str
     { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { front: { type: Type.STRING }, back: { type: Type.STRING } }, required: ["front", "back"] } }
 );
 
+// --- Domain Finder ---
+export const generateDomainAndHostingRecommendations = async (description: string, projectType: string) => generateJsonContent(
+    `Suggest domains and hosting for: "${description}" (Type: ${projectType}). JSON {domains: string[], hosting: [{name, description, bestFor, freeTierFeatures}]}.`,
+    {
+        type: Type.OBJECT,
+        properties: {
+            domains: { type: Type.ARRAY, items: { type: Type.STRING } },
+            hosting: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        name: { type: Type.STRING },
+                        description: { type: Type.STRING },
+                        bestFor: { type: Type.STRING },
+                        freeTierFeatures: { type: Type.STRING }
+                    },
+                    required: ["name", "description", "bestFor", "freeTierFeatures"]
+                }
+            }
+        },
+        required: ["domains", "hosting"]
+    },
+    'gemini-2.5-pro'
+);
+
+// --- Vibe Coding ---
 export const generateVibeApp = async (prompt: string) => getGeminiAI().models.generateContent({
     model: 'gemini-2.5-pro',
-    contents: prompt,
-    config: { systemInstruction: "Generate a single-file HTML app with CSS/JS. Output only raw HTML.", thinkingConfig: { thinkingBudget: 4096 } },
+    contents: `Create a single-file HTML/JS/CSS app based on this idea: "${prompt}". It should be modern, colorful, and fully functional. Return the code directly.`
 });
+
+// --- Code Reviewer ---
+export const reviewCode = async (code: string) => generateJsonContent(
+    `Review this code for security, bugs, and performance. Return JSON: {summary, bugScore (0-100), securityScore (0-100), issues: [{type, line, severity (Critical/High/Medium/Low), description, rootCause, fix}], fixedCode}. Code:\n${code}`,
+    {
+        type: Type.OBJECT,
+        properties: {
+            summary: { type: Type.STRING },
+            bugScore: { type: Type.INTEGER },
+            securityScore: { type: Type.INTEGER },
+            issues: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        type: { type: Type.STRING },
+                        line: { type: Type.INTEGER },
+                        severity: { type: Type.STRING, enum: ['Critical', 'High', 'Medium', 'Low'] },
+                        description: { type: Type.STRING },
+                        rootCause: { type: Type.STRING },
+                        fix: { type: Type.STRING }
+                    },
+                    required: ["type", "line", "severity", "description", "rootCause", "fix"]
+                }
+            },
+            fixedCode: { type: Type.STRING }
+        },
+        required: ["summary", "bugScore", "securityScore", "issues", "fixedCode"]
+    },
+    'gemini-2.5-pro'
+);

@@ -11,7 +11,7 @@ interface ImageEditorProps {
 }
 
 // --- Tool Definitions ---
-type ToolCategory = 'AI Magic' | 'Artistic' | 'Adjust' | 'Geometry' | 'Convert';
+type ToolCategory = 'AI Magic' | 'Artistic' | 'Adjust' | 'Geometry' | 'Convert' | 'Elements' | 'Text';
 
 interface PhotoTool {
     id: string;
@@ -19,7 +19,7 @@ interface PhotoTool {
     category: ToolCategory;
     icon: string;
     prompt?: string; // For AI tools
-    action?: (ctx: any) => void; // For client-side tools
+    action?: string; // For client-side tools
     cssFilter?: string; // For CSS filters
     cssTransform?: string; // For CSS transforms
 }
@@ -48,6 +48,18 @@ const PHOTO_TOOLS: PhotoTool[] = [
     { id: 'vintage', name: 'Vintage Filter', category: 'Artistic', icon: '🕰️', prompt: 'Apply a nostalgic vintage aesthetic to this photo.' },
     { id: 'pattern', name: 'Pattern Generator', category: 'Artistic', icon: '💠', prompt: 'Create a seamless pattern based on the elements in this image.' },
     { id: 'overlay', name: 'Overlay Images', category: 'Artistic', icon: '🖼️', prompt: 'Create an artistic double exposure overlay effect.' },
+    { id: 'textures', name: 'Texture Overlay', category: 'Artistic', icon: '🧱', prompt: 'Apply a homey, lived-in texture to the image.' },
+    { id: 'glitch', name: 'Glitch Effect', category: 'Artistic', icon: '👾', prompt: 'Apply a cool digital glitch distortion effect to the image.' },
+    
+    // --- Text ---
+    { id: 'curved-text', name: 'Curved Text', category: 'Text', icon: '↪️', prompt: 'Add the text "Hello World" with a stylish curved arch effect.' },
+    { id: '3d-text', name: '3D Text Effects', category: 'Text', icon: '🧊', prompt: 'Add visual depth to text with 3D effects.' },
+    
+    // --- Elements ---
+    { id: 'icons', name: 'Icons', category: 'Elements', icon: '⭐', prompt: 'Add a professional icon to the design.' },
+    { id: 'stickers', name: 'Stickers', category: 'Elements', icon: '🦄', prompt: 'Add a fun sticker to the photo.' },
+    { id: 'speech-bubble', name: 'Speech Bubble', category: 'Elements', icon: '💬', prompt: 'Add a comic-style speech bubble.' },
+    { id: 'clipart', name: 'Clipart', category: 'Elements', icon: '📎', prompt: 'Add stylish clipart to the design.' },
     
     // --- Adjust (CSS/AI Mixed) ---
     { id: 'brighten', name: 'Brighten Image', category: 'Adjust', icon: '☀️', cssFilter: 'brightness(1.2)' },
@@ -70,8 +82,10 @@ const PHOTO_TOOLS: PhotoTool[] = [
     { id: 'crop', name: 'Crop Image', category: 'Geometry', icon: '✂️', prompt: 'Crop this image to improve composition.' },
     { id: 'frame', name: 'Add Frames', category: 'Geometry', icon: '🖼️', prompt: 'Add an artistic frame around this photo.' },
     { id: 'borders', name: 'Photo Borders', category: 'Geometry', icon: '⬜', prompt: 'Add a clean white border around this photo.' },
+    { id: 'grids', name: 'Design Grids', category: 'Geometry', icon: '▦', prompt: 'Overlay a crisp design grid for layout composition.' },
 
     // --- Convert (Functionality) ---
+    { id: 'ascii', name: 'ASCII Art', category: 'Convert', icon: '🔢', prompt: 'Convert this image into ASCII art characters.' },
     { id: 'jpg-png', name: 'JPG to PNG', category: 'Convert', icon: '📄', action: 'convert-png' },
     { id: 'png-jpg', name: 'PNG to JPG', category: 'Convert', icon: '🖼️', action: 'convert-jpg' },
     { id: 'webp-jpg', name: 'WEBP to JPG', category: 'Convert', icon: '🌐', action: 'convert-jpg' },
@@ -385,7 +399,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                             className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:ring-2 focus:ring-cyan-500 mb-3"
                         />
                         <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                            {['AI Magic', 'Artistic', 'Adjust', 'Geometry', 'Convert'].map(cat => (
+                            {['AI Magic', 'Artistic', 'Text', 'Elements', 'Adjust', 'Geometry', 'Convert'].map(cat => (
                                 <button
                                     key={cat}
                                     onClick={() => setActiveCategory(cat as ToolCategory)}
