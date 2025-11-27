@@ -362,6 +362,26 @@ export const generateTaglinesAndSocial = async (e: string, sys: string) => gener
 export const generateVisualIdentity = async (e: string, sys: string) => generateJsonContent(`Visual ID for: ${e}`, brandCompSchema('visualIdentity', '', false, { logoConcept: { type: Type.STRING }, colorPalette: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, hex: { type: Type.STRING } }, required: ["name", "hex"] } }, typography: { type: Type.STRING } }), 'gemini-2.5-pro');
 export const generateMarketingAngles = async (e: string, sys: string) => generateJsonContent(`Angles for: ${e}`, brandCompSchema('marketingAngles', '2-3 angles', true), 'gemini-2.5-pro');
 
+// --- Brand Kit Helpers ---
+export const generateBrandGuidelines = async (brandData: any) => getGeminiAI().models.generateContent({
+    model: 'gemini-2.5-pro',
+    contents: `Create comprehensive brand guidelines for the following brand profile. Include sections on Voice & Tone, Logo Usage, Typography Rules, and Color Usage. Format as Markdown.
+    
+    Brand Profile:
+    ${JSON.stringify(brandData, null, 2)}`
+});
+
+export const analyzeLayoutForResize = async (platform: string, description: string, imageBase64?: string) => {
+    let prompt = `Analyze this design context and provide a tailored image generation prompt to resize/adapt the design for ${platform}. The new design should maintain brand identity but be optimized for the target platform's aspect ratio and user behavior. Description: "${description}".`;
+    const parts: any[] = [{ text: prompt }];
+    if (imageBase64) parts.push({ inlineData: { data: imageBase64, mimeType: 'image/png' } });
+    
+    return getGeminiAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { parts }
+    });
+};
+
 // --- Content ---
 export const expandContent = async (topic: string, type: string, tone: string) => getGeminiAI().models.generateContent({ model: 'gemini-2.5-pro', contents: `Expand "${topic}" into a ${type}. Tone: ${tone}. Markdown.` });
 

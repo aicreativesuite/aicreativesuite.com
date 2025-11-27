@@ -33,6 +33,7 @@ import AudiobookCreator from './components/features/AudiobookCreator';
 import VideoDubber from './components/features/VideoDubber';
 import VoiceLab from './components/features/VoiceLab';
 import RealtimeTranscriber from './components/features/RealtimeTranscriber';
+import BrandKit from './components/features/BrandKit';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
 
 
@@ -225,6 +226,7 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
+            case 'brand-kit': return BrandKit;
             case 'audiobook-creator': return AudiobookCreator;
             case 'video-dubber': return VideoDubber;
             case 'voice-lab': return VoiceLab;
