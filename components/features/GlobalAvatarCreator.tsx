@@ -53,7 +53,7 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
     const [apiKeyReady, setApiKeyReady] = useState(false);
     const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
-
+    
     // Refs
     const pollIntervalRef = useRef<number | null>(null);
     const messageIntervalRef = useRef<number | null>(null);
@@ -156,6 +156,45 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
         }
     };
 
+    // Helper to construct prompts for display and usage
+    const getGeneratedPrompts = () => {
+        let imgPrompt = `A high-quality, photorealistic portrait of ${avatarDescription || 'a character'}`;
+        if (expression && expression !== 'neutral') {
+            imgPrompt += `, displaying a ${expression} expression`;
+        }
+        if (background) {
+            imgPrompt += `, ${background}`;
+        }
+        imgPrompt += `, facing the camera, neutral lighting, 8k resolution.`;
+
+        let vidPrompt = `A video of this person speaking naturally.`;
+        if (movementType === 'minimal') {
+            vidPrompt += ` Minimal head movement, professional posture.`;
+        } else if (movementType === 'gestures') {
+            vidPrompt += ` Using expressive hand gestures to emphasize speech, upper body movement.`;
+        } else if (movementType === 'walking') {
+            vidPrompt += ` Walking towards the camera, steady cam, dynamic background.`;
+        } else if (movementType === 'dynamic') {
+            vidPrompt += ` Energetic body language, moving around the frame.`;
+        }
+
+        if (lipSyncMode === 'enhanced') {
+            vidPrompt += ` Focus on mouth, precise lip articulation matching speech patterns, high fidelity facial capture.`;
+        } else {
+            vidPrompt += ` Realistic facial expressions matching speech.`;
+        }
+
+        if (removeWatermark) {
+            vidPrompt += ` Clean footage, no text, no watermarks, high production value.`;
+        }
+
+        vidPrompt += ` Looking directly at the camera. High quality, 8k.`;
+
+        return { imgPrompt, vidPrompt };
+    };
+
+    const { imgPrompt: finalImagePrompt, vidPrompt: finalVideoPrompt } = getGeneratedPrompts();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         // @ts-ignore
@@ -202,16 +241,7 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
             setLoadingStep('avatar');
             setLoadingMessage('Generating digital human...');
             
-            let prompt = `A high-quality, photorealistic portrait of ${avatarDescription}`;
-            if (expression && expression !== 'neutral') {
-                prompt += `, displaying a ${expression} expression`;
-            }
-            if (background) {
-                prompt += `, ${background}`;
-            }
-            prompt += `, facing the camera, neutral lighting, 8k resolution.`;
-
-            const imageBytes = await generateImage(prompt, '9:16');
+            const imageBytes = await generateImage(finalImagePrompt, '9:16');
             setAvatarImage({ base64: imageBytes, mimeType: 'image/jpeg' });
 
             // Step 2: Generate Audio
@@ -234,31 +264,7 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
                 setLoadingMessage(VEO_LOADING_MESSAGES[i]);
             }, 3000);
 
-            let videoPrompt = `A video of this person speaking naturally.`;
-
-            if (movementType === 'minimal') {
-                videoPrompt += ` Minimal head movement, professional posture.`;
-            } else if (movementType === 'gestures') {
-                videoPrompt += ` Using expressive hand gestures to emphasize speech, upper body movement.`;
-            } else if (movementType === 'walking') {
-                videoPrompt += ` Walking towards the camera, steady cam, dynamic background.`;
-            } else if (movementType === 'dynamic') {
-                videoPrompt += ` Energetic body language, moving around the frame.`;
-            }
-
-            if (lipSyncMode === 'enhanced') {
-                videoPrompt += ` Focus on mouth, precise lip articulation matching speech patterns, high fidelity facial capture.`;
-            } else {
-                videoPrompt += ` Realistic facial expressions matching speech.`;
-            }
-
-            if (removeWatermark) {
-                videoPrompt += ` Clean footage, no text, no watermarks, high production value.`;
-            }
-
-            videoPrompt += ` Looking directly at the camera. High quality, 8k.`;
-
-            const operation = await generateVideoFromImage(videoPrompt, imageBytes, 'image/jpeg', '9:16', false);
+            const operation = await generateVideoFromImage(finalVideoPrompt, imageBytes, 'image/jpeg', '9:16', false);
             handlePolling(operation);
 
         } catch (err: any) {

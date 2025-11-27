@@ -51,6 +51,8 @@ interface MovieState {
     genre: string;
     tone: string;
     duration: string;
+    
+    // Outputs
     worldSetting: string;
     storyStructure: any;
     characters: CharacterData[];
@@ -63,9 +65,34 @@ interface MovieState {
     worldDetails?: any;
     storyAnalysis?: any;
     sceneBreakdowns: Record<string, any>;
+    storySettings: {
+        sceneCount: string;
+        endingType: string;
+    };
 }
 
 interface MovieGeneratorProps { onShare: (options: any) => void; }
+
+const DURATION_OPTIONS = ['90 min', '120 min', '150 min'];
+const SCENE_COUNT_OPTIONS = ['Short (30-50)', 'Feature (100-120)', 'Epic (150-200)'];
+const ENDING_TYPE_OPTIONS = ['Happy', 'Tragic', 'Open-ended', 'Bittersweet', 'Twist Ending', 'Ambiguous'];
+
+const SCREENPLAY_OPTIONS = [
+    'Scene Headers (INT/EXT)',
+    'Dialogue',
+    'Camera Directions',
+    'Transitions',
+    'VFX Notes',
+    'Cinematic Tone'
+];
+
+const SPECIAL_MODULES = [
+    'Comedy dialogue style',
+    'Action choreography prompts',
+    'Romantic dialogues',
+    'Villain monologues',
+    'Hero transformation moments'
+];
 
 const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
     const [activePhase, setActivePhase] = useState<Phase>('concept');
@@ -73,7 +100,8 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
         title: '', logline: '', genre: MOVIE_GENRES[0], tone: 'Dramatic', duration: '120 min',
         worldSetting: '', storyStructure: null, characters: [],
         screenplayScenes: [], visualPrompts: [], animationClips: [], audioTracks: [],
-        productionDocs: '', marketingCopy: '', sceneBreakdowns: {}
+        productionDocs: '', marketingCopy: '', sceneBreakdowns: {},
+        storySettings: { sceneCount: 'Feature (100-120)', endingType: 'Happy' }
     });
 
     // UI State
@@ -89,6 +117,9 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
     const [currentInput, setCurrentInput] = useState(''); 
     const [selectedOption, setSelectedOption] = useState('');
     const [selectedSubTab, setSelectedSubTab] = useState<string>(''); // Generic sub-tab state
+    
+    // Screenplay specific
+    const [screenplayDetails, setScreenplayDetails] = useState<string[]>(['Dialogue', 'Scene Headers (INT/EXT)']);
 
     useEffect(() => {
         return () => {
@@ -99,22 +130,29 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
     }, []);
 
     const updateMovie = (updates: Partial<MovieState>) => setMovie(prev => ({ ...prev, ...updates }));
+    
+    const toggleScreenplayDetail = (detail: string) => {
+        setScreenplayDetails(prev => prev.includes(detail) ? prev.filter(d => d !== detail) : [...prev, detail]);
+    };
 
     // --- Phase 1: Concept & World ---
     const handleGenerateConcept = async () => {
         if (!movie.genre || !currentInput) return setError("Please enter a topic/premise.");
         setLoading(true);
         try {
-            const res = await generateMovieConcept(movie.genre, movie.tone, currentInput);
+            // World context removed as per request to simplify inputs
+            const res = await generateMovieConcept(movie.genre, movie.tone, currentInput, movie.duration);
             const data = JSON.parse(res.text);
             updateMovie({ 
                 title: data.title, 
                 logline: data.logline, 
                 worldSetting: data.worldDescription 
             });
-            // Auto-generate world details if successful
+            
+            // Auto-generate detailed world specs based on the concept and inputs
             const worldRes = await generateWorldDetails(data.worldDescription);
             updateMovie({ worldDetails: JSON.parse(worldRes.text) });
+            
             setActivePhase('story');
         } catch(e:any) { setError(e.message); } finally { setLoading(false); }
     };
@@ -123,7 +161,13 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
     const handleGenerateStory = async () => {
         setLoading(true);
         try {
-            const structRes = await generateDetailedStory(movie.title, movie.logline, movie.genre);
+            const structRes = await generateDetailedStory(
+                movie.title, 
+                movie.logline, 
+                movie.genre,
+                movie.storySettings.sceneCount,
+                movie.storySettings.endingType
+            );
             const structure = JSON.parse(structRes.text);
             updateMovie({ storyStructure: structure });
             
@@ -167,7 +211,7 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
         if (!selectedOption) return setError("Select a scene/beat to write.");
         setLoading(true);
         try {
-            const res = await generateScreenplayScene(movie.title, selectedOption, currentInput || 'Standard'); 
+            const res = await generateScreenplayScene(movie.title, selectedOption, currentInput || 'Standard', screenplayDetails); 
             updateMovie({ 
                 screenplayScenes: [...movie.screenplayScenes, { 
                     id: Date.now().toString(), 
@@ -361,16 +405,20 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-4">
                                     <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Genre</label><select className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" value={movie.genre} onChange={e => updateMovie({genre: e.target.value})}>{MOVIE_GENRES.map(g => <option key={g}>{g}</option>)}</select></div>
-                                    <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Tone</label><input className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" placeholder="e.g. Dark, Gritty" value={movie.tone} onChange={e => updateMovie({tone: e.target.value})} /></div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Tone / Mood</label><input className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" placeholder="Dark, gritty, funny, surreal..." value={movie.tone} onChange={e => updateMovie({tone: e.target.value})} /></div>
+                                        <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Duration</label><select className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" value={movie.duration} onChange={e => updateMovie({duration: e.target.value})}>{DURATION_OPTIONS.map(d => <option key={d}>{d}</option>)}</select></div>
+                                    </div>
                                 </div>
                                 <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Premise</label><textarea className="w-full h-32 bg-slate-800 border border-slate-700 rounded p-3 text-white resize-none" placeholder="Describe your movie idea..." value={currentInput} onChange={e => setCurrentInput(e.target.value)} /></div>
                             </div>
+
                             {movie.worldDetails && (
                                 <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mt-4">
-                                    <h4 className="text-purple-400 font-bold mb-2">World Building</h4>
+                                    <h4 className="text-purple-400 font-bold mb-2 text-xs uppercase">Generated World Details</h4>
                                     <p className="text-sm text-slate-300 mb-2">{movie.worldDetails.environmentDescription}</p>
                                     <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
-                                        <div><strong className="text-slate-500">Rules/Magic:</strong> {movie.worldDetails.uniqueRulesOrMagic}</div>
+                                        <div><strong className="text-slate-500">Unique Rules:</strong> {movie.worldDetails.uniqueRulesOrMagic}</div>
                                         <div><strong className="text-slate-500">Vehicles:</strong> {movie.worldDetails.vehicleDesigns?.join(', ')}</div>
                                     </div>
                                 </div>
@@ -380,13 +428,40 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
 
                     {activePhase === 'story' && (
                         <PhaseLayout title="Story Development" actions={
-                            <button onClick={handleGenerateStory} disabled={loading || !movie.title} className="w-full bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-lg font-bold transition disabled:opacity-50">{loading ? <Loader /> : 'Generate Structure & Analysis'}</button>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Scene Count Range</label>
+                                        <select 
+                                            className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white text-sm"
+                                            value={movie.storySettings.sceneCount}
+                                            onChange={e => updateMovie({ storySettings: { ...movie.storySettings, sceneCount: e.target.value } })}
+                                        >
+                                            {SCENE_COUNT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Ending Type</label>
+                                        <select 
+                                            className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white text-sm"
+                                            value={movie.storySettings.endingType}
+                                            onChange={e => updateMovie({ storySettings: { ...movie.storySettings, endingType: e.target.value } })}
+                                        >
+                                            {ENDING_TYPE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <button onClick={handleGenerateStory} disabled={loading || !movie.title} className="w-full bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-lg font-bold transition disabled:opacity-50">{loading ? <Loader /> : 'Generate Structure & Analysis'}</button>
+                            </div>
                         }>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
                                     <h4 className="text-lg font-bold text-white mb-4">Structure</h4>
                                     {movie.storyStructure ? (
                                         <div className="space-y-4 text-sm">
+                                            {movie.storyStructure.estimatedSceneCount && (
+                                                <div className="bg-slate-900 p-2 rounded text-xs text-slate-400 mb-2">Estimated Scenes: <span className="text-white font-bold">{movie.storyStructure.estimatedSceneCount}</span></div>
+                                            )}
                                             {movie.storyStructure.acts.map((act: any, i: number) => (
                                                 <div key={i} className="bg-slate-900 p-3 rounded">
                                                     <div className="font-bold text-cyan-400">{act.name}</div>
@@ -396,15 +471,27 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
                                         </div>
                                     ) : <div className="text-slate-500 italic text-center py-8">Generate concept first.</div>}
                                 </div>
-                                <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                                    <h4 className="text-lg font-bold text-white mb-4">AI Analysis</h4>
-                                    {movie.storyAnalysis ? (
-                                        <div className="space-y-3 text-sm">
-                                            <div><strong className="text-purple-400">Tension Curve:</strong> <p className="text-slate-300">{movie.storyAnalysis.tensionCurve}</p></div>
-                                            <div><strong className="text-purple-400">Plot Twists:</strong> <ul className="list-disc pl-4 text-slate-300">{movie.storyAnalysis.plotTwists?.map((t:string,i:number)=><li key={i}>{t}</li>)}</ul></div>
-                                            <div><strong className="text-purple-400">Relationships:</strong> <ul className="list-disc pl-4 text-slate-300">{movie.storyAnalysis.characterRelationships?.map((r:string,i:number)=><li key={i}>{r}</li>)}</ul></div>
-                                        </div>
-                                    ) : <div className="text-slate-500 italic text-center py-8">Analysis will appear here.</div>}
+                                <div className="space-y-4">
+                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                        <h4 className="text-lg font-bold text-white mb-4">Plot Points & Twists</h4>
+                                        {movie.storyStructure ? (
+                                            <div className="space-y-3 text-sm">
+                                                <div><strong className="text-amber-400">Major Turning Points:</strong> <ul className="list-disc pl-4 text-slate-300">{movie.storyStructure.majorPlotPoints?.map((p:string,i:number)=><li key={i}>{p}</li>)}</ul></div>
+                                                <div><strong className="text-red-400">Twists:</strong> <ul className="list-disc pl-4 text-slate-300">{movie.storyStructure.twists?.map((t:string,i:number)=><li key={i}>{t}</li>)}</ul></div>
+                                                <div><strong className="text-green-400">Ending ({movie.storySettings.endingType}):</strong> <p className="text-slate-300 mt-1">{movie.storyStructure.endingDescription}</p></div>
+                                            </div>
+                                        ) : <div className="text-slate-500 italic text-center py-8">Structure pending.</div>}
+                                    </div>
+                                    
+                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                        <h4 className="text-lg font-bold text-white mb-4">AI Critique</h4>
+                                        {movie.storyAnalysis ? (
+                                            <div className="space-y-3 text-sm">
+                                                <div><strong className="text-purple-400">Tension Curve:</strong> <p className="text-slate-300">{movie.storyAnalysis.tensionCurve}</p></div>
+                                                <div><strong className="text-purple-400">Relationships:</strong> <ul className="list-disc pl-4 text-slate-300">{movie.storyAnalysis.characterRelationships?.map((r:string,i:number)=><li key={i}>{r}</li>)}</ul></div>
+                                            </div>
+                                        ) : <div className="text-slate-500 italic text-center py-8">Analysis will appear here.</div>}
+                                    </div>
                                 </div>
                             </div>
                         </PhaseLayout>
@@ -417,6 +504,34 @@ const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onShare }) => {
                             <div className="space-y-4">
                                 <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Select Beat</label><select className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" value={selectedOption} onChange={e => setSelectedOption(e.target.value)}><option value="">-- Select --</option>{movie.storyStructure?.acts?.flatMap((a: any) => a.beats).map((b: string, i: number) => <option key={i} value={b}>{b.substring(0, 60)}...</option>)}<option value="Custom">Custom Scene</option></select></div>
                                 <div><label className="text-xs font-bold text-slate-400 uppercase block mb-1">Style Instructions</label><input className="w-full bg-slate-800 border border-slate-700 rounded p-2.5 text-white" placeholder="e.g., Witty dialogue, Slow burn" value={currentInput} onChange={e => setCurrentInput(e.target.value)} /></div>
+                                
+                                <div>
+                                    <label className="text-xs font-bold text-slate-400 uppercase block mb-2">Special Modules</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {SPECIAL_MODULES.map(mod => (
+                                            <button 
+                                                key={mod}
+                                                onClick={() => setCurrentInput(mod)}
+                                                className="px-3 py-1.5 bg-slate-800 hover:bg-purple-900/30 hover:border-purple-500/50 border border-slate-700 rounded text-xs text-slate-300 transition-colors"
+                                            >
+                                                {mod}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                                    <label className="text-xs font-bold text-slate-400 uppercase block mb-2">Include Elements</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {SCREENPLAY_OPTIONS.map(opt => (
+                                            <label key={opt} className="flex items-center space-x-2 text-sm text-slate-300 cursor-pointer">
+                                                <input type="checkbox" checked={screenplayDetails.includes(opt)} onChange={() => toggleScreenplayDetail(opt)} className="rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-offset-0 focus:ring-cyan-500" />
+                                                <span>{opt}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div className="mt-6 space-y-6 h-64 overflow-y-auto custom-scrollbar pr-2">
                                     {movie.screenplayScenes.map((scene) => (
                                         <div key={scene.id} className="bg-white text-slate-900 p-6 rounded shadow-xl font-mono text-sm whitespace-pre-wrap border-l-4 border-green-500">
