@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { generateSpeech } from '../../services/geminiService';
 import Loader from '../common/Loader';
 import { pcmToWav, decode } from '../../utils';
+import { TTS_CATEGORIES } from '../../constants';
 
 interface TextToSpeechProps {
     onShare: (options: { contentUrl: string; contentText: string; contentType: 'audio' }) => void;
@@ -9,6 +11,7 @@ interface TextToSpeechProps {
 
 const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
     const [text, setText] = useState('');
+    const [category, setCategory] = useState(TTS_CATEGORIES[0]);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -38,7 +41,9 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
         setAudioUrl(null);
 
         try {
-            const base64Audio = await generateSpeech(text);
+            // Prepend instructions based on category
+            const enhancedText = `(Style: ${category}) ${text}`;
+            const base64Audio = await generateSpeech(enhancedText);
             if (base64Audio) {
                 const bytes = decode(base64Audio);
                 const blob = pcmToWav(bytes, 24000, 1, 16);
@@ -58,13 +63,28 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
     return (
         <div className="max-w-2xl mx-auto space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-                <textarea
-                    rows={5}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
-                    placeholder="Type or paste text here to convert to speech..."
-                />
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Voice Category</label>
+                    <select 
+                        value={category} 
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500"
+                    >
+                        {TTS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+                
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Script</label>
+                    <textarea
+                        rows={5}
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
+                        placeholder="Type or paste text here..."
+                    />
+                </div>
+
                 <button
                     type="submit"
                     disabled={loading}
@@ -85,7 +105,7 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
                         <audio ref={audioRef} controls src={audioUrl} className="w-full">
                             Your browser does not support the audio element.
                         </audio>
-                        <div className="text-center">
+                        <div className="text-center flex gap-3 justify-center">
                              <button
                                 onClick={() => onShare({ contentUrl: audioUrl, contentText: text, contentType: 'audio' })}
                                 className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
@@ -93,8 +113,11 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
                                 </svg>
-                                <span>Share & Promote</span>
+                                <span>Share</span>
                             </button>
+                            <a href={audioUrl} download="generated_speech.wav" className="flex items-center justify-center space-x-2 bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors duration-300">
+                                <span>Download</span>
+                            </a>
                         </div>
                     </div>
                 )}

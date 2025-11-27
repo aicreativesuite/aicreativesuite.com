@@ -186,6 +186,37 @@ export const generateSongConcept = async (genre: string, mood: string, topic: st
     }, 'gemini-2.5-pro'
 );
 
+// --- Audio Tools ---
+export const generateAudiobookScript = async (text: string) => generateJsonContent(
+    `Convert this text into an audiobook script format. Identify speakers (Narrator, Character1, Character2). If no clear characters, use Narrator. JSON Array of {speaker, text}. \n\nTEXT:\n${text.substring(0, 10000)}`,
+    {
+        type: Type.ARRAY,
+        items: {
+            type: Type.OBJECT,
+            properties: {
+                speaker: { type: Type.STRING },
+                text: { type: Type.STRING }
+            },
+            required: ["speaker", "text"]
+        }
+    }
+);
+
+export const translateScript = async (script: string, targetLanguage: string) => generateJsonContent(
+    `Translate the following script to ${targetLanguage}. Maintain speaker labels. Input format: JSON Array {speaker, text}. Output format: JSON Array {speaker, text}. \n\nSCRIPT:\n${script}`,
+    {
+        type: Type.ARRAY,
+        items: {
+            type: Type.OBJECT,
+            properties: {
+                speaker: { type: Type.STRING },
+                text: { type: Type.STRING }
+            },
+            required: ["speaker", "text"]
+        }
+    }
+);
+
 // --- Movie (Advanced) ---
 export const generateMovieConcept = async (genre: string, tone: string, topic: string) => generateJsonContent(
     `Movie Concept for: "${topic}". Genre: ${genre}, Tone: ${tone}. Include title, logline, worldDescription, visualStyleRef.`,

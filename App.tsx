@@ -28,6 +28,11 @@ import ProductionPlanner from './components/features/ProductionPlanner';
 import GlobalAvatarCreator from './components/features/GlobalAvatarCreator';
 import SmartQuizGenerator from './components/features/SmartQuizGenerator';
 import SlideDeckGenerator from './components/features/SlideDeckGenerator';
+import TextToSpeech from './components/features/TextToSpeech';
+import AudiobookCreator from './components/features/AudiobookCreator';
+import VideoDubber from './components/features/VideoDubber';
+import VoiceLab from './components/features/VoiceLab';
+import RealtimeTranscriber from './components/features/RealtimeTranscriber';
 import { PLATFORMS, Platform, PlatformCategory } from './constants';
 
 
@@ -220,6 +225,11 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
+            case 'audiobook-creator': return AudiobookCreator;
+            case 'video-dubber': return VideoDubber;
+            case 'voice-lab': return VoiceLab;
+            case 'realtime-transcriber': return RealtimeTranscriber;
+            case 'text-to-speech': return TextToSpeech;
             case 'slide-deck': return SlideDeckGenerator;
             case 'image-generator': return ImageGenerator;
             case 'image-editor': return ImageEditor;
