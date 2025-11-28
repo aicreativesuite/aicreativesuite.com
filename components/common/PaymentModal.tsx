@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plan } from '../../constants';
 import Loader from './Loader';
@@ -11,6 +12,7 @@ interface PaymentModalProps {
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ show, onClose, plan, billingCycle }) => {
     const [cardDetails, setCardDetails] = useState({ name: '', number: '', expiry: '', cvc: '' });
+    const [paymentMethod, setPaymentMethod] = useState<'credit' | 'debit'>('credit');
     const [error, setError] = useState('');
     const [processing, setProcessing] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -19,6 +21,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ show, onClose, plan, billin
         // Reset state when modal is opened for a new plan
         if (show) {
             setCardDetails({ name: '', number: '', expiry: '', cvc: '' });
+            setPaymentMethod('credit');
             setError('');
             setProcessing(false);
             setSuccess(false);
@@ -62,7 +65,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ show, onClose, plan, billin
     };
 
     const price = plan.price[billingCycle];
-    const displayPrice = price === 'Free' ? '$0' : (typeof price === 'number' ? `$${price}` : 'Custom');
+    const isPayOnUse = plan.name === 'Pay on Use';
+    const displayPrice = price === 'Free' ? '$0' : (price === 'Usage' ? 'Variable' : (typeof price === 'number' ? `$${price}` : 'Custom'));
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 transition-opacity" onClick={onClose}>
@@ -76,13 +80,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ show, onClose, plan, billin
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-400 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
-                        <h2 className="text-2xl font-bold text-white mb-2">Subscription Active!</h2>
-                        <p className="text-slate-400 mb-6">Welcome to the {plan.name} plan. You can now access your new features.</p>
+                        <h2 className="text-2xl font-bold text-white mb-2">{isPayOnUse ? 'Payment Linked!' : 'Subscription Active!'}</h2>
+                        <p className="text-slate-400 mb-6">{isPayOnUse ? 'Your payment method has been verified. You can now use the platform.' : `Welcome to the ${plan.name} plan. You can now access your new features.`}</p>
                         <button onClick={onClose} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 transition-colors">Get Started</button>
                     </div>
                 ) : (
                     <>
-                        <h2 className="text-2xl font-bold text-white mb-2">{price === 'Free' ? 'Start with' : 'Upgrade to'} {plan.name}</h2>
+                        <h2 className="text-2xl font-bold text-white mb-2">{isPayOnUse ? 'Link Payment Method' : (price === 'Free' ? 'Start with' : 'Upgrade to') + ' ' + plan.name}</h2>
+                        
                         <div className="bg-slate-700/50 rounded-lg p-4 mb-6 text-sm">
                             <div className="flex justify-between items-center">
                                 <span className="text-slate-300">{plan.name} ({billingCycle})</span>
@@ -104,12 +109,30 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ show, onClose, plan, billin
                              </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="space-y-4">
+                                {/* Payment Method Toggle */}
+                                <div className="flex bg-slate-900 p-1 rounded-lg mb-4">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setPaymentMethod('credit')}
+                                        className={`flex-1 py-2 rounded-md text-sm font-medium transition ${paymentMethod === 'credit' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        Credit Card
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setPaymentMethod('debit')}
+                                        className={`flex-1 py-2 rounded-md text-sm font-medium transition ${paymentMethod === 'debit' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        Debit Card
+                                    </button>
+                                </div>
+
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">Cardholder Name</label>
                                     <input type="text" id="name" name="name" value={cardDetails.name} onChange={handleInputChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500" placeholder="Demo User" />
                                 </div>
                                 <div>
-                                    <label htmlFor="number" className="block text-sm font-medium text-slate-300 mb-2">Card Details</label>
+                                    <label htmlFor="number" className="block text-sm font-medium text-slate-300 mb-2">{paymentMethod === 'debit' ? 'Debit Card Details' : 'Credit Card Details'}</label>
                                     <div className="relative">
                                         <input type="text" id="number" name="number" value={cardDetails.number} onChange={handleInputChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500" placeholder="0000 0000 0000 0000" />
                                     </div>
@@ -130,14 +153,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ show, onClose, plan, billin
                                     disabled={processing}
                                     className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                                 >
-                                    {processing ? <Loader /> : `Pay ${displayPrice}`}
+                                    {processing ? <Loader /> : (isPayOnUse ? `Link ${paymentMethod === 'debit' ? 'Debit' : 'Credit'} Card` : `Pay ${displayPrice}`)}
                                 </button>
                                 <div className="text-xs text-slate-500 text-center space-y-2 pt-4 border-t border-slate-700/50">
-                                    <div className="flex items-center justify-center space-x-2 text-slate-400">
+                                    <div className="flex items-center justify-center space-x-3 text-slate-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
                                         </svg>
                                         <span>Secure Payment Gateway</span>
+                                    </div>
+                                    <div className="flex justify-center space-x-2 opacity-50">
+                                        {/* Card Icons Placeholder */}
+                                        <div className="h-4 w-6 bg-slate-600 rounded"></div>
+                                        <div className="h-4 w-6 bg-slate-600 rounded"></div>
+                                        <div className="h-4 w-6 bg-slate-600 rounded"></div>
+                                        <div className="h-4 w-6 bg-slate-600 rounded"></div>
                                     </div>
                                 </div>
                             </form>
