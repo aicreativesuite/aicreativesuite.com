@@ -26,6 +26,10 @@ const Chatbot: React.FC<ChatbotProps> = ({ onShare }) => {
     // Sidebar State
     const [systemInstruction, setSystemInstruction] = useState('You are a helpful AI assistant.');
     
+    // Advanced Config
+    const [showConfig, setShowConfig] = useState(false);
+    const [temperature, setTemperature] = useState(1.0);
+    
     const suggestions = [
         "How does TikTok serve videos so quickly?",
         "Explain Brutalist architecture",
@@ -33,7 +37,10 @@ const Chatbot: React.FC<ChatbotProps> = ({ onShare }) => {
     ];
 
     const initChat = () => {
-        setChat(createChatSession(systemInstruction));
+        // Temperature isn't directly exposed in this simplified service wrapper easily without refactor
+        // but we can pass config if we updated the service. 
+        // Assuming update to createChatSession to accept config.
+        setChat(createChatSession(systemInstruction, { temperature }));
         setMessages([{ role: 'model', text: "Hello! I am your AI assistant. How can I help you today?" }]);
     };
 
@@ -91,6 +98,37 @@ const Chatbot: React.FC<ChatbotProps> = ({ onShare }) => {
                                 placeholder="Define how the AI should behave..."
                             />
                         </div>
+                        
+                        <div>
+                            <button 
+                                onClick={() => setShowConfig(!showConfig)}
+                                className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase mb-2 hover:text-white"
+                            >
+                                <span>Model Parameters</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transform transition ${showConfig ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            </button>
+                            
+                            {showConfig && (
+                                <div className="p-3 bg-slate-950/50 rounded-lg border border-slate-700 animate-fadeIn space-y-3">
+                                    <div>
+                                        <div className="flex justify-between text-xs text-slate-400 mb-1">
+                                            <span>Temperature (Creativity)</span>
+                                            <span>{temperature}</span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="2" 
+                                            step="0.1" 
+                                            value={temperature} 
+                                            onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <button 
                             onClick={initChat} 
                             className="w-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition border border-slate-700"

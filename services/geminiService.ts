@@ -16,9 +16,23 @@ const generateJsonContent = async (prompt: string, schema: any, model = 'gemini-
     });
 };
 
+export const enhancePrompt = async (originalPrompt: string, type: 'image' | 'video' | 'text'): Promise<GenerateContentResponse> => {
+    const ai = getGeminiAI();
+    let systemInstruction = "";
+    if (type === 'image') systemInstruction = "You are an expert prompt engineer for AI image generation (Imagen/Midjourney style). Rewrite the user's prompt to be highly detailed, descriptive, and optimized for photorealism, lighting, and texture. Keep it under 60 words.";
+    if (type === 'video') systemInstruction = "You are an expert prompt engineer for AI video generation (Veo/Sora style). Rewrite the user's prompt to include specific camera angles, lighting, motion details, and atmospheric description. Keep it concise.";
+    if (type === 'text') systemInstruction = "You are an expert editor. Improve the clarity, tone, and impact of the following text prompt to get the best possible result from an LLM.";
+
+    return ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: originalPrompt,
+        config: { systemInstruction }
+    });
+};
+
 // --- Text Generation ---
-export const generateText = async (prompt: string, model: 'gemini-2.5-flash' | 'gemini-2.5-flash-lite' | 'gemini-2.5-pro' = 'gemini-2.5-flash'): Promise<GenerateContentResponse> => {
-    return getGeminiAI().models.generateContent({ model, contents: prompt });
+export const generateText = async (prompt: string, model: 'gemini-2.5-flash' | 'gemini-2.5-flash-lite' | 'gemini-2.5-pro' = 'gemini-2.5-flash', config?: any): Promise<GenerateContentResponse> => {
+    return getGeminiAI().models.generateContent({ model, contents: prompt, config });
 };
 
 export const generateTextWithThinking = async (prompt: string): Promise<GenerateContentResponse> => {
@@ -30,10 +44,13 @@ export const generateTextWithThinking = async (prompt: string): Promise<Generate
 };
 
 // --- Chat ---
-export const createChatSession = (systemInstruction?: string): Chat => {
+export const createChatSession = (systemInstruction?: string, config?: any): Chat => {
     return getGeminiAI().chats.create({
         model: 'gemini-2.5-flash',
-        config: systemInstruction ? { systemInstruction } : undefined,
+        config: { 
+            systemInstruction,
+            ...config
+        },
     });
 };
 

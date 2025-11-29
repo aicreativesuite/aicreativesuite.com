@@ -23,6 +23,10 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ onShare }) => {
     const [videoStyle, setVideoStyle] = useState(DESIGN_STYLES[0]);
     const [visualEffect, setVisualEffect] = useState(VISUAL_EFFECTS[0]);
     const [background, setBackground] = useState(BACKGROUND_OPTIONS[0].value);
+    
+    // Advanced Camera Controls
+    const [cameraMovement, setCameraMovement] = useState<string | null>(null);
+
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState(VEO_LOADING_MESSAGES[0]);
@@ -156,6 +160,9 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ onShare }) => {
             if (visualEffect !== 'None') {
                 fullPrompt += `, with ${visualEffect} effects`;
             }
+            if (cameraMovement) {
+                fullPrompt += `, ${cameraMovement}`;
+            }
 
             let operation: any;
             if (mode === 'image-to-video' && imageFile) {
@@ -255,6 +262,30 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ onShare }) => {
                                     <select id="visual-effect" value={visualEffect} onChange={(e) => setVisualEffect(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:ring-2 focus:ring-cyan-500 transition">
                                         {VISUAL_EFFECTS.map((s) => <option key={s} value={s}>{s}</option>)}
                                     </select>
+                                </div>
+                            </div>
+
+                            {/* Camera Controls */}
+                            <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cinematic Controls</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { label: 'Zoom In', val: 'Slowly zoom in' },
+                                        { label: 'Zoom Out', val: 'Slowly zoom out' },
+                                        { label: 'Pan Left', val: 'Pan camera to the left' },
+                                        { label: 'Pan Right', val: 'Pan camera to the right' },
+                                        { label: 'Tilt Up', val: 'Tilt camera upwards' },
+                                        { label: 'Tilt Down', val: 'Tilt camera downwards' }
+                                    ].map((cam) => (
+                                        <button 
+                                            key={cam.label}
+                                            type="button"
+                                            onClick={() => setCameraMovement(cameraMovement === cam.val ? null : cam.val)}
+                                            className={`text-[10px] py-1.5 px-1 rounded border transition ${cameraMovement === cam.val ? 'bg-cyan-600 border-cyan-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-400 hover:bg-slate-700'}`}
+                                        >
+                                            {cam.label}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { generateImage } from '../../services/geminiService';
+import { generateImage, enhancePrompt } from '../../services/geminiService';
 import { DESIGN_STYLES, ASPECT_RATIOS, ART_TECHNIQUES_BY_DESIGN, ARTISTIC_STYLES, VISUAL_EFFECTS, BACKGROUND_OPTIONS } from '../../constants';
 import Loader from '../common/Loader';
 import QRCode from 'qrcode';
@@ -61,15 +61,31 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
     const [background, setBackground] = useState(BACKGROUND_OPTIONS[0].value);
     const [aspectRatio, setAspectRatio] = useState(ASPECT_RATIOS[0]);
     const [addQr, setAddQr] = useState(false);
+    const [seed, setSeed] = useState<string>('');
     const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [isEnhancing, setIsEnhancing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSaved, setIsSaved] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     useEffect(() => {
         const availableArtTechniques = ART_TECHNIQUES_BY_DESIGN[designStyle] || [];
         setArtTechnique(availableArtTechniques.length > 0 ? availableArtTechniques[0] : '');
     }, [designStyle]);
+
+    const handleEnhancePrompt = async () => {
+        if (!prompt) return;
+        setIsEnhancing(true);
+        try {
+            const response = await enhancePrompt(prompt, 'image');
+            setPrompt(response.text.replace(/^"|"$/g, '')); // Remove potential quotes
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsEnhancing(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,6 +102,10 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
             
             if (background) {
                 fullPrompt += `, ${background}`;
+            }
+            
+            if (seed) {
+                fullPrompt += ` (Seed: ${seed})`;
             }
             
             fullPrompt += '.';
@@ -121,7 +141,22 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
             <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <label htmlFor="prompt" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Your Vision</label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label htmlFor="prompt" className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Your Vision</label>
+                            <button 
+                                type="button" 
+                                onClick={handleEnhancePrompt} 
+                                disabled={isEnhancing || !prompt}
+                                className="text-[10px] bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded flex items-center space-x-1 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isEnhancing ? (
+                                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" /></svg>
+                                )}
+                                <span>Magic Enhance</span>
+                            </button>
+                        </div>
                         <textarea
                             id="prompt"
                             rows={4}
@@ -129,17 +164,6 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
                             onChange={(e) => setPrompt(e.target.value)}
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none transition"
                             placeholder="e.g., A futuristic cityscape at sunset"
-                        />
-                    </div>
-                     <div>
-                        <label htmlFor="negative-prompt" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Negative Prompt</label>
-                        <textarea
-                            id="negative-prompt"
-                            rows={2}
-                            value={negativePrompt}
-                            onChange={(e) => setNegativePrompt(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none transition"
-                            placeholder="e.g., text, watermarks, people"
                         />
                     </div>
                     
@@ -193,15 +217,53 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
-                        <input
-                            id="add-qr"
-                            type="checkbox"
-                            checked={addQr}
-                            onChange={(e) => setAddQr(e.target.checked)}
-                            className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-cyan-500"
-                        />
-                        <label htmlFor="add-qr" className="block text-xs text-slate-300">Add verification QR (Watermark)</label>
+                    {/* Advanced Settings Toggle */}
+                    <div>
+                        <button 
+                            type="button" 
+                            onClick={() => setShowAdvanced(!showAdvanced)}
+                            className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 hover:text-white"
+                        >
+                            <span>Advanced Settings</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transform transition ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        
+                        {showAdvanced && (
+                            <div className="space-y-4 p-3 bg-slate-950/50 rounded-lg border border-slate-800 animate-fadeIn">
+                                <div>
+                                    <label htmlFor="seed" className="block text-xs text-slate-500 mb-1">Seed (Optional)</label>
+                                    <input
+                                        id="seed"
+                                        type="number"
+                                        value={seed}
+                                        onChange={(e) => setSeed(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs placeholder-slate-600"
+                                        placeholder="Random seed for reproducibility"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="negative-prompt" className="block text-xs text-slate-500 mb-1">Negative Prompt</label>
+                                    <textarea
+                                        id="negative-prompt"
+                                        rows={2}
+                                        value={negativePrompt}
+                                        onChange={(e) => setNegativePrompt(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs placeholder-slate-600 resize-none"
+                                        placeholder="e.g., text, watermarks, blurry"
+                                    />
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        id="add-qr"
+                                        type="checkbox"
+                                        checked={addQr}
+                                        onChange={(e) => setAddQr(e.target.checked)}
+                                        className="h-3 w-3 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-cyan-500"
+                                    />
+                                    <label htmlFor="add-qr" className="block text-xs text-slate-400">Add verification QR</label>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center space-x-2">

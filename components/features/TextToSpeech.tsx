@@ -13,6 +13,7 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
     const [text, setText] = useState('');
     const [category, setCategory] = useState(TTS_CATEGORIES[0]);
     const [voice, setVoice] = useState(TTS_VOICES[0]);
+    const [speed, setSpeed] = useState(1.0);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -35,7 +36,13 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
         setAudioUrl(null);
 
         try {
-            const enhancedText = `(Style: ${category}) ${text}`;
+            // Incorporate speed into the instruction if API doesn't support specific parameter
+            // Gemini TTS currently works best with descriptive instructions
+            let speedInstruction = "";
+            if (speed < 0.8) speedInstruction = "Speak slowly and clearly.";
+            else if (speed > 1.2) speedInstruction = "Speak at a fast pace.";
+            
+            const enhancedText = `(Style: ${category}. ${speedInstruction}) ${text}`;
             const base64Audio = await generateSpeech(enhancedText, voice);
             if (base64Audio) {
                 const bytes = decode(base64Audio);
@@ -89,6 +96,27 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({ onShare }) => {
                             >
                                 {TTS_VOICES.map(v => <option key={v} value={v}>{v}</option>)}
                             </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="flex justify-between text-xs text-slate-400 mb-2 font-bold uppercase tracking-wider">
+                            <label>Speaking Rate</label>
+                            <span>{speed}x</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="0.5" 
+                            max="2.0" 
+                            step="0.1" 
+                            value={speed} 
+                            onChange={(e) => setSpeed(parseFloat(e.target.value))}
+                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                        />
+                        <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>Slow</span>
+                            <span>Normal</span>
+                            <span>Fast</span>
                         </div>
                     </div>
 
