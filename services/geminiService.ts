@@ -19,8 +19,8 @@ const generateJsonContent = async (prompt: string, schema: any, model = 'gemini-
 export const enhancePrompt = async (originalPrompt: string, type: 'image' | 'video' | 'text'): Promise<GenerateContentResponse> => {
     const ai = getGeminiAI();
     let systemInstruction = "";
-    if (type === 'image') systemInstruction = "You are an expert prompt engineer for AI image generation (Imagen/Midjourney style). Rewrite the user's prompt to be highly detailed, descriptive, and optimized for photorealism, lighting, and texture. Keep it under 60 words.";
-    if (type === 'video') systemInstruction = "You are an expert prompt engineer for AI video generation (Veo/Sora style). Rewrite the user's prompt to include specific camera angles, lighting, motion details, and atmospheric description. Keep it concise.";
+    if (type === 'image') systemInstruction = "You are an expert prompt engineer for AI image generation. Rewrite the user's prompt to be highly detailed, descriptive, and optimized for photorealism, lighting, and texture. Keep it under 60 words.";
+    if (type === 'video') systemInstruction = "You are an expert prompt engineer for AI video generation (Veo). Rewrite the user's prompt to include specific camera angles, lighting, motion details, and atmospheric description. Keep it concise.";
     if (type === 'text') systemInstruction = "You are an expert editor. Improve the clarity, tone, and impact of the following text prompt to get the best possible result from an LLM.";
 
     return ai.models.generateContent({
@@ -39,7 +39,7 @@ export const generateTextWithThinking = async (prompt: string): Promise<Generate
     return getGeminiAI().models.generateContent({
         model: 'gemini-2.5-pro',
         contents: prompt,
-        config: { thinkingConfig: { thinkingBudget: 32768 } },
+        config: { thinkingConfig: { thinkingBudget: 1024 } }, // Reduced budget for speed/stability
     });
 };
 
@@ -56,12 +56,19 @@ export const createChatSession = (systemInstruction?: string, config?: any): Cha
 
 // --- Image Generation & Editing ---
 export const generateImage = async (prompt: string, aspectRatio: string): Promise<string> => {
-    const response = await getGeminiAI().models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt,
-        config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio },
+    // Using gemini-2.5-flash-image as default for efficiency
+    const ai = getGeminiAI();
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [{ text: prompt }] },
+        config: { 
+            responseModalities: [Modality.IMAGE],
+            imageConfig: { aspectRatio: aspectRatio as any }
+        },
     });
-    return response.generatedImages[0].image.imageBytes;
+    const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    if (!part?.inlineData?.data) throw new Error("No image generated");
+    return part.inlineData.data;
 };
 
 export const editImage = async (prompt: string, imageBase64: string, mimeType: string): Promise<string | null> => {
@@ -114,6 +121,8 @@ export const extendVideo = async (prompt: string, video: any, aspectRatio: '16:9
 };
 
 export const pollVideoOperation = async (operation: any): Promise<any> => {
+    // Correct usage: pass the operation name, not the whole object if checking via name,
+    // but the SDK method getVideosOperation accepts {operation: op} according to guidelines.
     return getGeminiAI().operations.getVideosOperation({ operation });
 };
 
@@ -554,9 +563,16 @@ export const generateSpeech = async (text: string, voiceName: string = 'Puck', r
         },
     };
 
+    const parts: any[] = [{ text }];
+    // If reference audio provided, send it for context (multimodal prompting style)
+    if (referenceAudioBase64) {
+        parts.push({ inlineData: { mimeType: 'audio/wav', data: referenceAudioBase64 } });
+        parts.push({ text: "Use the style of the attached audio." });
+    }
+
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: { parts: [{ text }] },
+        contents: { parts },
         config: {
             responseModalities: [Modality.AUDIO],
             speechConfig,
@@ -575,9 +591,14 @@ export const generateMultiSpeakerSpeech = async (script: string, speakers: {spea
         voiceConfig: { prebuiltVoiceConfig: { voiceName: s.voiceName } }
     }));
 
+    const parts: any[] = [{ text: script }];
+    if (referenceAudioBase64) {
+        parts.push({ inlineData: { mimeType: 'audio/wav', data: referenceAudioBase64 } });
+    }
+
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: { parts: [{ text: script }] },
+        contents: { parts },
         config: {
             responseModalities: [Modality.AUDIO],
             speechConfig: {
