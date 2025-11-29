@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { generateSongConcept, generateSpeech } from '../../services/geminiService';
 import { MUSIC_GENRES, MUSIC_MOODS } from '../../constants';
@@ -110,78 +111,97 @@ Generated with AI Creative Suite.
     }
 
     return (
-        <div className="flex flex-col lg:flex-row gap-8">
-            {/* Controls */}
-            <div className="w-full lg:w-1/3 space-y-6">
-                <form onSubmit={handleSubmit} className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                    <h3 className="text-xl font-bold text-white mb-4">Song Concept</h3>
-                    <fieldset disabled={loading} className="space-y-4">
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+            {/* Sidebar Controls */}
+            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label htmlFor="topic" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Topic / Theme</label>
+                        <textarea id="topic" rows={4} value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none" placeholder="e.g., A robot falling in love with a star" />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label htmlFor="topic" className="block text-sm font-medium text-slate-300 mb-2">Topic / Theme</label>
-                            <textarea id="topic" rows={3} value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A robot falling in love with a star" />
+                            <label htmlFor="genre" className="block text-xs font-bold text-slate-400 uppercase mb-1">Genre</label>
+                            <select id="genre" value={genre} onChange={(e) => setGenre(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                                {MUSIC_GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+                            </select>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="genre" className="block text-sm font-medium text-slate-300 mb-2">Genre</label>
-                                <select id="genre" value={genre} onChange={(e) => setGenre(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                                    {MUSIC_GENRES.map(g => <option key={g} value={g}>{g}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="mood" className="block text-sm font-medium text-slate-300 mb-2">Mood</label>
-                                <select id="mood" value={mood} onChange={(e) => setMood(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                                    {MUSIC_MOODS.map(m => <option key={m} value={m}>{m}</option>)}
-                                </select>
-                            </div>
+                        <div>
+                            <label htmlFor="mood" className="block text-xs font-bold text-slate-400 uppercase mb-1">Mood</label>
+                            <select id="mood" value={mood} onChange={(e) => setMood(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                                {MUSIC_MOODS.map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
                         </div>
-                        <button type="submit" className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300 flex items-center justify-center space-x-2">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55c-2.21 0-4 1.79-4 4s1.79 4 4 4s4-1.79 4-4V7h4V3h-6z" /></svg>
-                            <span>{loading ? 'Writing Song...' : 'Generate Song'}</span>
-                        </button>
-                        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-                    </fieldset>
+                    </div>
+
+                    <button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center items-center gap-2">
+                         {loading ? <Loader /> : <span>Generate Song</span>}
+                    </button>
+                    {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
                 </form>
             </div>
 
-            {/* Results */}
-            <div className="w-full lg:w-2/3 flex flex-col bg-slate-800/50 rounded-lg border border-slate-700 min-h-[400px]">
-                <div className="flex-shrink-0 p-4 border-b border-slate-700 flex justify-between items-center">
-                    <h3 className="font-bold text-lg text-white">Your Song</h3>
-                     {result && (
-                        <button onClick={handleShare} className="flex items-center space-x-2 bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 transition-colors duration-300 text-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
-                            <span>Share</span>
-                        </button>
-                     )}
-                </div>
-                <div className="flex-grow p-6 overflow-y-auto">
-                    {loading && <Loader message="Composing your masterpiece..." />}
-                    {!loading && !result && <div className="flex items-center justify-center h-full"><p className="text-slate-500">Your song will appear here.</p></div>}
+            {/* Output Area */}
+            <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                {/* Header */}
+                <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Song Sheet</h3>
                     {result && (
-                        <div className="space-y-6">
-                            <h2 className="text-3xl font-bold text-white text-center">{result.title}</h2>
+                        <button onClick={handleShare} className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition">
+                            Share
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex-grow p-8 relative overflow-y-auto custom-scrollbar">
+                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                    
+                    {loading && (
+                        <div className="h-full flex flex-col items-center justify-center">
+                            <Loader message="Composing your masterpiece..." />
+                        </div>
+                    )}
+
+                    {!loading && !result && (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                            </svg>
+                            <p>Configure and generate to see your song.</p>
+                        </div>
+                    )}
+
+                    {result && (
+                        <div className="relative z-10 max-w-3xl mx-auto space-y-8">
+                            <div className="text-center">
+                                <h2 className="text-3xl font-bold text-white mb-2">{result.title}</h2>
+                                <span className="text-xs text-slate-400 uppercase tracking-widest">{genre} • {mood}</span>
+                            </div>
                             
-                            <div className="bg-slate-900/50 p-4 rounded-lg">
-                                <h4 className="font-bold text-cyan-400 mb-2">Lyrics</h4>
-                                <p className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">{result.lyrics}</p>
-                                <div className="mt-4">
-                                    <button onClick={handleGenerateAudio} disabled={loadingAudio} className="text-xs font-semibold py-1 px-3 rounded-full transition bg-purple-600 hover:bg-purple-700 text-white disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center space-x-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
-                                        <span>{loadingAudio ? 'Generating...' : 'Generate Audio Demo'}</span>
-                                    </button>
-                                    {loadingAudio && <Loader />}
-                                    {audioUrl && <audio src={audioUrl} controls className="w-full mt-3 h-8" />}
+                            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
+                                <h4 className="text-sm font-bold text-cyan-400 uppercase mb-4 border-b border-slate-700 pb-2">Lyrics</h4>
+                                <p className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed font-serif">{result.lyrics}</p>
+                                
+                                <div className="mt-6 pt-4 border-t border-slate-700">
+                                    <div className="flex items-center justify-between">
+                                        <button onClick={handleGenerateAudio} disabled={loadingAudio} className="text-xs font-bold py-2 px-4 rounded-full transition bg-purple-600 hover:bg-purple-500 text-white disabled:bg-slate-700 disabled:cursor-not-allowed flex items-center space-x-2">
+                                            <span>{loadingAudio ? 'Generating...' : 'Listen to Lyrics (Demo)'}</span>
+                                        </button>
+                                    </div>
+                                    {loadingAudio && <div className="mt-2"><Loader /></div>}
+                                    {audioUrl && <audio src={audioUrl} controls className="w-full mt-4 h-8" />}
                                     {audioError && <p className="text-red-400 text-xs mt-2">{audioError}</p>}
                                 </div>
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-slate-900/50 p-4 rounded-lg">
-                                    <h4 className="font-bold text-cyan-400 mb-2">Chord Progression</h4>
-                                    <p className="text-slate-300 whitespace-pre-wrap text-sm">{result.chordProgression}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
+                                    <h4 className="text-xs font-bold text-cyan-400 uppercase mb-3">Chord Progression</h4>
+                                    <p className="text-slate-300 whitespace-pre-wrap text-sm font-mono">{result.chordProgression}</p>
                                 </div>
-                                <div className="bg-slate-900/50 p-4 rounded-lg">
-                                    <h4 className="font-bold text-cyan-400 mb-2">Arrangement Idea</h4>
+                                <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
+                                    <h4 className="text-xs font-bold text-cyan-400 uppercase mb-3">Arrangement Idea</h4>
                                     <p className="text-slate-300 whitespace-pre-wrap text-sm">{result.arrangementDescription}</p>
                                 </div>
                             </div>

@@ -181,7 +181,7 @@ const OfficeSuite: React.FC<OfficeSuiteProps> = ({ onShare }) => {
                             <button key={c} onClick={() => setSelectedCategory(c)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition ${selectedCategory === c ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}>{c}</button>
                         ))}
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto pb-20 custom-scrollbar">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto pb-20 custom-scrollbar h-[calc(100vh-16rem)]">
                         {filteredTools.map(tool => (
                             <button key={tool.id} onClick={() => setActiveTool(tool)} className="bg-slate-900/50 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 p-4 rounded-xl flex flex-col items-center text-center transition group h-48 justify-center relative overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20 pointer-events-none"></div>
@@ -194,76 +194,110 @@ const OfficeSuite: React.FC<OfficeSuiteProps> = ({ onShare }) => {
                     </div>
                 </>
             ) : (
-                <div className="flex-grow flex flex-col bg-slate-900 rounded-xl border border-slate-800 overflow-hidden h-full">
-                    <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
-                        <div className="flex items-center space-x-3">
-                            <button onClick={() => { setActiveTool(null); setResult(null); setInput(''); }} className="text-slate-400 hover:text-white">← Back</button>
+                <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+                    {/* Sidebar Controls */}
+                    <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar flex flex-col gap-6">
+                        <div className="flex items-center space-x-3 mb-2">
+                            <button onClick={() => { setActiveTool(null); setResult(null); setInput(''); }} className="text-slate-400 hover:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                            </button>
                             <span className="text-2xl mr-2">{activeTool.icon}</span>
-                            <div>
-                                <h3 className="text-xl font-bold text-white">{activeTool.name}</h3>
-                                <p className="text-xs text-slate-500">{activeTool.category}</p>
-                            </div>
+                            <h3 className="text-xl font-bold text-white">{activeTool.name}</h3>
                         </div>
-                    </div>
-                    
-                    <div className="flex-grow p-8 flex flex-col items-center justify-center overflow-y-auto">
-                        {activeTool.id === 'sticky-notes' ? (
-                            <div className="w-full h-full relative bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-700 overflow-hidden">
-                                <button onClick={addNote} className="absolute top-4 right-4 bg-cyan-600 text-white px-4 py-2 rounded shadow z-10">+ Add Note</button>
-                                {notes.map(note => (
-                                    <div key={note.id} className={`absolute w-40 h-40 p-4 shadow-xl rounded ${note.color} text-slate-900 cursor-move`} style={{top: note.y, left: note.x}} draggable onDragEnd={(e) => {
-                                        const newNotes = notes.map(n => n.id === note.id ? {...n, x: e.clientX % 500, y: e.clientY % 400} : n); 
-                                        setNotes(newNotes);
-                                    }}>
-                                        <textarea className="w-full h-full bg-transparent resize-none outline-none font-handwriting" defaultValue={note.text} />
-                                    </div>
-                                ))}
-                                {notes.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-slate-500">Click Add Note to start brainstorming.</div>}
-                            </div>
-                        ) : (
-                            <div className="w-full max-w-3xl space-y-6">
-                                {['PDF', 'Word', 'PPT', 'Transcribe'].some(k => activeTool.category.includes(k) || activeTool.description.includes(k)) && (
-                                    <div className="border-2 border-dashed border-slate-700 rounded-xl p-10 text-center bg-slate-800/30">
-                                        <input type="file" onChange={e => setFile(e.target.files?.[0] || null)} className="hidden" id="file-upload" />
-                                        <label htmlFor="file-upload" className="cursor-pointer">
-                                            <div className="text-slate-400 mb-2">{file ? file.name : "Click to upload file"}</div>
-                                            <div className="text-cyan-500 text-sm">Supported: PDF, DOCX, PPTX, JPG</div>
-                                        </label>
-                                    </div>
-                                )}
-                                
-                                {['Visual Suite', 'Summarizer', 'Translate', 'Content', 'Formula', 'Quiz', 'Data', 'URL', 'Bio'].some(k => activeTool.category.includes(k) || activeTool.name.includes(k)) && (
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-400 mb-2">
-                                            {activeTool.id === 'ai-sheets' ? 'Describe your spreadsheet data' : 
-                                             activeTool.id === 'ai-whiteboard' ? 'Brainstorming Topic' : 
-                                             activeTool.id === 'print-shop' ? 'Merch Idea' :
-                                             'Input Text / Topic'}
-                                        </label>
-                                        <textarea 
-                                            value={input} 
-                                            onChange={e => setInput(e.target.value)} 
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-4 text-white min-h-[150px] focus:ring-2 focus:ring-cyan-500" 
-                                            placeholder={activeTool.id === 'url-short' ? "Paste URL here..." : "Enter text, data, or topic..."}
-                                        />
-                                    </div>
-                                )}
 
-                                <button onClick={handleProcess} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg transition disabled:opacity-50 flex justify-center items-center gap-2">
+                        {/* Inputs */}
+                        <div className="space-y-5 animate-fadeIn">
+                            {['PDF', 'Word', 'PPT', 'Transcribe'].some(k => activeTool.category.includes(k) || activeTool.description.includes(k)) && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Upload File</label>
+                                    <div className="border-2 border-dashed border-slate-700 rounded-lg p-6 text-center bg-slate-950/30 hover:border-cyan-500 transition-colors relative">
+                                        <input type="file" onChange={e => setFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        <div className="pointer-events-none">
+                                            <p className="text-xs text-slate-400 truncate">{file ? file.name : "Click to Upload"}</p>
+                                            <p className="text-[10px] text-slate-600 mt-1">PDF, DOCX, PPTX, JPG</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {['Visual Suite', 'Summarizer', 'Translate', 'Content', 'Formula', 'Quiz', 'Data', 'URL', 'Bio'].some(k => activeTool.category.includes(k) || activeTool.name.includes(k)) && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                        {activeTool.id === 'ai-sheets' ? 'Describe Data' : 
+                                         activeTool.id === 'ai-whiteboard' ? 'Brainstorm Topic' : 
+                                         activeTool.id === 'print-shop' ? 'Merch Idea' :
+                                         'Input Text'}
+                                    </label>
+                                    <textarea 
+                                        value={input} 
+                                        onChange={e => setInput(e.target.value)} 
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none"
+                                        rows={6}
+                                        placeholder={activeTool.id === 'url-short' ? "Paste URL here..." : "Enter text, data, or topic..."}
+                                    />
+                                </div>
+                            )}
+
+                            {activeTool.id !== 'sticky-notes' && (
+                                <button 
+                                    onClick={handleProcess} 
+                                    disabled={loading}
+                                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 disabled:opacity-50 flex justify-center items-center"
+                                >
                                     {loading ? <Loader /> : <span>Generate / Process</span>}
                                 </button>
+                            )}
+                            
+                            {activeTool.id === 'sticky-notes' && (
+                                <button onClick={addNote} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg">+ Add Note</button>
+                            )}
+                        </div>
+                    </div>
 
-                                {result && (
-                                    <div className="bg-slate-800 p-6 rounded-lg text-slate-300 border border-slate-700 mt-4 prose prose-invert max-w-none">
-                                        <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                                            <span className="text-xs font-bold text-slate-500 uppercase">Result</span>
-                                            <button onClick={() => onShare({ contentText: result, contentType: 'text' })} className="text-cyan-400 text-xs hover:text-cyan-300">Share</button>
+                    {/* Main Preview Area */}
+                    <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                        <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                            <h3 className="font-bold text-white text-sm uppercase tracking-wider">Workspace</h3>
+                            {result && (
+                                <button onClick={() => onShare({ contentText: result, contentType: 'text' })} className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition">Share</button>
+                            )}
+                        </div>
+
+                        <div className="flex-grow p-8 flex items-center justify-center relative bg-slate-950/30 overflow-y-auto custom-scrollbar">
+                            <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                            
+                            {activeTool.id === 'sticky-notes' ? (
+                                <div className="w-full h-full relative">
+                                    {notes.map(note => (
+                                        <div key={note.id} className={`absolute w-40 h-40 p-4 shadow-xl rounded ${note.color} text-slate-900 cursor-move`} style={{top: note.y, left: note.x}} draggable onDragEnd={(e) => {
+                                            const newNotes = notes.map(n => n.id === note.id ? {...n, x: e.clientX % 500, y: e.clientY % 400} : n); 
+                                            setNotes(newNotes);
+                                        }}>
+                                            <textarea className="w-full h-full bg-transparent resize-none outline-none font-handwriting text-sm" defaultValue={note.text} />
                                         </div>
-                                        {activeTool.id === 'url-short' ? <a href={result} target="_blank" className="text-cyan-400 text-xl">{result}</a> : <div dangerouslySetInnerHTML={{__html: md.render(result)}} />}
+                                    ))}
+                                    {notes.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-slate-500 pointer-events-none">Click "Add Note" to start brainstorming.</div>}
+                                </div>
+                            ) : (
+                                !result ? (
+                                    <div className="text-center text-slate-600 opacity-60">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                        <p className="text-lg">Output will appear here.</p>
                                     </div>
-                                )}
-                            </div>
-                        )}
+                                ) : (
+                                    <div className="w-full max-w-4xl bg-white text-slate-900 p-8 rounded-xl shadow-2xl z-10 prose prose-sm max-w-none">
+                                        {activeTool.id === 'url-short' ? (
+                                            <div className="text-center">
+                                                <p className="text-lg font-bold mb-2">Shortened Link:</p>
+                                                <a href={result} target="_blank" className="text-blue-600 underline text-xl block mb-4">{result}</a>
+                                            </div>
+                                        ) : (
+                                            <div dangerouslySetInnerHTML={{__html: md.render(result)}} />
+                                        )}
+                                    </div>
+                                )
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

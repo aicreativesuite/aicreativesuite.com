@@ -4,6 +4,9 @@ import { analyzeImage, analyzeVideoFrame, transcribeAudio } from '../../services
 import { fileToBase64 } from '../../utils';
 import Loader from '../common/Loader';
 import { GenerateContentResponse } from '@google/genai';
+import { Remarkable } from 'remarkable';
+
+const md = new Remarkable({ html: true });
 
 type Mode = 'image' | 'video' | 'audio';
 
@@ -112,69 +115,132 @@ const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onShare }) => {
     };
 
     return (
-        <div className="space-y-6">
-             <div className="flex bg-slate-700 rounded-lg p-1 max-w-sm mx-auto">
-                 <button onClick={() => handleModeChange('image')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'image' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Image</button>
-                 <button onClick={() => handleModeChange('video')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'video' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Video</button>
-                 <button onClick={() => handleModeChange('audio')} className={`w-1/3 p-2 rounded-md text-sm font-semibold transition ${mode === 'audio' ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>Audio</button>
-             </div>
-             
-             <div className="flex flex-col md:flex-row gap-8">
-                <form onSubmit={handleSubmit} className="w-full md:w-1/2 lg:w-1/3 space-y-4">
-                     <div>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleFileChange}
-                          accept={getAcceptType()}
-                          className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
-                        />
-                     </div>
-                     {preview && (
-                         <div className="p-4 bg-slate-900/50 rounded-lg">
-                             {mode === 'image' && <img src={preview} alt="Preview" className="max-h-40 mx-auto rounded-lg"/>}
-                             {mode === 'video' && <video src={preview} controls className="max-h-40 mx-auto rounded-lg"/>}
-                             {mode === 'audio' && <audio src={preview} controls className="w-full"/>}
-                         </div>
-                     )}
-                     
-                    {mode !== 'audio' && (
-                        <textarea
-                            rows={3}
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
-                            placeholder={mode === 'image' ? "What's in this image?" : "What's happening in this video?"}
-                        />
-                    )}
-                    
-                    <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300">
-                        {loading ? `Analyzing ${mode}...` : `Analyze ${mode}`}
-                    </button>
-                     {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-                </form>
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+            {/* Sidebar Controls */}
+            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                
+                {/* Mode Selector */}
+                <div className="flex gap-2 mb-6">
+                    {(['image', 'video', 'audio'] as Mode[]).map((m) => (
+                        <button
+                            key={m}
+                            onClick={() => handleModeChange(m)}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${mode === m ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                        >
+                            {m}
+                        </button>
+                    ))}
+                </div>
 
-                <div className="w-full md:w-1/2 lg:w-2/3 min-h-[300px] bg-slate-900/50 rounded-lg p-6 prose prose-invert prose-p:text-slate-300 max-w-none relative">
-                    {loading && <Loader message={`Thinking about the ${mode}...`} />}
-                    {!loading && !response && <p className="text-slate-500 text-center pt-10">Analysis will appear here.</p>}
-                    {response && (
-                        <>
-                            <div className="absolute top-6 right-6 not-prose">
-                                <button
-                                    onClick={() => onShare({ contentText: response.text, contentType: 'text' })}
-                                    className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-                                    </svg>
-                                    <span>Share</span>
-                                </button>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Upload {mode}</label>
+                        <div className="w-full relative border-2 border-dashed border-slate-700 rounded-lg p-6 text-center hover:border-cyan-500 transition-colors duration-300 bg-slate-950/30">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept={getAcceptType()}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <div className="flex flex-col items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <p className="text-xs text-slate-400">
+                                    {file ? <span className="text-green-400 font-semibold">{file.name}</span> : <span>Click to upload or drag & drop</span>}
+                                </p>
                             </div>
-                            <p>{response.text}</p>
-                        </>
+                        </div>
+                    </div>
+
+                    {mode !== 'audio' && (
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Prompt</label>
+                            <textarea
+                                rows={4}
+                                value={prompt}
+                                onChange={(e) => setPrompt(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none"
+                                placeholder={mode === 'image' ? "What's in this image?" : "What's happening in this video?"}
+                            />
+                        </div>
+                    )}
+
+                    <button 
+                        type="submit" 
+                        disabled={loading} 
+                        className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg transition shadow-lg disabled:opacity-50 flex justify-center items-center gap-2"
+                    >
+                        {loading ? <Loader /> : <span>Analyze {mode.charAt(0).toUpperCase() + mode.slice(1)}</span>}
+                    </button>
+                    
+                    {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
+                </form>
+            </div>
+
+            {/* Main Preview/Output Area */}
+            <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                {/* Header */}
+                <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Analysis Result</h3>
+                    {response && (
+                        <button 
+                            onClick={() => onShare({ contentText: response.text, contentType: 'text' })} 
+                            className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition flex items-center gap-1"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
+                            Share
+                        </button>
                     )}
                 </div>
-             </div>
+
+                <div className="flex-grow overflow-y-auto p-8 relative custom-scrollbar">
+                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                    
+                    {loading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 z-20 backdrop-blur-sm">
+                            <Loader message={`Analyzing ${mode}...`} />
+                        </div>
+                    )}
+
+                    {!preview && !loading && (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p>Upload media to get started.</p>
+                        </div>
+                    )}
+
+                    {preview && (
+                        <div className="flex flex-col gap-6 relative z-10 max-w-4xl mx-auto">
+                            {/* Media Preview */}
+                            <div className="w-full bg-black/40 rounded-xl overflow-hidden border border-slate-700 shadow-lg flex items-center justify-center max-h-[400px]">
+                                {mode === 'image' && <img src={preview} alt="Preview" className="max-h-[400px] w-auto object-contain" />}
+                                {mode === 'video' && <video src={preview} controls className="max-h-[400px] w-auto" />}
+                                {mode === 'audio' && (
+                                    <div className="p-8 w-full flex flex-col items-center">
+                                        <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-cyan-400" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <audio src={preview} controls className="w-full max-w-md" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Analysis Result */}
+                            {response && (
+                                <div className="bg-white text-slate-900 p-8 rounded-xl shadow-lg prose prose-sm max-w-none">
+                                    <div dangerouslySetInnerHTML={{ __html: md.render(response.text) }} />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };

@@ -422,7 +422,7 @@ const App: React.FC = () => {
                                         <p className="text-slate-400">{activeFeatureDetails.description}</p>
                                     </div>
                                 </div>
-                                <ActiveComponent onShare={openTrafficBooster} />
+                                <ActiveComponent onShare={openTrafficBooster} onBack={() => setActiveFeature(null)} />
                             </div>
                         )}
                          {ActiveComponent && !activeFeatureDetails && activeFeature === 'pricing' && (

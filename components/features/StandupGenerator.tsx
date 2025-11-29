@@ -210,85 +210,104 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
     return (
         <>
             <ApiKeyDialog show={showApiKeyDialog} onSelectKey={handleSelectKey} />
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* Controls Column */}
-                <div className="w-full lg:w-1/3 space-y-6">
-                    <form onSubmit={handleSubmit} className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                        <h3 className="text-xl font-bold text-white mb-4">Comedy Set Setup</h3>
-                        <fieldset disabled={isLoading} className="space-y-6">
+            <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+                {/* Sidebar Controls */}
+                <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <fieldset disabled={isLoading} className="space-y-5">
                             <div>
-                                <label htmlFor="topic" className="block text-sm font-medium text-slate-300 mb-2">Topic</label>
-                                <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., Dating Apps" />
+                                <label htmlFor="topic" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Topic</label>
+                                <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500" placeholder="e.g., Dating Apps" />
                             </div>
+                            
                             <div>
-                                <label htmlFor="comedianStyle" className="block text-sm font-medium text-slate-300 mb-2">Comedian Style</label>
-                                <select id="comedianStyle" value={comedianStyle} onChange={(e) => setComedianStyle(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                                    {COMEDIAN_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
+                                <label htmlFor="comedianAppearance" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Comedian</label>
+                                <textarea id="comedianAppearance" rows={3} value={comedianAppearance} onChange={(e) => setComedianAppearance(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none" placeholder="e.g., A woman in her 30s with vibrant pink hair, wearing a leather jacket." />
                             </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label htmlFor="comedianStyle" className="block text-xs font-bold text-slate-400 uppercase mb-1">Style</label>
+                                    <select id="comedianStyle" value={comedianStyle} onChange={(e) => setComedianStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                                        {COMEDIAN_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="expression" className="block text-xs font-bold text-slate-400 uppercase mb-1">Expression</label>
+                                    <select id="expression" value={expression} onChange={(e) => setExpression(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                                        {AVATAR_EXPRESSIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
                             <div>
-                                <label htmlFor="audienceType" className="block text-sm font-medium text-slate-300 mb-2">Venue / Audience</label>
-                                <select id="audienceType" value={audienceType} onChange={(e) => setAudienceType(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
+                                <label htmlFor="audienceType" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Venue</label>
+                                <select id="audienceType" value={audienceType} onChange={(e) => setAudienceType(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
                                     {AUDIENCE_TYPES.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                             </div>
-                            <div>
-                                <label htmlFor="expression" className="block text-sm font-medium text-slate-300 mb-2">Expression</label>
-                                <select id="expression" value={expression} onChange={(e) => setExpression(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                                    {AVATAR_EXPRESSIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="comedianAppearance" className="block text-sm font-medium text-slate-300 mb-2">Comedian's Appearance</label>
-                                <textarea id="comedianAppearance" rows={3} value={comedianAppearance} onChange={(e) => setComedianAppearance(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A woman in her 30s with vibrant pink hair, wearing a leather jacket." />
-                            </div>
-                            <button type="submit" className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300">
-                                {isLoading ? 'Generating...' : 'Generate Comedy Set'}
+                            
+                            <button type="submit" className="w-full bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center">
+                                {isLoading ? <Loader /> : 'Create Comedy Set'}
                             </button>
                         </fieldset>
-                        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+                        {error && <p className="text-red-400 text-xs text-center">{error}</p>}
                     </form>
                 </div>
 
-                {/* Output Column */}
-                <div className="w-full lg:w-2/3 flex items-center justify-center bg-slate-900/50 rounded-2xl border border-slate-800 min-h-[400px] lg:min-h-0 p-6">
-                    {isLoading && <Loader message={loadingMessage} />}
-                    
-                    {!isLoading && comedianVideoUrl && jokeAudioUrl && jokeScript && (
-                        <div className="w-full max-w-sm mx-auto text-center space-y-4">
-                            <div className="relative aspect-[9/16] w-full bg-black rounded-lg overflow-hidden shadow-2xl shadow-cyan-900/20">
-                                <video ref={videoRef} src={comedianVideoUrl} muted loop playsInline className="w-full h-full object-cover" />
-                            </div>
-                            <audio ref={audioRef} src={jokeAudioUrl} controls className="w-full" />
-                            <div className="p-4 bg-slate-800 rounded-lg text-left text-sm text-slate-300 max-h-40 overflow-y-auto">
-                                <h4 className="font-bold text-slate-100 mb-2">Script:</h4>
-                                <p className="whitespace-pre-wrap">{jokeScript}</p>
-                            </div>
-                            <div className="flex gap-2 justify-center flex-wrap">
-                                <button onClick={handlePlay} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex-1 min-w-[100px]">Play</button>
-                                <a href={comedianVideoUrl} download={`standup-video-${Date.now()}.mp4`} className="bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors flex-1 min-w-[100px] flex items-center justify-center">Download</a>
-                                <button
-                                    onClick={handleSave}
-                                    className={`font-bold py-2 px-4 rounded-lg transition-colors flex-1 min-w-[100px] ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
-                                >
-                                    {isSaved ? 'Saved' : 'Save'}
-                                </button>
-                                <button
-                                    onClick={() => onShare({ contentUrl: comedianVideoUrl, contentText: jokeScript, contentType: 'video' })}
-                                    className="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors flex-1 min-w-[100px]"
-                                >
-                                    Share
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                {/* Main Preview Area */}
+                <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                    <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                        <h3 className="font-bold text-white text-sm uppercase tracking-wider">Live Performance</h3>
+                        {comedianVideoUrl && (
+                            <button
+                                onClick={() => onShare({ contentUrl: comedianVideoUrl, contentText: jokeScript || '', contentType: 'video' })}
+                                className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition"
+                            >
+                                Share
+                            </button>
+                        )}
+                    </div>
 
-                    {!isLoading && !comedianVideoUrl && (
-                        <div className="text-center text-slate-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-16 w-16 opacity-30" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 7.5c1.38 0 2.5 1.12 2.5 2.5S10.88 12.5 9.5 12.5 7 11.38 7 10s1.12-2.5 2.5-2.5m4.5 2.5c1.38 0 2.5-1.12 2.5-2.5S15.38 7.5 14 7.5s-2.5 1.12-2.5 2.5 1.12 2.5 2.5 2.5M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m0-4c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5" /></svg>
-                            <p className="mt-4">Your AI comedy special will appear here.</p>
-                        </div>
-                    )}
+                    <div className="flex-grow p-8 flex items-center justify-center relative bg-slate-950/30">
+                        <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                        
+                        {isLoading && (
+                            <div className="text-center z-10">
+                                <Loader message={loadingMessage} />
+                                {loadingStep === 'video' && <p className="text-xs text-slate-500 mt-4">Generating video takes about a minute...</p>}
+                            </div>
+                        )}
+                        
+                        {!isLoading && comedianVideoUrl && jokeAudioUrl && jokeScript && (
+                            <div className="w-full max-w-sm mx-auto text-center space-y-4 relative z-10">
+                                <div className="relative aspect-[9/16] w-full bg-black rounded-xl overflow-hidden shadow-2xl shadow-purple-900/30 border border-slate-700">
+                                    <video ref={videoRef} src={comedianVideoUrl} muted loop playsInline className="w-full h-full object-cover" />
+                                </div>
+                                <audio ref={audioRef} src={jokeAudioUrl} controls className="w-full" />
+                                
+                                <div className="flex gap-2 justify-center">
+                                    <button onClick={handlePlay} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg transition text-xs flex items-center justify-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                        Sync Play
+                                    </button>
+                                    <a href={comedianVideoUrl} download={`standup-video-${Date.now()}.mp4`} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-lg transition text-xs flex items-center justify-center">Download</a>
+                                </div>
+
+                                <div className="p-4 bg-slate-800/80 rounded-xl text-left text-xs text-slate-300 max-h-32 overflow-y-auto border border-slate-700/50">
+                                    <h4 className="font-bold text-slate-100 mb-2 uppercase tracking-wide">Script</h4>
+                                    <p className="whitespace-pre-wrap leading-relaxed">{jokeScript}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {!isLoading && !comedianVideoUrl && (
+                            <div className="text-center text-slate-600 opacity-60">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-20 w-20 mb-4" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 7.5c1.38 0 2.5 1.12 2.5 2.5S10.88 12.5 9.5 12.5 7 11.38 7 10s1.12-2.5 2.5-2.5m4.5 2.5c1.38 0 2.5-1.12 2.5-2.5S15.38 7.5 14 7.5s-2.5 1.12-2.5 2.5 1.12 2.5 2.5 2.5M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m0-4c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5" /></svg>
+                                <p className="text-lg">Your AI comedy special will appear here.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </>

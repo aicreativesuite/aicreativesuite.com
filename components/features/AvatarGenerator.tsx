@@ -75,13 +75,13 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
         setImage(null);
         setIsSaved(false);
         try {
-            let fullPrompt = `A high-quality, digital art headshot avatar of ${prompt}.`;
+            let fullPrompt = `A high-quality, photorealistic portrait of a character described as: ${prompt}.`;
             
             const attributes = [
                 hairColor !== 'any color' && `${hairColor} hair`,
                 eyeColor !== 'any color' && `${eyeColor} eyes`,
                 clothingStyle !== 'any style' && `wearing ${clothingStyle}`,
-                expression !== 'neutral' && `with a ${expression} expression`,
+                expression !== 'neutral' && `displaying a ${expression} expression`,
             ].filter(Boolean).join(', ');
 
             if (attributes) {
@@ -114,153 +114,164 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
     };
 
     return (
-        <div className="flex flex-col md:flex-row gap-8">
-            <form onSubmit={handleSubmit} className="w-full md:w-1/3 space-y-6">
-                <div>
-                    <label htmlFor="prompt" className="block text-sm font-medium text-slate-300 mb-2">Character Description</label>
-                    <textarea
-                        id="prompt"
-                        rows={3}
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
-                        placeholder="e.g., a wise owl wizard, a female cyberpunk hacker"
-                    />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-120px)] min-h-[600px]">
+            {/* Sidebar Controls */}
+            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar flex flex-col gap-6">
+                <form onSubmit={handleSubmit} className="contents">
                     <div>
-                        <label htmlFor="hairColor" className="block text-sm font-medium text-slate-300 mb-2">Hair Color</label>
-                        <select
-                            id="hairColor"
-                            value={hairColor}
-                            onChange={(e) => setHairColor(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500"
-                        >
-                            {AVATAR_HAIR_COLORS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                        </select>
+                        <label htmlFor="prompt" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Description</label>
+                        <textarea
+                            id="prompt"
+                            rows={4}
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none transition"
+                            placeholder="e.g., a wise owl wizard, a cyberpunk hacker"
+                        />
                     </div>
-                    <div>
-                        <label htmlFor="eyeColor" className="block text-sm font-medium text-slate-300 mb-2">Eye Color</label>
-                        <select
-                            id="eyeColor"
-                            value={eyeColor}
-                            onChange={(e) => setEyeColor(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500"
-                        >
-                            {AVATAR_EYE_COLORS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                        </select>
-                    </div>
-                </div>
+                    
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Hair</label>
+                                <select
+                                    value={hairColor}
+                                    onChange={(e) => setHairColor(e.target.value)}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs focus:ring-2 focus:ring-cyan-500"
+                                >
+                                    {AVATAR_HAIR_COLORS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Eyes</label>
+                                <select
+                                    value={eyeColor}
+                                    onChange={(e) => setEyeColor(e.target.value)}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs focus:ring-2 focus:ring-cyan-500"
+                                >
+                                    {AVATAR_EYE_COLORS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                                </select>
+                            </div>
+                        </div>
 
-                <div>
-                    <label htmlFor="clothingStyle" className="block text-sm font-medium text-slate-300 mb-2">Clothing Style</label>
-                    <select
-                        id="clothingStyle"
-                        value={clothingStyle}
-                        onChange={(e) => setClothingStyle(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500"
-                    >
-                        {AVATAR_CLOTHING_STYLES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                    </select>
-                </div>
-
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="expression" className="block text-sm font-medium text-slate-300 mb-2">Expression</label>
-                        <select
-                            id="expression"
-                            value={expression}
-                            onChange={(e) => setExpression(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500"
-                        >
-                            {AVATAR_EXPRESSIONS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label htmlFor="background" className="block text-sm font-medium text-slate-300 mb-2">Background</label>
-                        <select
-                            id="background"
-                            value={background}
-                            onChange={(e) => setBackground(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500"
-                        >
-                            {BACKGROUND_OPTIONS.map((bg) => <option key={bg.label} value={bg.value}>{bg.label}</option>)}
-                        </select>
-                    </div>
-                </div>
-
-                 <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Aspect Ratio</label>
-                    <div className="grid grid-cols-5 gap-2">
-                        {ASPECT_RATIOS.map((ratio) => (
-                            <button
-                                key={ratio}
-                                type="button"
-                                onClick={() => setAspectRatio(ratio)}
-                                className={`p-2 rounded-lg border text-sm transition ${aspectRatio === ratio ? 'bg-cyan-500 border-cyan-500 text-white font-bold' : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}`}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Clothing</label>
+                            <select
+                                value={clothingStyle}
+                                onChange={(e) => setClothingStyle(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs focus:ring-2 focus:ring-cyan-500"
                             >
-                                {ratio}
-                            </button>
-                        ))}
+                                {AVATAR_CLOTHING_STYLES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Emotion</label>
+                                <select
+                                    value={expression}
+                                    onChange={(e) => setExpression(e.target.value)}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs focus:ring-2 focus:ring-cyan-500"
+                                >
+                                    {AVATAR_EXPRESSIONS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Scene</label>
+                                <select
+                                    value={background}
+                                    onChange={(e) => setBackground(e.target.value)}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs focus:ring-2 focus:ring-cyan-500"
+                                >
+                                    {BACKGROUND_OPTIONS.map((bg) => <option key={bg.label} value={bg.value}>{bg.label}</option>)}
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Aspect Ratio</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {['1:1', '9:16', '16:9'].map((ratio) => (
+                                <button
+                                    key={ratio}
+                                    type="button"
+                                    onClick={() => setAspectRatio(ratio)}
+                                    className={`py-1.5 px-2 rounded-lg border text-xs font-medium transition ${aspectRatio === ratio ? 'bg-cyan-600 text-white border-cyan-500' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
+                                >
+                                    {ratio}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
+                        <input
+                            id="add-qr"
+                            type="checkbox"
+                            checked={addQr}
+                            onChange={(e) => setAddQr(e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-cyan-500"
+                        />
+                        <label htmlFor="add-qr" className="ml-2 block text-xs text-slate-300">Add verification QR (Watermark)</label>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-900/20 flex items-center justify-center space-x-2 mt-auto"
+                    >
+                        {loading ? <Loader /> : <span>Generate Avatar</span>}
+                    </button>
+                    {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+                </form>
+            </div>
+
+            {/* Preview Area */}
+            <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 p-6 flex items-center justify-center relative overflow-hidden shadow-inner group">
+                <div className="absolute inset-0 bg-grid-slate-800/20 [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none"></div>
                 
-                <div className="flex items-center">
-                    <input
-                        id="add-qr"
-                        type="checkbox"
-                        checked={addQr}
-                        onChange={(e) => setAddQr(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <label htmlFor="add-qr" className="ml-2 block text-sm text-slate-300">Add verification QR code (Watermark)</label>
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300 flex items-center justify-center"
-                >
-                    {loading ? 'Generating...' : 'Generate Avatar'}
-                </button>
-                {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-            </form>
-
-            <div className="w-full md:w-2/3 flex items-center justify-center bg-slate-800/50 rounded-lg border border-slate-700 min-h-[300px] md:min-h-0 p-4">
-                {loading && <Loader message="Creating your avatar..." />}
+                {loading && <Loader message="Designing your character..." />}
+                
                 {!loading && image && (
-                    <div className="text-center group">
-                        <img src={image} alt="Generated Avatar" className="max-w-full max-h-[60vh] rounded-lg object-contain mb-4" />
-                        <div className="flex flex-wrap gap-3 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <a href={image} download={`avatar-${Date.now()}.jpg`} className="flex items-center justify-center space-x-2 bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors duration-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                    <div className="relative max-w-full max-h-full flex flex-col items-center">
+                        <img src={image} alt="Generated Avatar" className="max-w-full max-h-[calc(100vh-250px)] rounded-lg object-contain shadow-2xl shadow-black/50 border border-slate-700/50" />
+                        
+                        <div className="absolute bottom-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 p-2 rounded-xl backdrop-blur-sm transform translate-y-2 group-hover:translate-y-0 duration-300">
+                            <a href={image} download={`avatar-${Date.now()}.jpg`} className="flex items-center justify-center space-x-2 bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors duration-300 text-xs">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                                 <span>Download</span>
                             </a>
                             <button
                                 onClick={handleSave}
-                                className={`flex items-center justify-center space-x-2 font-bold py-2 px-4 rounded-lg transition-colors duration-300 ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+                                className={`flex items-center justify-center space-x-2 font-bold py-2 px-4 rounded-lg transition-colors duration-300 text-xs ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
                             >
                                 {isSaved ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                                 ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
                                 )}
                                 <span>{isSaved ? 'Saved' : 'Save'}</span>
                             </button>
                             <button
                                 onClick={() => onShare({ contentUrl: image, contentText: prompt, contentType: 'image' })}
-                                className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
+                                className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300 text-xs"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
                                 </svg>
-                                <span>Share & Promote</span>
+                                <span>Share</span>
                             </button>
                         </div>
                     </div>
                 )}
-                {!loading && !image && <p className="text-slate-500">Your generated avatar will appear here</p>}
+                
+                {!loading && !image && (
+                    <div className="text-center text-slate-600 opacity-60">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <p className="text-lg">Configure your avatar to start</p>
+                    </div>
+                )}
             </div>
         </div>
     );

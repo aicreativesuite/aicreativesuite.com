@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateAudiobookScript, generateMultiSpeakerSpeech } from '../../services/geminiService';
 import { TTS_VOICES } from '../../constants';
 import Loader from '../common/Loader';
@@ -69,7 +69,6 @@ const AudiobookCreator: React.FC<AudiobookCreatorProps> = ({ onShare }) => {
                 voiceName: characterVoices[char]
             }));
 
-            // Ensure at least 2 speakers for multi-speaker config, if only 1, duplicate
             if (speakerConfig.length === 1) {
                 speakerConfig.push({ speaker: 'Narrator', voiceName: TTS_VOICES[0] });
             }
@@ -86,87 +85,118 @@ const AudiobookCreator: React.FC<AudiobookCreatorProps> = ({ onShare }) => {
         } catch (err) {
             setError('Failed to generate audiobook.');
             console.error(err);
-            setStep('mapping'); // Go back
+            setStep('mapping'); 
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-                <h3 className="text-2xl font-bold text-white">Audiobook Creator</h3>
-                <div className="flex space-x-2">
-                    {['Input', 'Cast', 'Generate', 'Listen'].map((s, i) => {
-                        const steps = ['input', 'mapping', 'generating', 'done'];
-                        const isActive = steps.indexOf(step) >= i;
-                        return (
-                            <div key={s} className={`flex items-center ${isActive ? 'text-cyan-400' : 'text-slate-600'}`}>
-                                <span className="text-sm font-bold">{i + 1}. {s}</span>
-                                {i < 3 && <span className="mx-2">→</span>}
-                            </div>
-                        );
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+            {/* Sidebar Controls */}
+            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                
+                {/* Steps Indicator */}
+                <div className="flex justify-between mb-6 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                    {['Input', 'Cast', 'Audio'].map((s, i) => {
+                        const stepIdx = ['input', 'mapping', 'done'].indexOf(step === 'generating' ? 'mapping' : step);
+                        return <span key={s} className={stepIdx >= i ? 'text-cyan-400' : ''}>{i+1}. {s}</span>
                     })}
                 </div>
+
+                {step === 'input' && (
+                    <div className="space-y-4 animate-fadeIn">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Story Text</label>
+                            <textarea
+                                rows={15}
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none"
+                                placeholder="Paste story chapter..."
+                            />
+                        </div>
+                        <button onClick={handleAnalyze} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center">
+                            {loading ? <Loader /> : 'Analyze Characters'}
+                        </button>
+                    </div>
+                )}
+
+                {(step === 'mapping' || step === 'generating') && (
+                    <div className="space-y-4 animate-fadeIn">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cast Voices</h4>
+                        <div className="space-y-2">
+                            {characters.map(char => (
+                                <div key={char} className="bg-slate-950 border border-slate-700 rounded-lg p-2 flex flex-col">
+                                    <span className="text-xs font-bold text-white mb-1">{char}</span>
+                                    <select 
+                                        value={characterVoices[char]} 
+                                        onChange={(e) => setCharacterVoices({...characterVoices, [char]: e.target.value})}
+                                        className="bg-slate-800 border border-slate-600 rounded p-1 text-white text-xs"
+                                    >
+                                        {TTS_VOICES.map(v => <option key={v} value={v}>{v}</option>)}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={handleGenerate} disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center">
+                            {loading ? <Loader /> : 'Generate Audiobook'}
+                        </button>
+                    </div>
+                )}
+
+                {step === 'done' && (
+                    <div className="space-y-4 animate-fadeIn">
+                        <div className="bg-green-900/20 border border-green-500/50 p-4 rounded-lg text-center">
+                            <p className="text-green-400 font-bold text-sm">Generation Complete!</p>
+                        </div>
+                        <button onClick={() => { setStep('input'); setAudioUrl(null); }} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition">
+                            Create New
+                        </button>
+                    </div>
+                )}
+                
+                {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
             </div>
 
-            {step === 'input' && (
-                <div className="space-y-4">
-                    <textarea
-                        rows={10}
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-4 text-white focus:ring-2 focus:ring-cyan-500"
-                        placeholder="Paste your story or chapter text here..."
-                    />
-                    <button onClick={handleAnalyze} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg transition">
-                        {loading ? <Loader /> : 'Analyze Characters'}
-                    </button>
+            {/* Main Preview Area */}
+            <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Studio Player</h3>
+                    {audioUrl && (
+                        <button onClick={() => onShare({ contentText: "My AI Audiobook", contentType: 'audio' })} className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition">Share</button>
+                    )}
                 </div>
-            )}
 
-            {step === 'mapping' && (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {characters.map(char => (
-                            <div key={char} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex items-center justify-between">
-                                <span className="font-bold text-white">{char}</span>
-                                <select 
-                                    value={characterVoices[char]} 
-                                    onChange={(e) => setCharacterVoices({...characterVoices, [char]: e.target.value})}
-                                    className="bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm"
-                                >
-                                    {TTS_VOICES.map(v => <option key={v} value={v}>{v}</option>)}
-                                </select>
+                <div className="flex-grow p-8 flex items-center justify-center relative">
+                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                    
+                    {step === 'generating' && (
+                        <div className="text-center z-10">
+                            <Loader message="Synthesizing multi-voice audio..." />
+                        </div>
+                    )}
+
+                    {!loading && !audioUrl && (
+                        <div className="text-center text-slate-600 opacity-60 z-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                            <p className="text-lg">Paste text to create an audiobook.</p>
+                        </div>
+                    )}
+
+                    {audioUrl && (
+                        <div className="w-full max-w-md p-8 bg-slate-900 rounded-xl border border-slate-700 shadow-2xl z-10 text-center space-y-6">
+                            <div className="w-24 h-24 bg-slate-800 rounded-full mx-auto flex items-center justify-center shadow-lg border border-slate-600">
+                                <span className="text-4xl">🎧</span>
                             </div>
-                        ))}
-                    </div>
-                    <button onClick={handleGenerate} disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition">
-                        {loading ? <Loader /> : 'Generate Audiobook'}
-                    </button>
+                            <audio controls src={audioUrl} className="w-full" />
+                            <div className="flex gap-2 justify-center">
+                                <a href={audioUrl} download="audiobook.wav" className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition">Download WAV</a>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
-
-            {step === 'generating' && (
-                <div className="flex flex-col items-center justify-center py-12">
-                    <Loader message="Synthesizing voices and mixing audio..." />
-                </div>
-            )}
-
-            {step === 'done' && audioUrl && (
-                <div className="bg-slate-800 p-8 rounded-xl border border-slate-700 text-center space-y-6">
-                    <div className="text-6xl">🎧</div>
-                    <h4 className="text-xl font-bold text-white">Your Audiobook is Ready!</h4>
-                    <audio controls src={audioUrl} className="w-full" />
-                    <div className="flex justify-center gap-4">
-                        <a href={audioUrl} download="audiobook.wav" className="bg-slate-700 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-600">Download</a>
-                        <button onClick={() => onShare({ contentText: "Check out my AI Audiobook!", contentType: 'audio' })} className="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-500">Share</button>
-                        <button onClick={() => setStep('input')} className="bg-slate-800 text-slate-400 px-6 py-2 rounded-lg font-bold hover:text-white">Create New</button>
-                    </div>
-                </div>
-            )}
-            
-            {error && <div className="bg-red-900/30 border border-red-500 text-red-200 p-4 rounded-lg text-center">{error}</div>}
+            </div>
         </div>
     );
 };

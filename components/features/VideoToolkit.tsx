@@ -163,12 +163,10 @@ const VideoToolkit: React.FC<VideoToolkitProps> = ({ onShare }) => {
                     finalPrompt = `Create a video based on this script: ${prompt}`;
                 }
 
-                // If file present, use image-to-video (simulated via frame extraction in real app, here basic logic)
-                // For simplicity in this demo suite, we use text-to-video if no file, or assume file is an image reference
                 let op;
                 if (file && file.type.startsWith('image')) {
                      const base64 = await fileToBase64(file);
-                     op = await generateVideoFromPrompt(finalPrompt, '16:9', false); // Ideally use generateVideoFromImage if imported
+                     op = await generateVideoFromPrompt(finalPrompt, '16:9', false); 
                 } else {
                      op = await generateVideoFromPrompt(finalPrompt, '16:9', false);
                 }
@@ -196,18 +194,15 @@ const VideoToolkit: React.FC<VideoToolkitProps> = ({ onShare }) => {
             // AI AUDIO/TEXT TOOLS
             else if (['captions', 'auto-caption', 'translator', 'ai-trans'].includes(activeTool.id)) {
                  if (!file) throw new Error("Please upload a video/audio file.");
-                 // Simulate extraction/transcription
                  const base64 = await fileToBase64(file);
-                 // Using analyzeVideo or transcribeAudio depending on file type, using generic logic here
                  const res = await transcribeAudio(base64, file.type); 
-                 setResult(res.text); // Return text transcript
+                 setResult(res.text); 
                  setLoading(false);
             }
             // UTILITY TOOLS (Simulation)
             else {
-                // Simulate processing time for client-side tools
                 setTimeout(() => {
-                    setResult(previewUrl); // Just echo back for demo purposes
+                    setResult(previewUrl); 
                     setLoading(false);
                 }, 2000);
             }
@@ -223,75 +218,89 @@ const VideoToolkit: React.FC<VideoToolkitProps> = ({ onShare }) => {
             <ApiKeyDialog show={showApiKeyDialog} onSelectKey={handleSelectKey} />
             
             {activeTool ? (
-                <div className="flex-grow flex flex-col h-full bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-                    <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
-                        <div className="flex items-center space-x-3">
+                <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+                    {/* Sidebar Controls */}
+                    <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar flex flex-col gap-6">
+                        <div className="flex items-center space-x-3 mb-2">
                             <button onClick={() => { setActiveTool(null); setFile(null); setPreviewUrl(null); setResult(null); }} className="text-slate-400 hover:text-white">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             </button>
                             <span className="text-2xl mr-2">{activeTool.icon}</span>
                             <h3 className="text-xl font-bold text-white">{activeTool.name}</h3>
                         </div>
-                    </div>
-                    
-                    <div className="flex-grow p-8 flex flex-col items-center justify-center overflow-y-auto">
-                        {!result ? (
-                            <div className="w-full max-w-2xl space-y-8">
-                                {/* Upload Section */}
-                                {['trimmer', 'cropper', 'converter', 'enhancer', 'captions'].some(k => activeTool.id.includes(k) || activeTool.category === 'Converters') && (
-                                    <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center bg-slate-800/50 hover:border-cyan-500 transition-colors relative">
+
+                        {/* Inputs */}
+                        <div className="space-y-5 animate-fadeIn">
+                            {['trimmer', 'cropper', 'converter', 'enhancer', 'captions'].some(k => activeTool.id.includes(k) || activeTool.category === 'Converters') && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Upload File</label>
+                                    <div className="border-2 border-dashed border-slate-700 rounded-lg p-6 text-center bg-slate-950/30 hover:border-cyan-500 transition-colors relative">
                                         <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                        {file ? (
-                                            <div className="text-green-400 font-bold">{file.name}</div>
-                                        ) : (
-                                            <div className="text-slate-400">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                                                <p>Drag & Drop or Click to Upload</p>
-                                            </div>
-                                        )}
+                                        <div className="pointer-events-none">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto text-slate-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                            <p className="text-xs text-slate-400 truncate">{file ? file.name : "Click to Upload"}</p>
+                                        </div>
                                     </div>
-                                )}
-
-                                {/* Prompt Section for AI Tools */}
-                                {(['ai-gen', 'script-vid', 'reel-maker', 'enhancer', 'add-text', 'add-music', 'text-anim', 'lottie'].some(k => activeTool.id.includes(k)) || activeTool.category === 'Social Growth') && (
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-400 mb-2">
-                                            {activeTool.category === 'Social Growth' ? 'Topic / Keyword' : 'Instructions / Script'}
-                                        </label>
-                                        <textarea 
-                                            value={prompt}
-                                            onChange={e => setPrompt(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500"
-                                            rows={4}
-                                            placeholder={activeTool.category === 'Social Growth' ? "Enter topic (e.g. Travel Vlog)" : "Describe what you want to create or change..."}
-                                        />
-                                    </div>
-                                )}
-
-                                <button 
-                                    onClick={handleProcess}
-                                    disabled={loading}
-                                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:opacity-90 disabled:opacity-50 flex justify-center"
-                                >
-                                    {loading ? <Loader /> : `Process ${activeTool.name}`}
-                                </button>
-                                {error && <p className="text-red-400 text-center">{error}</p>}
-                            </div>
-                        ) : (
-                            <div className="text-center w-full max-w-4xl animate-fadeIn">
-                                <h4 className="text-lg font-bold text-white mb-4">Result Ready!</h4>
-                                {(activeTool.category === 'Audio & Text' || activeTool.category === 'Social Growth') && !result.startsWith('blob') ? (
-                                    <div className="bg-slate-800 p-6 rounded-lg text-left whitespace-pre-wrap text-slate-300 font-mono text-sm max-h-96 overflow-y-auto">{result}</div>
-                                ) : (
-                                    <video src={result} controls className="w-full rounded-xl shadow-2xl bg-black mb-6 max-h-[60vh]" />
-                                )}
-                                <div className="flex justify-center gap-4">
-                                    {result.startsWith('blob') && <a href={result} download="output.mp4" className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-bold">Download</a>}
-                                    {activeTool.category === 'Social Growth' && <button onClick={() => {navigator.clipboard.writeText(result); alert('Copied!')}} className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-bold">Copy Text</button>}
-                                    <button onClick={() => {setResult(null); setFile(null); setPreviewUrl(null);}} className="bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-2 rounded-lg font-bold">Create New</button>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                            {(['ai-gen', 'script-vid', 'reel-maker', 'enhancer', 'add-text', 'add-music', 'text-anim', 'lottie'].some(k => activeTool.id.includes(k)) || activeTool.category === 'Social Growth') && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                        {activeTool.category === 'Social Growth' ? 'Topic / Keyword' : 'Instructions'}
+                                    </label>
+                                    <textarea 
+                                        value={prompt}
+                                        onChange={e => setPrompt(e.target.value)}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none"
+                                        rows={5}
+                                        placeholder={activeTool.category === 'Social Growth' ? "Enter topic (e.g. Travel Vlog)" : "Describe what you want to create or change..."}
+                                    />
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={handleProcess}
+                                disabled={loading}
+                                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 disabled:opacity-50 flex justify-center items-center"
+                            >
+                                {loading ? <Loader /> : `Run ${activeTool.name}`}
+                            </button>
+                            {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
+                        </div>
+                    </div>
+
+                    {/* Main Preview Area */}
+                    <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                        <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                            <h3 className="font-bold text-white text-sm uppercase tracking-wider">Output</h3>
+                            {result && (
+                                <div className="flex gap-2">
+                                    {result.startsWith('blob') && <a href={result} download="output.mp4" className="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded font-bold transition">Download</a>}
+                                    {activeTool.category === 'Social Growth' && <button onClick={() => {navigator.clipboard.writeText(result); alert('Copied!')}} className="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded font-bold transition">Copy</button>}
+                                    <button onClick={() => {setResult(null); setFile(null); setPreviewUrl(null);}} className="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded font-bold transition">New</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-grow p-8 flex items-center justify-center relative bg-slate-950/30">
+                            <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                            
+                            {!result ? (
+                                <div className="text-center text-slate-600 opacity-60">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    <p className="text-lg">Result will appear here.</p>
+                                </div>
+                            ) : (
+                                <div className="w-full max-w-4xl animate-fadeIn relative z-10">
+                                    {(activeTool.category === 'Audio & Text' || activeTool.category === 'Social Growth') && !result.startsWith('blob') ? (
+                                        <div className="bg-slate-900 border border-slate-700 p-6 rounded-lg text-left whitespace-pre-wrap text-slate-300 font-mono text-sm max-h-[60vh] overflow-y-auto shadow-xl">{result}</div>
+                                    ) : (
+                                        <video src={result} controls className="w-full rounded-xl shadow-2xl bg-black max-h-[60vh]" />
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -324,7 +333,7 @@ const VideoToolkit: React.FC<VideoToolkitProps> = ({ onShare }) => {
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto pb-20 custom-scrollbar">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto pb-20 custom-scrollbar h-[calc(100vh-16rem)]">
                         {filteredTools.map(tool => (
                             <button 
                                 key={tool.id} 

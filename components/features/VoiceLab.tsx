@@ -59,76 +59,121 @@ const VoiceLab: React.FC<VoiceLabProps> = ({ onShare }) => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="flex space-x-4 mb-8 border-b border-slate-800 pb-1">
-                {['clone', 'isolate', 'sfx'].map(t => (
-                    <button 
-                        key={t} 
-                        onClick={() => {setActiveTab(t as any); setResultAudioUrl(null);}} 
-                        className={`pb-3 px-4 text-sm font-bold uppercase tracking-wider transition ${activeTab === t ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-500 hover:text-white'}`}
-                    >
-                        {t === 'clone' ? 'Voice Cloning' : t === 'isolate' ? 'Voice Isolator' : 'Text to SFX'}
-                    </button>
-                ))}
-            </div>
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+            {/* Sidebar Controls */}
+            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                
+                {/* Tabs */}
+                <div className="flex bg-slate-800 rounded-lg p-1 mb-6">
+                    {['clone', 'isolate', 'sfx'].map(t => (
+                        <button 
+                            key={t} 
+                            onClick={() => {setActiveTab(t as any); setResultAudioUrl(null);}} 
+                            className={`flex-1 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition ${activeTab === t ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            {t}
+                        </button>
+                    ))}
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-6 bg-slate-900/50 p-6 rounded-xl border border-slate-800">
+                <div className="space-y-5 animate-fadeIn">
                     {activeTab === 'clone' && (
                         <>
                             <div>
-                                <label className="block text-sm font-bold text-slate-300 mb-2">Reference Voice (Upload Sample)</label>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Reference Voice</label>
                                 <AudioUploader onAudioUpload={setAudioFile} onAudioClear={() => setAudioFile(null)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-slate-300 mb-2">Text to Speak</label>
-                                <textarea value={text} onChange={e => setText(e.target.value)} className="w-full bg-slate-950 border-slate-700 rounded p-3 text-white" rows={3} placeholder="What should the clone say?" />
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Script</label>
+                                <textarea 
+                                    value={text} 
+                                    onChange={e => setText(e.target.value)} 
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none" 
+                                    rows={4} 
+                                    placeholder="What should the clone say?" 
+                                />
                             </div>
-                            <button onClick={handleGenerateClone} disabled={loading} className="w-full bg-cyan-600 text-white font-bold py-3 rounded hover:bg-cyan-500 transition">{loading ? <Loader /> : 'Clone & Speak'}</button>
+                            <button onClick={handleGenerateClone} disabled={loading} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 rounded-xl hover:from-cyan-500 hover:to-blue-500 transition shadow-lg disabled:opacity-50 flex justify-center">
+                                {loading ? <Loader /> : 'Clone & Speak'}
+                            </button>
                         </>
                     )}
 
                     {activeTab === 'isolate' && (
                         <>
                             <div>
-                                <label className="block text-sm font-bold text-slate-300 mb-2">Noisy Audio Input</label>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Noisy Audio</label>
                                 <AudioUploader onAudioUpload={setAudioFile} onAudioClear={() => setAudioFile(null)} />
                             </div>
-                            <div className="p-4 bg-slate-800 rounded border border-slate-700 text-xs text-slate-400">
-                                AI will analyze the frequency spectrum and remove background noise, reverb, and artifacts.
+                            <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 text-xs text-slate-400 leading-relaxed">
+                                <span className="text-cyan-400 font-bold block mb-1">AI Processing</span>
+                                Isolates voice from background noise, reverb, and artifacts using spectral gating.
                             </div>
-                            <button onClick={handleIsolate} disabled={loading} className="w-full bg-green-600 text-white font-bold py-3 rounded hover:bg-green-500 transition">{loading ? <Loader /> : 'Isolate Voice'}</button>
+                            <button onClick={handleIsolate} disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center">
+                                {loading ? <Loader /> : 'Clean Audio'}
+                            </button>
                         </>
                     )}
 
                     {activeTab === 'sfx' && (
                         <>
                             <div>
-                                <label className="block text-sm font-bold text-slate-300 mb-2">Sound Description</label>
-                                <input value={text} onChange={e => setText(e.target.value)} className="w-full bg-slate-950 border-slate-700 rounded p-3 text-white" placeholder="e.g. Footsteps on gravel, Laser blast" />
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Sound Description</label>
+                                <textarea 
+                                    value={text} 
+                                    onChange={e => setText(e.target.value)} 
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-purple-500 resize-none" 
+                                    rows={4}
+                                    placeholder="e.g. Footsteps on gravel, Laser blast, Rain on a tin roof" 
+                                />
                             </div>
-                            <button onClick={handleSfx} disabled={loading} className="w-full bg-purple-600 text-white font-bold py-3 rounded hover:bg-purple-500 transition">{loading ? <Loader /> : 'Generate SFX'}</button>
+                            <button onClick={handleSfx} disabled={loading} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center">
+                                {loading ? <Loader /> : 'Generate SFX'}
+                            </button>
                         </>
                     )}
                 </div>
+            </div>
 
-                <div className="bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center min-h-[300px] relative">
-                    {loading ? (
-                        <div className="text-center">
-                            <Loader />
-                            <p className="text-xs text-slate-500 mt-4">{status}</p>
+            {/* Main Output Area */}
+            <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Lab Result</h3>
+                    {resultAudioUrl && (
+                        <button 
+                            onClick={() => onShare({ contentUrl: resultAudioUrl!, contentText: text, contentType: 'audio' })}
+                            className="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded font-bold transition"
+                        >
+                            Share
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex-grow p-8 flex items-center justify-center relative">
+                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                    
+                    {loading && (
+                        <div className="text-center z-10">
+                            <Loader message={status} />
                         </div>
-                    ) : resultAudioUrl ? (
-                        <div className="w-full p-8 text-center space-y-6">
-                            <div className="w-24 h-24 bg-slate-800 rounded-full mx-auto flex items-center justify-center animate-pulse">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-cyan-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
+                    )}
+
+                    {!loading && !resultAudioUrl && (
+                        <div className="text-center text-slate-600 opacity-60 z-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                            <p className="text-lg">Configure settings to process audio</p>
+                        </div>
+                    )}
+
+                    {resultAudioUrl && (
+                        <div className="w-full max-w-md p-8 bg-slate-900 rounded-xl border border-slate-700 shadow-2xl z-10 text-center space-y-6">
+                            <div className="w-20 h-20 bg-slate-800 rounded-full mx-auto flex items-center justify-center shadow-inner">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-cyan-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
                             </div>
                             <audio controls src={resultAudioUrl} className="w-full" />
-                            <button onClick={() => onShare({ contentUrl: resultAudioUrl!, contentText: text, contentType: 'audio' })} className="text-sm text-cyan-400 hover:underline">Share Result</button>
-                        </div>
-                    ) : (
-                        <div className="text-slate-600 text-center">
-                            <p>Result will appear here.</p>
+                            <div className="flex gap-2 justify-center">
+                                <a href={resultAudioUrl} download="processed_audio.wav" className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition">Download</a>
+                            </div>
                         </div>
                     )}
                 </div>

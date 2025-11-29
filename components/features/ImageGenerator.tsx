@@ -116,142 +116,136 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
     const availableArtTechniques = ART_TECHNIQUES_BY_DESIGN[designStyle] || [];
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Controls Area */}
-            <div className="lg:col-span-1">
-                <form onSubmit={handleSubmit} className="space-y-6 bg-slate-900/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-800 sticky top-8">
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+            {/* Sidebar Controls */}
+            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <label htmlFor="prompt" className="block text-sm font-medium text-slate-300 mb-2">Your Vision</label>
+                        <label htmlFor="prompt" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Your Vision</label>
                         <textarea
                             id="prompt"
                             rows={4}
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none transition"
                             placeholder="e.g., A futuristic cityscape at sunset"
                         />
                     </div>
                      <div>
-                        <label htmlFor="negative-prompt" className="block text-sm font-medium text-slate-300 mb-2">Negative Prompt (Optional)</label>
+                        <label htmlFor="negative-prompt" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Negative Prompt</label>
                         <textarea
                             id="negative-prompt"
                             rows={2}
                             value={negativePrompt}
                             onChange={(e) => setNegativePrompt(e.target.value)}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none transition"
                             placeholder="e.g., text, watermarks, people"
                         />
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label htmlFor="design-style" className="block text-sm font-medium text-slate-300 mb-2">Design Style</label>
-                            <select id="design-style" value={designStyle} onChange={(e) => setDesignStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Style</label>
+                            <select id="design-style" value={designStyle} onChange={(e) => setDesignStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
                                 {DESIGN_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="artistic-style" className="block text-sm font-medium text-slate-300 mb-2">Artistic Style</label>
-                            <select id="artistic-style" value={artisticStyle} onChange={(e) => setArtisticStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Artistry</label>
+                            <select id="artistic-style" value={artisticStyle} onChange={(e) => setArtisticStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
                                 {ARTISTIC_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                         {availableArtTechniques.length > 0 && (
                             <div>
-                                <label htmlFor="art-technique" className="block text-sm font-medium text-slate-300 mb-2">Art Technique</label>
-                                <select id="art-technique" value={artTechnique} onChange={(e) => setArtTechnique(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition">
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Technique</label>
+                                <select id="art-technique" value={artTechnique} onChange={(e) => setArtTechnique(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
                                     {availableArtTechniques.map((s) => <option key={s} value={s}>{s}</option>)}
                                 </select>
                             </div>
                         )}
                         <div>
-                            <label htmlFor="visual-effect" className="block text-sm font-medium text-slate-300 mb-2">Visual Effect</label>
-                            <select id="visual-effect" value={visualEffect} onChange={(e) => setVisualEffect(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Effect</label>
+                            <select id="visual-effect" value={visualEffect} onChange={(e) => setVisualEffect(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
                                 {VISUAL_EFFECTS.map((s) => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label htmlFor="background" className="block text-sm font-medium text-slate-300 mb-2">Background Setting</label>
-                        <select id="background" value={background} onChange={(e) => setBackground(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 transition">
+                        <label htmlFor="background" className="block text-xs font-bold text-slate-400 uppercase mb-2">Background</label>
+                        <select id="background" value={background} onChange={(e) => setBackground(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
                             {BACKGROUND_OPTIONS.map((bg) => <option key={bg.label} value={bg.value}>{bg.label}</option>)}
                         </select>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Aspect Ratio</label>
-                        <div className="grid grid-cols-5 gap-2">
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Aspect Ratio</label>
+                        <div className="grid grid-cols-3 gap-2">
                             {ASPECT_RATIOS.map((ratio) => (
-                                <button key={ratio} type="button" onClick={() => setAspectRatio(ratio)} className={`py-2 px-1 rounded-lg border text-xs sm:text-sm transition ${aspectRatio === ratio ? 'bg-cyan-500 border-cyan-500 text-white font-bold' : 'bg-slate-800 border-slate-700 hover:bg-slate-700'}`}>
+                                <button key={ratio} type="button" onClick={() => setAspectRatio(ratio)} className={`py-2 px-1 rounded-lg border text-xs font-medium transition ${aspectRatio === ratio ? 'bg-cyan-600 border-cyan-500 text-white' : 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-400'}`}>
                                     {ratio}
                                 </button>
                             ))}
                         </div>
                     </div>
-                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                        {loading ? 'Generating...' : 'Generate Image'}
-                    </button>
-                    <div className="flex items-center">
+
+                    <div className="flex items-center space-x-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
                         <input
                             id="add-qr"
                             type="checkbox"
                             checked={addQr}
                             onChange={(e) => setAddQr(e.target.checked)}
-                            className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-cyan-600 focus:ring-cyan-500"
+                            className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-cyan-500"
                         />
-                        <label htmlFor="add-qr" className="ml-2 block text-sm text-slate-400">Add verification QR code (Watermark)</label>
+                        <label htmlFor="add-qr" className="block text-xs text-slate-300">Add verification QR (Watermark)</label>
                     </div>
-                    {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+
+                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center space-x-2">
+                        {loading ? <Loader /> : <span>Generate Image</span>}
+                    </button>
+                    {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
                 </form>
             </div>
+
              {/* Output Area */}
-             <div className="lg:col-span-2 w-full flex items-center justify-center bg-slate-900/50 rounded-2xl border border-slate-800 min-h-[400px] lg:min-h-[calc(100vh-10rem)] p-6">
-                {loading && <Loader message="Creating your vision..." />}
-                {!loading && image && (
-                     <div className="text-center w-full h-full flex flex-col items-center justify-center group">
-                        <img src={image} alt="Generated" className="max-w-full max-h-[70vh] rounded-lg object-contain shadow-2xl shadow-black/40" />
-                        <div className="mt-6 flex space-x-4 justify-center">
-                            <a href={image} download={`generated-image-${Date.now()}.jpg`} className="flex items-center justify-center space-x-2 bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors duration-300">
+             <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                {/* Header */}
+                <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Result</h3>
+                    {image && (
+                        <div className="flex space-x-2">
+                             <a href={image} download={`generated-image-${Date.now()}.jpg`} className="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-white" title="Download">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                                <span>Download</span>
                             </a>
-                            <button
-                                onClick={handleSave}
-                                className={`flex items-center justify-center space-x-2 font-bold py-2 px-4 rounded-lg transition-colors duration-300 ${isSaved ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
-                            >
-                                {isSaved ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
-                                )}
-                                <span>{isSaved ? 'Saved' : 'Save'}</span>
+                            <button onClick={handleSave} className={`p-2 rounded hover:bg-slate-800 transition-colors ${isSaved ? 'text-green-400' : 'text-slate-400 hover:text-white'}`} title="Save">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                             </button>
-                            <button
-                                onClick={() => onShare({ contentUrl: image, contentText: prompt, contentType: 'image' })}
-                                className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-                                </svg>
-                                <span>Share & Promote</span>
-                            </button>
-                            <button onClick={() => setImage(null)} className="flex items-center justify-center space-x-2 bg-red-900/50 text-red-200 font-bold py-2 px-4 rounded-lg hover:bg-red-900/70 transition-colors duration-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                                <span>Discard</span>
+                            <button onClick={() => onShare({ contentUrl: image, contentText: prompt, contentType: 'image' })} className="p-2 rounded hover:bg-slate-800 text-purple-400 hover:text-purple-300" title="Share">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
                             </button>
                         </div>
-                    </div>
-                )}
-                {!loading && !image && (
-                     <div className="text-center text-slate-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-16 w-16 opacity-30" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM5 19V5H19V19H5ZM16.5 16L13.5 12L10 16.5L7.5 13L5 17.5H19L16.5 16Z"></path></svg>
-                        <p className="mt-4">Your masterpiece awaits</p>
-                    </div>
-                )}
+                    )}
+                </div>
+
+                <div className="flex-grow p-8 flex items-center justify-center relative bg-slate-950/30">
+                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                    {loading && <Loader message="Creating your vision..." />}
+                    {!loading && image && (
+                         <div className="relative group max-w-full max-h-full">
+                            <img src={image} alt="Generated" className="max-w-full max-h-[calc(100vh-16rem)] rounded-lg object-contain shadow-2xl shadow-black/50" />
+                        </div>
+                    )}
+                    {!loading && !image && (
+                         <div className="text-center text-slate-600 opacity-60">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-20 w-20 mb-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM5 19V5H19V19H5ZM16.5 16L13.5 12L10 16.5L7.5 13L5 17.5H19L16.5 16Z"></path></svg>
+                            <p className="text-lg">Enter a prompt to create an image</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

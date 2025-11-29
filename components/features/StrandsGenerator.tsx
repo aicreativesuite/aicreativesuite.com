@@ -191,17 +191,17 @@ const StrandsGenerator: React.FC<StrandsGeneratorProps> = ({ onShare }) => {
     }
 
     const ResultCard: React.FC<{ title: string; agentIcon?: React.ReactNode, children: React.ReactNode; className?: string }> = ({ title, agentIcon, children, className }) => (
-        <div className={`bg-slate-800/50 p-6 rounded-xl border border-slate-700 ${className}`}>
-            <h3 className="flex items-center space-x-2 text-lg font-bold text-cyan-400 mb-4">
-                {agentIcon}
+        <div className={`bg-slate-800/50 p-6 rounded-xl border border-slate-700 ${className} shadow-sm`}>
+            <h3 className="flex items-center space-x-2 text-sm font-bold text-cyan-400 uppercase tracking-wider mb-4 border-b border-slate-700/50 pb-2">
+                {agentIcon && <span className="text-lg">{agentIcon}</span>}
                 <span>{title}</span>
             </h3>
-            <div className="space-y-4 text-slate-300">{children}</div>
+            <div className="space-y-4 text-slate-300 text-sm leading-relaxed">{children}</div>
         </div>
     );
 
     const CopyableListItem: React.FC<{ text: string }> = ({ text }) => (
-        <li className="flex justify-between items-center group p-2 rounded-md hover:bg-slate-700/50">
+        <li className="flex justify-between items-center group p-2 rounded-md hover:bg-slate-700/50 transition-colors">
             <span>{text}</span>
             <button onClick={() => handleCopyToClipboard(text)} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-white" title="Copy">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" /><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" /></svg>
@@ -212,13 +212,13 @@ const StrandsGenerator: React.FC<StrandsGeneratorProps> = ({ onShare }) => {
     const AgentCard: React.FC<{agent: typeof STRANDS_LEAD_AGENTS[0], isSelected: boolean, onSelect: () => void}> = ({ agent, isSelected, onSelect }) => (
         <div
             onClick={onSelect}
-            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${isSelected ? 'border-cyan-500 bg-cyan-900/50' : 'border-slate-700 bg-slate-800 hover:border-slate-500'}`}
+            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${isSelected ? 'border-cyan-500 bg-cyan-900/20' : 'border-slate-700 bg-slate-800 hover:border-slate-500'}`}
         >
             <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0 text-cyan-400">{agent.icon}</div>
+                <div className="flex-shrink-0 text-2xl">{agent.icon}</div>
                 <div>
-                    <h4 className="font-bold text-sm text-white">{agent.name}</h4>
-                    <p className="text-xs text-slate-400">{agent.expertise}</p>
+                    <h4 className="font-bold text-xs text-white uppercase">{agent.name}</h4>
+                    <p className="text-[10px] text-slate-400">{agent.expertise}</p>
                 </div>
             </div>
         </div>
@@ -227,41 +227,47 @@ const StrandsGenerator: React.FC<StrandsGeneratorProps> = ({ onShare }) => {
     const AgentStatusIndicator: React.FC<{name: string, status: AgentStatus}> = ({ name, status }) => {
         const getStatusIcon = () => {
             switch (status) {
-                case 'working': return <svg className="animate-spin h-5 w-5 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
-                case 'done': return <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
-                case 'error': return <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>;
-                case 'pending': return <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" /></svg>;
+                case 'working': return <svg className="animate-spin h-4 w-4 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+                case 'done': return <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
+                case 'error': return <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>;
+                case 'pending': return <div className="h-2 w-2 bg-slate-600 rounded-full"></div>;
             }
         };
-        return <div className={`flex items-center justify-between p-3 rounded-lg ${status === 'working' ? 'bg-slate-700/50' : 'bg-transparent'}`}><span className="text-sm font-medium">{name}</span> {getStatusIcon()}</div>
+        return (
+            <div className={`flex items-center justify-between p-2 rounded-lg transition-colors ${status === 'working' ? 'bg-cyan-900/20 border border-cyan-800/50' : 'bg-transparent border border-transparent'}`}>
+                <span className={`text-xs font-medium ${status === 'working' ? 'text-white' : 'text-slate-400'}`}>{name}</span> 
+                {getStatusIcon()}
+            </div>
+        )
     }
 
     return (
-        <div className="flex flex-col lg:flex-row gap-8 relative">
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px] relative">
             {toastMessage && (
-                <div className="absolute top-0 right-0 bg-green-500 text-white py-2 px-4 rounded-lg animate-pulse z-20">
+                <div className="absolute top-0 right-0 bg-green-500 text-white py-2 px-4 rounded-lg animate-pulse z-50 text-xs">
                     {toastMessage}
                 </div>
             )}
-            <div className="w-full lg:w-1/3 space-y-6">
-                <form onSubmit={handleSubmit} className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                    <h3 className="text-xl font-bold text-white mb-4">Brand Concept</h3>
-                     <fieldset disabled={loading} className="space-y-4">
+            
+            {/* Sidebar Controls */}
+            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <fieldset disabled={loading} className="space-y-5">
                         <div>
-                            <label htmlFor="concept" className="block text-sm font-medium text-slate-300 mb-2">1. Core Concept</label>
-                            <textarea id="concept" rows={3} value={concept} onChange={(e) => setConcept(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., A sustainable coffee brand for young professionals" />
+                            <label htmlFor="concept" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">1. Core Concept</label>
+                            <textarea id="concept" rows={3} value={concept} onChange={(e) => setConcept(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none transition" placeholder="e.g., A sustainable coffee brand for young professionals" />
                         </div>
                         <div>
-                            <label htmlFor="audience" className="block text-sm font-medium text-slate-300 mb-2">2. Target Audience</label>
-                            <input id="audience" type="text" value={audience} onChange={(e) => setAudience(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., Eco-conscious millennials, ages 25-35" />
+                            <label htmlFor="audience" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">2. Target Audience</label>
+                            <input id="audience" type="text" value={audience} onChange={(e) => setAudience(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500" placeholder="e.g., Eco-conscious millennials" />
                         </div>
                         <div>
-                            <label htmlFor="keywords" className="block text-sm font-medium text-slate-300 mb-2">3. Key Values / Keywords</label>
-                            <input id="keywords" type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white" placeholder="e.g., eco-friendly, community, quality, modern" />
+                            <label htmlFor="keywords" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">3. Keywords</label>
+                            <input id="keywords" type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500" placeholder="e.g., eco-friendly, community, modern" />
                         </div>
                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">4. Choose Your Lead Strategist</label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">4. Lead Strategist</label>
+                            <div className="grid grid-cols-1 gap-2">
                                 {STRANDS_LEAD_AGENTS.map(agent => (
                                     <AgentCard
                                         key={agent.id}
@@ -278,100 +284,111 @@ const StrandsGenerator: React.FC<StrandsGeneratorProps> = ({ onShare }) => {
                             <button
                                 type="button"
                                 onClick={() => setShowAgentConfig(!showAgentConfig)}
-                                className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center space-x-1"
+                                className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center space-x-1 uppercase font-bold tracking-wider"
                             >
-                                <span>{showAgentConfig ? 'Hide' : 'Show'} Advanced Agent Config</span>
+                                <span>{showAgentConfig ? 'Hide' : 'Show'} Agent Config</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transform transition ${showAgentConfig ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                             </button>
                             
                             {showAgentConfig && (
                                 <div className="mt-3 p-3 bg-slate-800 rounded-lg border border-slate-700 animate-fadeIn">
-                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Decision Engine Model</label>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Decision Model</label>
                                     <select 
                                         value={selectedAgentModel || ''} 
                                         onChange={(e) => setSelectedAgentModel(e.target.value || null)}
-                                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm"
+                                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-xs"
                                     >
                                         <option value="">Default (Persona Based)</option>
                                         {AGENT_TYPES.map(type => (
                                             <option key={type.id} value={type.id}>{type.name}</option>
                                         ))}
                                     </select>
-                                    {selectedAgentModel && (
-                                        <p className="text-[10px] text-slate-400 mt-2 italic">
-                                            {AGENT_TYPES.find(a => a.id === selectedAgentModel)?.description}
-                                        </p>
-                                    )}
                                 </div>
                             )}
                         </div>
 
-                        <button type="submit" className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-300 flex items-center justify-center space-x-2">
-                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M11.94 1.94a1 1 0 00-1.88 0l-1.33 4.02-4.02 1.33a1 1 0 000 1.88l4.02 1.33 1.33 4.02a1 1 0 001.88 0l1.33-4.02 4.02-1.33a1 1 0 000-1.88l-4.02-1.33-1.33-4.02zM5.94 9.94a1 1 0 00-1.88 0l-1.33 4.02-4.02 1.33a1 1 0 000 1.88l4.02 1.33 1.33 4.02a1 1 0 001.88 0l1.33-4.02 4.02-1.33a1 1 0 000-1.88l-4.02-1.33-1.33-4.02z" /></svg>
-                            <span>{loading ? 'Working...' : 'Assemble Agent Team'}</span>
+                        <button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                           {loading ? <Loader /> : <span>Start Agent Workflow</span>}
                         </button>
-                        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+                        {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
                      </fieldset>
                 </form>
             </div>
-            <div className="w-full lg:w-2/3 flex flex-col min-h-[400px]">
-                {agentProgress && (
-                    <div className="mb-6 bg-slate-800 p-4 rounded-xl border border-slate-700">
-                        <h3 className="text-lg font-bold text-white mb-2">Agent Progress</h3>
-                        <div className="space-y-1">
-                            <AgentStatusIndicator name="Lead Strategist" status={agentProgress.strategist} />
-                            <AgentStatusIndicator name={STRANDS_SPECIALIST_AGENTS.namer.name} status={agentProgress.namer} />
-                            <AgentStatusIndicator name={STRANDS_SPECIALIST_AGENTS.copywriter.name} status={agentProgress.copywriter} />
-                            <AgentStatusIndicator name={STRANDS_SPECIALIST_AGENTS.artDirector.name} status={agentProgress.artDirector} />
-                            <AgentStatusIndicator name={STRANDS_SPECIALIST_AGENTS.marketer.name} status={agentProgress.marketer} />
-                        </div>
-                    </div>
-                )}
 
-                {!agentProgress && <div className="flex-grow flex items-center justify-center text-slate-500">Your brand identity will appear here.</div>}
+            {/* Main Result Area */}
+            <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                {/* Header */}
+                <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Brand Identity System</h3>
+                    {result && (
+                        <button onClick={handleShare} className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded font-bold transition">Share Concept</button>
+                    )}
+                </div>
 
-                {result && (
-                    <div className="space-y-6">
-                        <div className="flex justify-end">
-                            <button onClick={handleShare} className="flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
-                                <span>Share Full Concept</span>
-                            </button>
+                <div className="flex-grow overflow-y-auto p-8 relative custom-scrollbar">
+                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                    
+                    {agentProgress && (
+                        <div className="mb-8 bg-slate-950 rounded-xl border border-slate-800 p-4 shadow-lg relative z-10">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Agent Activity</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                <AgentStatusIndicator name="Lead Strategist" status={agentProgress.strategist} />
+                                <AgentStatusIndicator name="Namer" status={agentProgress.namer} />
+                                <AgentStatusIndicator name="Copywriter" status={agentProgress.copywriter} />
+                                <AgentStatusIndicator name="Art Director" status={agentProgress.artDirector} />
+                                <AgentStatusIndicator name="Marketer" status={agentProgress.marketer} />
+                            </div>
                         </div>
-                        {result.brandEssence && <ResultCard title="Brand Essence"><p className="whitespace-pre-wrap">{result.brandEssence}</p></ResultCard>}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {result.nameSuggestions && <ResultCard title="Name Suggestions" agentIcon={STRANDS_SPECIALIST_AGENTS.namer.icon}><ul className="list-none p-0 m-0 space-y-1">{result.nameSuggestions.map(name => <CopyableListItem key={name} text={name} />)}</ul></ResultCard>}
-                            {result.taglines && <ResultCard title="Taglines & Slogans" agentIcon={STRANDS_SPECIALIST_AGENTS.copywriter.icon}><ul className="list-none p-0 m-0 space-y-1">{result.taglines.map(tag => <CopyableListItem key={tag} text={tag} />)}</ul></ResultCard>}
+                    )}
+
+                    {!agentProgress && !result && (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                            <p className="text-lg">Initialize agents to build your brand.</p>
                         </div>
-                        {result.visualIdentity && (
-                             <ResultCard title="Visual Identity" agentIcon={STRANDS_SPECIALIST_AGENTS.artDirector.icon}>
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="flex justify-between items-center">
-                                            <h4 className="font-semibold text-slate-100 mb-1">Logo Concept</h4>
-                                            <button onClick={handleGenerateLogo} disabled={isGeneratingLogo} className="text-xs font-semibold py-1 px-3 rounded-full transition bg-purple-600 hover:bg-purple-700 text-white disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center space-x-1.5">
-                                                 <span>✨</span>
-                                                 <span>{isGeneratingLogo ? 'Generating...' : 'Generate Logo'}</span>
-                                            </button>
+                    )}
+
+                    {result && (
+                        <div className="space-y-6 relative z-10 max-w-5xl mx-auto animate-fadeIn">
+                            {result.brandEssence && <ResultCard title="Brand Essence"><p className="whitespace-pre-wrap">{result.brandEssence}</p></ResultCard>}
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {result.nameSuggestions && <ResultCard title="Naming Options" agentIcon={STRANDS_SPECIALIST_AGENTS.namer.icon}><ul className="list-none p-0 m-0 space-y-1">{result.nameSuggestions.map(name => <CopyableListItem key={name} text={name} />)}</ul></ResultCard>}
+                                {result.taglines && <ResultCard title="Taglines" agentIcon={STRANDS_SPECIALIST_AGENTS.copywriter.icon}><ul className="list-none p-0 m-0 space-y-1">{result.taglines.map(tag => <CopyableListItem key={tag} text={tag} />)}</ul></ResultCard>}
+                            </div>
+                            
+                            {result.visualIdentity && (
+                                 <ResultCard title="Visual Identity" agentIcon={STRANDS_SPECIALIST_AGENTS.artDirector.icon}>
+                                    <div className="space-y-6">
+                                        <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h4 className="text-xs font-bold text-slate-400 uppercase">Logo Concept</h4>
+                                                <button onClick={handleGenerateLogo} disabled={isGeneratingLogo} className="text-[10px] font-bold py-1 px-3 rounded-full transition bg-cyan-600 hover:bg-cyan-500 text-white disabled:bg-slate-700 disabled:cursor-not-allowed flex items-center space-x-1">
+                                                     <span>{isGeneratingLogo ? 'Generating...' : 'Visualize Logo'}</span>
+                                                </button>
+                                            </div>
+                                            <p className="text-sm mb-4 italic text-slate-400">{result.visualIdentity.logoConcept}</p>
+                                            {isGeneratingLogo && <div className="mt-4"><Loader message="Designing logo..." small /></div>}
+                                            {logoImage && <img src={logoImage} alt="Generated logo" className="mt-4 rounded-lg border border-slate-600 max-w-[200px] shadow-lg" />}
                                         </div>
-                                        <p className="text-sm">{result.visualIdentity.logoConcept}</p>
-                                        {isGeneratingLogo && <div className="mt-4"><Loader message="Generating logo..."/></div>}
-                                        {logoImage && <img src={logoImage} alt="Generated logo" className="mt-4 rounded-lg border border-slate-600" />}
+                                        
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Color Palette</h4>
+                                            <div className="flex flex-wrap gap-4 items-center">{result.visualIdentity.colorPalette.map(color => (<div key={color.hex} className="text-center group cursor-pointer" onClick={() => handleCopyToClipboard(color.hex)}><div className="w-14 h-14 rounded-full border-4 border-slate-800 shadow-lg mb-2 transition transform group-hover:scale-110" style={{ backgroundColor: color.hex }}></div><p className="text-xs font-bold text-white">{color.name}</p><p className="text-[10px] text-slate-500 font-mono">{color.hex}</p></div>))}</div>
+                                        </div>
+                                        
+                                        <div><h4 className="text-xs font-bold text-slate-400 uppercase mb-1">Typography</h4><p className="text-sm font-serif">{result.visualIdentity.typography}</p></div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-semibold text-slate-100 mb-2">Color Palette</h4>
-                                        <div className="flex flex-wrap gap-4 items-center">{result.visualIdentity.colorPalette.map(color => (<div key={color.hex} className="text-center"><div className="w-12 h-12 rounded-full border-2 border-slate-600 mb-1" style={{ backgroundColor: color.hex }}></div><p className="text-xs font-medium">{color.name}</p><p className="text-xs text-slate-400">{color.hex}</p></div>))}</div>
-                                    </div>
-                                    <div><h4 className="font-semibold text-slate-100 mb-1">Typography</h4><p className="text-sm">{result.visualIdentity.typography}</p></div>
-                                </div>
-                            </ResultCard>
-                        )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           {result.marketingAngles && <ResultCard title="Marketing Angles" agentIcon={STRANDS_SPECIALIST_AGENTS.marketer.icon}><ul className="list-disc list-inside space-y-2 text-sm">{result.marketingAngles.map((angle, i) => <li key={i}>{angle}</li>)}</ul></ResultCard>}
-                           {result.socialMediaPost && <ResultCard title="Sample Social Media Post" agentIcon={STRANDS_SPECIALIST_AGENTS.copywriter.icon}><p className="text-sm whitespace-pre-wrap">{result.socialMediaPost}</p></ResultCard>}
+                                </ResultCard>
+                            )}
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                               {result.marketingAngles && <ResultCard title="Marketing Angles" agentIcon={STRANDS_SPECIALIST_AGENTS.marketer.icon}><ul className="list-disc list-inside space-y-2 text-sm text-slate-300">{result.marketingAngles.map((angle, i) => <li key={i}>{angle}</li>)}</ul></ResultCard>}
+                               {result.socialMediaPost && <ResultCard title="Sample Social Post" agentIcon={STRANDS_SPECIALIST_AGENTS.copywriter.icon}><div className="bg-slate-900 p-4 rounded-lg text-sm whitespace-pre-wrap border border-slate-800 italic">{result.socialMediaPost}</div></ResultCard>}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );

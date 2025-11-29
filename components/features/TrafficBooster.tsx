@@ -229,90 +229,115 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px] relative">
              <PitchGeneratorModal
                 show={pitchModalState?.show ?? false}
                 businessName={pitchModalState?.businessName ?? ''}
                 format={pitchModalState?.format ?? 'email'}
                 onClose={() => setPitchModalState(null)}
             />
-            <form onSubmit={handleSubmit} className="p-6 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
-                 <h3 className="text-xl font-bold">Find & Pitch Local Businesses</h3>
-                 <p className="text-sm text-slate-400">Find businesses for market research or generate AI-powered outreach pitches to offer your services.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                    <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white"
-                        placeholder="Business type (e.g., coffee shops)"
-                    />
-                    <div className="relative">
+            
+            {/* Sidebar Controls */}
+            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Business Type</label>
                         <input
                             type="text"
-                            value={manualLocationQuery}
-                            onChange={(e) => { setManualLocationQuery(e.target.value); setUseGeo(false); }}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white pr-12"
-                            placeholder="City, State or Zip Code"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500"
+                            placeholder="e.g., coffee shops, plumbers"
                         />
-                        <button type="button" onClick={handleUseCurrentLocation} title="Use Current Location" className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors ${useGeo ? 'bg-cyan-500 text-white' : 'bg-slate-600 text-slate-300 hover:bg-cyan-500 hover:text-white'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
-                        </button>
                     </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Location</label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={manualLocationQuery}
+                                onChange={(e) => { setManualLocationQuery(e.target.value); setUseGeo(false); }}
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm pr-10 focus:ring-2 focus:ring-cyan-500"
+                                placeholder="City, State or Zip Code"
+                            />
+                            <button type="button" onClick={handleUseCurrentLocation} title="Use Current Location" className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${useGeo ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-400 hover:bg-cyan-500 hover:text-white'}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
+                            </button>
+                        </div>
+                        {useGeo && manualLocationQuery === '' && <p className="text-[10px] text-cyan-400 mt-1">Using current location.</p>}
+                    </div>
+
+                    <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2">
+                        {loading ? <Loader /> : 'Find Leads'}
+                    </button>
+                    {(error || locationError) && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error || locationError}</p>}
+                </form>
+            </div>
+
+            {/* Main Result Area */}
+            <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                <div className="p-4 border-b border-slate-800 bg-slate-900">
+                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Search Results</h3>
                 </div>
-                 <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-slate-600 transition-colors">
-                    {loading ? 'Searching...' : 'Find Businesses'}
-                </button>
-                 {(error || locationError) && <p className="text-red-400 text-sm text-center">{error || locationError}</p>}
-                 {useGeo && manualLocationQuery === '' && <p className="text-xs text-center text-slate-400">Using current location. To search elsewhere, type in the location field.</p>}
-            </form>
-            
-            <div className="min-h-[400px]">
-                {loading && <Loader message="Searching Google Maps..." />}
-                {!loading && (results.length > 0 || summary) && (
-                    <div className="space-y-6">
-                        {summary && <div className="p-4 bg-slate-800/50 rounded-lg text-slate-300 border border-slate-700 prose prose-sm prose-invert max-w-none">{summary}</div>}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {results.map((chunk, index) => (
-                                chunk.maps && (
-                                    <div key={index} className="flex flex-col p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors">
-                                        <div className="flex-grow">
-                                            <h4 className="font-bold text-white truncate">{chunk.maps.title}</h4>
-                                            <p className="text-sm text-slate-400 mt-1 line-clamp-2">{(chunk.maps.placeAnswerSources?.reviewSnippets?.[0] as any)?.snippet ?? 'No review snippet available.'}</p>
-                                        </div>
-                                        <a href={chunk.maps.uri} target="_blank" rel="noopener noreferrer" className="text-sm text-cyan-400 hover:underline mt-3 inline-flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
-                                            View on Google Maps
-                                        </a>
-                                        <div className="mt-4 pt-4 border-t border-slate-700">
-                                            <h5 className="text-xs font-semibold text-slate-400 mb-2">Generate Pitch</h5>
-                                            <div className="flex justify-around gap-2">
-                                                <button onClick={() => openPitchModal(chunk.maps!.title, 'email')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-md w-full transition flex justify-center items-center space-x-1">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>
-                                                    <span>Email</span>
-                                                </button>
-                                                <button onClick={() => openPitchModal(chunk.maps!.title, 'sms')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-md w-full transition flex justify-center items-center space-x-1">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm2.5 4a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" /></svg>
-                                                    <span>SMS</span>
-                                                </button>
-                                                <button onClick={() => openPitchModal(chunk.maps!.title, 'phone script')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-md w-full transition flex justify-center items-center space-x-1">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
-                                                    <span>Script</span>
-                                                </button>
+
+                <div className="flex-grow overflow-y-auto p-6 relative custom-scrollbar">
+                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                    
+                    {loading && (
+                        <div className="h-full flex flex-col items-center justify-center">
+                            <Loader message="Scouting locations..." />
+                        </div>
+                    )}
+
+                    {!loading && results.length === 0 && !summary && (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"></path></svg>
+                            <p className="text-lg">Enter criteria to find businesses.</p>
+                        </div>
+                    )}
+
+                    {!loading && (results.length > 0 || summary) && (
+                        <div className="space-y-6 relative z-10 max-w-5xl mx-auto">
+                            {summary && <div className="p-4 bg-slate-800 rounded-lg text-slate-300 border border-slate-700 text-sm leading-relaxed">{summary}</div>}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {results.map((chunk, index) => (
+                                    chunk.maps && (
+                                        <div key={index} className="flex flex-col p-4 bg-slate-800/80 rounded-xl border border-slate-700 hover:border-cyan-500/50 transition-all shadow-lg hover:shadow-cyan-900/20 group">
+                                            <div className="flex-grow mb-4">
+                                                <h4 className="font-bold text-white text-lg leading-tight mb-2 truncate">{chunk.maps.title}</h4>
+                                                <p className="text-xs text-slate-400 line-clamp-3">{(chunk.maps.placeAnswerSources?.reviewSnippets?.[0] as any)?.snippet ?? 'No review snippet available.'}</p>
+                                            </div>
+                                            
+                                            <a href={chunk.maps.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center mb-4 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
+                                                View on Maps
+                                            </a>
+                                            
+                                            <div className="pt-3 border-t border-slate-700">
+                                                <h5 className="text-[10px] font-bold text-slate-500 uppercase mb-2">Outreach Actions</h5>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <button onClick={() => openPitchModal(chunk.maps!.title, 'email')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-cyan-600">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>
+                                                        <span>Email</span>
+                                                    </button>
+                                                    <button onClick={() => openPitchModal(chunk.maps!.title, 'sms')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-green-600">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm2.5 4a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" /></svg>
+                                                        <span>SMS</span>
+                                                    </button>
+                                                    <button onClick={() => openPitchModal(chunk.maps!.title, 'phone script')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-purple-600">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
+                                                        <span>Call</span>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )
-                            ))}
+                                    )
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
-                {!loading && results.length === 0 && !summary && !error && !locationError && (
-                    <div className="text-center text-slate-500 pt-16">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-16 w-16 opacity-30" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"></path></svg>
-                        <p className="mt-4">Local business listings will appear here.</p>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );
