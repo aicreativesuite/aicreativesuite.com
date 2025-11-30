@@ -131,25 +131,25 @@ const AutomationHub: React.FC<AutomationHubProps> = ({ onShare }) => {
 
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)]">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
                 <div>
-                    <h2 className="text-3xl font-bold text-white mb-1">Super Automation Hub</h2>
+                    <h2 className="text-3xl font-bold text-white mb-2">Super Automation Hub</h2>
                     <p className="text-slate-400 text-sm">60+ autonomous agents working 24/7 to grow your business.</p>
                 </div>
-                <div className="relative w-full md:w-64">
+                <div className="relative w-full md:w-72">
                     <input 
                         type="text" 
                         placeholder="Search agents..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-4 text-white focus:ring-2 focus:ring-cyan-500 pl-10"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2.5 px-4 text-white focus:ring-2 focus:ring-cyan-500 pl-10"
                     />
-                    <svg className="w-4 h-4 text-slate-500 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <svg className="w-4 h-4 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 </div>
             </div>
 
             {/* Category Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-hide">
+            <div className="flex gap-4 overflow-x-auto pb-4 mb-10 scrollbar-hide">
                 {categories.map(cat => (
                     <button
                         key={cat}
@@ -165,10 +165,10 @@ const AutomationHub: React.FC<AutomationHubProps> = ({ onShare }) => {
                 ))}
             </div>
 
-            <div className="flex gap-6 flex-grow overflow-hidden">
+            <div className="flex gap-12 flex-grow overflow-hidden">
                 {/* Grid List */}
-                <div className={`flex-grow overflow-y-auto custom-scrollbar pr-2 ${activeAutomation ? 'hidden lg:block lg:w-1/2' : 'w-full'}`}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className={`flex-grow overflow-y-auto custom-scrollbar pr-6 ${activeAutomation ? 'hidden lg:block lg:w-1/2' : 'w-full'}`}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                         {filteredAutomations.map((auto) => (
                             <div 
                                 key={auto.slug}
