@@ -37,6 +37,11 @@ import BrandKit from './components/features/BrandKit';
 import VideoToolkit from './components/features/VideoToolkit';
 import OfficeSuite from './components/features/OfficeSuite';
 import AutomationHub from './components/features/AutomationHub';
+import DevStudio from './components/features/DevStudio';
+import DomainFinder from './components/features/DomainFinder';
+import CinemaTechGuide from './components/features/CinemaTechGuide';
+import PodcastGenerator from './components/features/PodcastGenerator';
+import VideoOverview from './components/features/VideoOverview';
 import { TrafficBoosterModal } from './components/common/TrafficBoosterModal';
 
 const FeatureCard: React.FC<{ feature: typeof FEATURES[number]; onClick: () => void }> = ({ feature, onClick }) => (
@@ -84,6 +89,11 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
+            case 'dev-studio': return DevStudio;
+            case 'domain-finder': return DomainFinder;
+            case 'cinema-tech': return CinemaTechGuide;
+            case 'podcast-generator': return PodcastGenerator;
+            case 'video-overview': return VideoOverview;
             case 'automation-hub': return AutomationHub;
             case 'office-suite': return OfficeSuite;
             case 'video-toolkit': return VideoToolkit;

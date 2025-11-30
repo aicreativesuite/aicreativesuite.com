@@ -41,14 +41,21 @@ const BrandKitIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http:
 const VideoToolkitIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-2zM8 16c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm6 0c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1z"/></svg>;
 const OfficeSuiteIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v2H8V8zm0 4h8v2H8v-2zm0 4h5v2H8v-2z"/></svg>;
 const AutomationIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2zM5 12a5 5 0 0 0 5 5h4a5 5 0 0 0 5-5H5zm2 2a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm10 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>;
+const DevStudioIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/></svg>;
+const PodcastIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zm7 9h-2a5 5 0 0 0-5 5v2h-4v-2a5 5 0 0 0-5-5H1a7 7 0 0 1 7-7h8a7 7 0 0 1 7 7z"/></svg>;
+const DomainIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>;
+const CinemaIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-2z"/></svg>;
+const OverviewIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>;
 
 // --- Feature Configuration ---
 export const FEATURES = [
+    { id: 'dev-studio', title: 'Dev Studio', description: 'Build, audit, and deploy AI apps with Vibe Coding.', category: 'Create & Edit', icon: <DevStudioIcon /> },
     { id: 'automation-hub', title: 'Super Automation Hub', description: 'Central command for Content, SEO, UX & Authority automations.', category: 'Assist & Analyze', icon: <AutomationIcon /> },
     { id: 'office-suite', title: 'Office & Business Suite', description: 'Powerful PDF tools, document management, and business AI.', category: 'Assist & Analyze', icon: <OfficeSuiteIcon /> },
     { id: 'video-toolkit', title: 'Video Toolkit', description: 'Comprehensive suite of video utilities, converters, and AI enhancements.', category: 'Create & Edit', icon: <VideoToolkitIcon /> },
     { id: 'brand-kit', title: 'Brand Kit', description: 'Manage brand assets, generate guidelines, and ensure consistency.', category: 'Create & Edit', icon: <BrandKitIcon /> },
     { id: 'audiobook-creator', title: 'Audiobook Creator', description: 'Create multi-voice audiobooks from text.', category: 'Create & Edit', icon: <AudiobookIcon /> },
+    { id: 'podcast-generator', title: 'Podcast Creator', description: 'Generate AI-hosted podcasts from any topic.', category: 'Create & Edit', icon: <PodcastIcon /> },
     { id: 'video-dubber', title: 'Video Dubber', description: 'Translate and dub videos into other languages.', category: 'Create & Edit', icon: <DubbingIcon /> },
     { id: 'voice-lab', title: 'Voice Lab', description: 'Clone, isolate, and modify voices.', category: 'Create & Edit', icon: <LabIcon /> },
     { id: 'realtime-transcriber', title: 'Realtime Transcriber', description: 'Live speech-to-text transcription.', category: 'Assist & Analyze', icon: <TranscribeIcon /> },
@@ -66,6 +73,7 @@ export const FEATURES = [
     { id: 'grounded-search', title: 'Grounded Search', description: 'Get real-time, fact-checked information.', category: 'Assist & Analyze', icon: <GroundedSearchIcon /> },
     { id: 'trend-forecaster', title: 'Trend Forecaster', description: 'Predict future trends with real-time data.', category: 'Assist & Analyze', icon: <TrendIcon /> },
     { id: 'media-analyzer', title: 'Media Analyzer', description: 'Analyze images, videos, and audio files.', category: 'Assist & Analyze', icon: <MediaAnalyzerIcon /> },
+    { id: 'video-overview', title: 'Video Analysis', description: 'Get detailed summaries and insights from videos.', category: 'Assist & Analyze', icon: <OverviewIcon /> },
     { id: 'avatar-generator', title: 'Avatar Generator', description: 'Create custom character avatars.', category: 'Create & Edit', icon: <AvatarIcon /> },
     { id: 'video-editor', title: 'Video Editor', description: 'Extend and edit your generated videos.', category: 'Create & Edit', icon: <VideoEditorIcon /> },
     { id: 'songs-generator', title: 'AI Music Generator', description: 'Compose lyrics and musical concepts.', category: 'Create & Edit', icon: <MusicIcon /> },
@@ -75,6 +83,8 @@ export const FEATURES = [
     { id: 'strands-generator', title: 'Brand Strands', description: 'Develop comprehensive brand identities.', category: 'Create & Edit', icon: <BrandIcon /> },
     { id: 'dance-generator', title: 'Dance Generator', description: 'Create dance videos with AI characters.', category: 'Create & Edit', icon: <DanceIcon /> },
     { id: 'traffic-booster', title: 'Lead Finder', description: 'Find local businesses and generate pitches.', category: 'Assist & Analyze', icon: <PitchIcon /> },
+    { id: 'domain-finder', title: 'Domain Finder', description: 'Find perfect domain names and free hosting.', category: 'Assist & Analyze', icon: <DomainIcon /> },
+    { id: 'cinema-tech', title: 'Cinema Tech', description: 'Explore modern cinema technologies.', category: 'Assist & Analyze', icon: <CinemaIcon /> },
     { id: 'ai-traffic-booster', title: 'Strategy Generator', description: 'Create comprehensive growth strategies.', category: 'Assist & Analyze', icon: <StrategyIcon /> },
     { id: 'viral-meme-generator', title: 'Viral Meme Maker', description: 'Create viral video memes from topics.', category: 'Create & Edit', icon: <MemeIcon /> },
     { id: 'production-planner', title: 'Production Planner', description: 'Tools for film and video production.', category: 'Assist & Analyze', icon: <ProductionIcon /> },
