@@ -36,6 +36,7 @@ import RealtimeTranscriber from './components/features/RealtimeTranscriber';
 import BrandKit from './components/features/BrandKit';
 import VideoToolkit from './components/features/VideoToolkit';
 import OfficeSuite from './components/features/OfficeSuite';
+import AutomationHub from './components/features/AutomationHub';
 import { TrafficBoosterModal } from './components/common/TrafficBoosterModal';
 
 const FeatureCard: React.FC<{ feature: typeof FEATURES[number]; onClick: () => void }> = ({ feature, onClick }) => (
@@ -83,6 +84,7 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
+            case 'automation-hub': return AutomationHub;
             case 'office-suite': return OfficeSuite;
             case 'video-toolkit': return VideoToolkit;
             case 'brand-kit': return BrandKit;

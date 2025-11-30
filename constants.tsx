@@ -40,9 +40,11 @@ const TranscribeIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="htt
 const BrandKitIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2L1 21h22L12 2zm0 3.8L19.3 19H4.7L12 5.8z"/><path d="M12 16c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" fill="#FFF"/></svg>;
 const VideoToolkitIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-2zM8 16c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm6 0c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1z"/></svg>;
 const OfficeSuiteIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v2H8V8zm0 4h8v2H8v-2zm0 4h5v2H8v-2z"/></svg>;
+const AutomationIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2zM5 12a5 5 0 0 0 5 5h4a5 5 0 0 0 5-5H5zm2 2a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm10 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>;
 
 // --- Feature Configuration ---
 export const FEATURES = [
+    { id: 'automation-hub', title: 'Super Automation Hub', description: 'Central command for Content, SEO, UX & Authority automations.', category: 'Assist & Analyze', icon: <AutomationIcon /> },
     { id: 'office-suite', title: 'Office & Business Suite', description: 'Powerful PDF tools, document management, and business AI.', category: 'Assist & Analyze', icon: <OfficeSuiteIcon /> },
     { id: 'video-toolkit', title: 'Video Toolkit', description: 'Comprehensive suite of video utilities, converters, and AI enhancements.', category: 'Create & Edit', icon: <VideoToolkitIcon /> },
     { id: 'brand-kit', title: 'Brand Kit', description: 'Manage brand assets, generate guidelines, and ensure consistency.', category: 'Create & Edit', icon: <BrandKitIcon /> },
