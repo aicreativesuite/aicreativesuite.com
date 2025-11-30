@@ -130,7 +130,7 @@ const AutomationHub: React.FC<AutomationHubProps> = ({ onShare }) => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-8rem)]">
+        <div className="flex flex-col h-[calc(100vh-8rem)] relative">
             <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
                 <div>
                     <h2 className="text-3xl font-bold text-white mb-2">Super Automation Hub</h2>
@@ -165,108 +165,128 @@ const AutomationHub: React.FC<AutomationHubProps> = ({ onShare }) => {
                 ))}
             </div>
 
-            <div className="flex gap-12 flex-grow overflow-hidden">
-                {/* Grid List */}
-                <div className={`flex-grow overflow-y-auto custom-scrollbar pr-6 ${activeAutomation ? 'hidden lg:block lg:w-1/2' : 'w-full'}`}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                        {filteredAutomations.map((auto) => (
-                            <div 
-                                key={auto.slug}
-                                onClick={() => { setActiveAutomation(auto); setSimulationResult(null); setSimulationInput(''); }}
-                                className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-cyan-500/50 hover:bg-slate-800/80 group ${
-                                    activeAutomation?.slug === auto.slug ? 'bg-slate-800 border-cyan-500 ring-1 ring-cyan-500' : 'bg-slate-900/50 border-slate-800'
-                                }`}
-                            >
-                                <div className="flex justify-between items-start mb-3">
-                                    <div className={`p-2 rounded-lg ${
-                                        auto.category === 'Content' ? 'bg-blue-500/20 text-blue-400' :
-                                        auto.category === 'SEO' ? 'bg-green-500/20 text-green-400' :
-                                        auto.category === 'UX' ? 'bg-purple-500/20 text-purple-400' :
-                                        'bg-amber-500/20 text-amber-400'
-                                    }`}>
-                                        {/* Icons based on category */}
-                                        {auto.category === 'Content' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>}
-                                        {auto.category === 'SEO' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
-                                        {auto.category === 'UX' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>}
-                                        {auto.category === 'Authority' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                                    </div>
-                                    <span className={`text-[10px] font-bold px-2 py-1 rounded border ${getStatusColor(auto.schedule)}`}>
-                                        {auto.schedule}
-                                    </span>
+            {/* Grid List */}
+            <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
+                    {filteredAutomations.map((auto) => (
+                        <div 
+                            key={auto.slug}
+                            onClick={() => { setActiveAutomation(auto); setSimulationResult(null); setSimulationInput(''); }}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-cyan-500/50 hover:bg-slate-800/80 group bg-slate-900/50 border-slate-800`}
+                        >
+                            <div className="flex justify-between items-start mb-3">
+                                <div className={`p-2 rounded-lg ${
+                                    auto.category === 'Content' ? 'bg-blue-500/20 text-blue-400' :
+                                    auto.category === 'SEO' ? 'bg-green-500/20 text-green-400' :
+                                    auto.category === 'UX' ? 'bg-purple-500/20 text-purple-400' :
+                                    'bg-amber-500/20 text-amber-400'
+                                }`}>
+                                    {/* Icons based on category */}
+                                    {auto.category === 'Content' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>}
+                                    {auto.category === 'SEO' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
+                                    {auto.category === 'UX' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>}
+                                    {auto.category === 'Authority' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                                 </div>
-                                <h3 className="font-bold text-white text-sm mb-1 group-hover:text-cyan-400 transition-colors">{auto.name}</h3>
-                                <p className="text-xs text-slate-400 line-clamp-2">{auto.description}</p>
+                                <span className={`text-[10px] font-bold px-2 py-1 rounded border ${getStatusColor(auto.schedule)}`}>
+                                    {auto.schedule}
+                                </span>
                             </div>
-                        ))}
-                    </div>
+                            <h3 className="font-bold text-white text-sm mb-1 group-hover:text-cyan-400 transition-colors">{auto.name}</h3>
+                            <p className="text-xs text-slate-400 line-clamp-2">{auto.description}</p>
+                        </div>
+                    ))}
                 </div>
+            </div>
 
-                {/* Simulation Panel */}
-                {activeAutomation && (
-                    <div className="w-full lg:w-1/2 bg-slate-900 border border-slate-800 rounded-xl flex flex-col overflow-hidden shadow-2xl relative animate-slideInRight">
-                        <div className="p-4 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
+            {/* Modal for Active Automation */}
+            {activeAutomation && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setActiveAutomation(null)}>
+                    <div 
+                        className="bg-slate-900 w-full max-w-4xl max-h-[85vh] rounded-2xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-scaleIn" 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-950">
                             <div>
-                                <h3 className="font-bold text-white flex items-center gap-2">
+                                <h3 className="text-xl font-bold text-white flex items-center gap-3">
                                     {activeAutomation.name}
-                                    <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700">{activeAutomation.category}</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded border ${
+                                        activeAutomation.category === 'Content' ? 'bg-blue-900/30 border-blue-800 text-blue-400' :
+                                        activeAutomation.category === 'SEO' ? 'bg-green-900/30 border-green-800 text-green-400' :
+                                        activeAutomation.category === 'UX' ? 'bg-purple-900/30 border-purple-800 text-purple-400' :
+                                        'bg-amber-900/30 border-amber-800 text-amber-400'
+                                    }`}>{activeAutomation.category}</span>
                                 </h3>
+                                <p className="text-xs text-slate-400 mt-1">{activeAutomation.description}</p>
                             </div>
-                            <button onClick={() => setActiveAutomation(null)} className="lg:hidden text-slate-400 hover:text-white">Close</button>
+                            <button 
+                                onClick={() => setActiveAutomation(null)}
+                                className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
 
-                        <div className="flex-grow flex flex-col p-6 overflow-hidden">
-                            {!simulationResult ? (
-                                <div className="flex-grow flex flex-col gap-4">
-                                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                                        <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Agent Task</h4>
-                                        <p className="text-sm text-slate-300">{activeAutomation.description}</p>
-                                    </div>
-                                    
-                                    <div className="flex-grow flex flex-col justify-center">
-                                        <label className="block text-sm font-bold text-white mb-2">Input Context / Trigger Data</label>
+                        {/* Content */}
+                        <div className="flex-grow overflow-hidden flex flex-col md:flex-row">
+                            {/* Input Section */}
+                            <div className="w-full md:w-1/3 p-6 border-b md:border-b-0 md:border-r border-slate-800 bg-slate-900/50 overflow-y-auto">
+                                 <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-300 mb-2">Input Context</label>
                                         <textarea
                                             value={simulationInput}
                                             onChange={(e) => setSimulationInput(e.target.value)}
-                                            className="w-full h-32 bg-slate-950 border border-slate-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-cyan-500 resize-none mb-4"
-                                            placeholder={`e.g., URL to analyze, topic to write about, or data to process for ${activeAutomation.name}...`}
+                                            className="w-full h-40 bg-slate-950 border border-slate-700 rounded-xl p-4 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none"
+                                            placeholder={`Enter topic, URL, or data for ${activeAutomation.name}...`}
                                         />
-                                        <button 
-                                            onClick={handleSimulate}
-                                            disabled={loading || !simulationInput.trim()}
-                                            className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 transition shadow-lg flex justify-center items-center gap-2"
-                                        >
-                                            {loading ? <Loader /> : (
-                                                <>
-                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    <span>Simulate Run</span>
-                                                </>
-                                            )}
-                                        </button>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col h-full">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h4 className="text-sm font-bold text-green-400 uppercase flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                            Run Successful
-                                        </h4>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setSimulationResult(null)} className="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded transition">New Run</button>
-                                            <button onClick={() => onShare({ contentText: simulationResult, contentType: 'text' })} className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded transition">Share Output</button>
+                                    <button 
+                                        onClick={handleSimulate}
+                                        disabled={loading || !simulationInput.trim()}
+                                        className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 transition shadow-lg flex justify-center items-center gap-2"
+                                    >
+                                        {loading ? <Loader /> : (
+                                            <>
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                <span>Run Simulation</span>
+                                            </>
+                                        )}
+                                    </button>
+                                 </div>
+                            </div>
+
+                            {/* Output Section */}
+                            <div className="w-full md:w-2/3 p-6 bg-slate-950 overflow-y-auto custom-scrollbar relative">
+                                {!simulationResult ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                        <p>Output will appear here</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="text-sm font-bold text-green-400 uppercase flex items-center gap-2">
+                                                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                                Execution Successful
+                                            </h4>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setSimulationResult(null)} className="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded transition">Clear</button>
+                                                <button onClick={() => onShare({ contentText: simulationResult, contentType: 'text' })} className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded transition font-bold">Share</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex-grow overflow-y-auto custom-scrollbar bg-black/30 rounded-xl p-4 border border-slate-800">
                                         <div className="prose prose-invert prose-sm max-w-none">
                                             <div dangerouslySetInnerHTML={{ __html: md.render(simulationResult) }} />
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -31,13 +31,13 @@ export const enhancePrompt = async (originalPrompt: string, type: 'image' | 'vid
 };
 
 // --- Text Generation ---
-export const generateText = async (prompt: string, model: 'gemini-2.5-flash' | 'gemini-2.5-flash-lite' | 'gemini-2.5-pro' = 'gemini-2.5-flash', config?: any): Promise<GenerateContentResponse> => {
+export const generateText = async (prompt: string, model: 'gemini-2.5-flash' | 'gemini-2.5-flash-lite' | 'gemini-3-pro-preview' = 'gemini-2.5-flash', config?: any): Promise<GenerateContentResponse> => {
     return getGeminiAI().models.generateContent({ model, contents: prompt, config });
 };
 
 export const generateTextWithThinking = async (prompt: string): Promise<GenerateContentResponse> => {
     return getGeminiAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3-pro-preview',
         contents: prompt,
         config: { thinkingConfig: { thinkingBudget: 1024 } }, // Reduced budget for speed/stability
     });
@@ -85,7 +85,7 @@ export const analyzeImage = async (prompt: string, imageBase64: string, mimeType
     getGeminiAI().models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }, { inlineData: { data: imageBase64, mimeType } }] } });
 
 export const analyzeVideoFrame = async (prompt: string, imageBase64: string, mimeType: string) => 
-    getGeminiAI().models.generateContent({ model: 'gemini-2.5-pro', contents: { parts: [{ text: prompt }, { inlineData: { data: imageBase64, mimeType } }] } });
+    getGeminiAI().models.generateContent({ model: 'gemini-3-pro-preview', contents: { parts: [{ text: prompt }, { inlineData: { data: imageBase64, mimeType } }] } });
 
 export const analyzeVideo = async (prompt: string, videoBase64: string, mimeType: string) => 
     getGeminiAI().models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }, { inlineData: { data: videoBase64, mimeType } }] } });
@@ -214,7 +214,7 @@ export const generateDetailedStory = async (
             endingDescription: { type: Type.STRING },
             estimatedSceneCount: { type: Type.INTEGER }
         }
-    }, 'gemini-2.5-pro');
+    }, 'gemini-3-pro-preview');
 };
 
 export const generateDetailedCharacters = async (title: string, logline: string): Promise<GenerateContentResponse> => {
@@ -230,13 +230,13 @@ export const generateDetailedCharacters = async (title: string, logline: string)
                 visualDescription: { type: Type.STRING }
             }
         }
-    }, 'gemini-2.5-pro');
+    }, 'gemini-3-pro-preview');
 };
 
 export const generateScreenplayScene = async (title: string, beat: string, style: string, details: string[] = []): Promise<GenerateContentResponse> => {
     const detailsPrompt = details.length > 0 ? `\n\nEnsure the following elements are explicitly included and detailed in the screenplay:\n${details.map(d => `- ${d}`).join('\n')}` : '';
     const prompt = `Write a detailed screenplay scene for "${title}" covering the beat: "${beat}". Style: ${style}. Use standard Fountain/screenplay format.${detailsPrompt}`;
-    return generateText(prompt, 'gemini-2.5-pro');
+    return generateText(prompt, 'gemini-3-pro-preview');
 };
 
 export const generateVisualPrompts = async (title: string, style: string, scenes: string[]): Promise<GenerateContentResponse> => {
@@ -296,7 +296,7 @@ export const analyzeStoryStructure = async (structureJson: string): Promise<Gene
             tensionCurve: { type: Type.STRING },
             characterRelationships: { type: Type.ARRAY, items: { type: Type.STRING } }
         }
-    }, 'gemini-2.5-pro');
+    }, 'gemini-3-pro-preview');
 };
 
 export const generateSceneBreakdown = async (sceneHeading: string): Promise<GenerateContentResponse> => {
@@ -364,7 +364,7 @@ export const generateTrafficStrategy = async (niche: string, audience: string, u
             technicalStrategy: { type: Type.OBJECT, properties: { schemaMarkup: { type: Type.ARRAY, items: { type: Type.STRING } }, analyticsTips: { type: Type.ARRAY, items: { type: Type.STRING } } } },
             growthStrategy: { type: Type.OBJECT, properties: { adTargeting: { type: Type.ARRAY, items: { type: Type.STRING } }, uxPersonalization: { type: Type.ARRAY, items: { type: Type.STRING } } } }
         }
-    }, 'gemini-2.5-pro');
+    }, 'gemini-3-pro-preview');
 };
 
 export const generateMemeConcept = async (topic: string, style: string): Promise<GenerateContentResponse> => {
@@ -410,7 +410,7 @@ export const generateSlideDeckStructure = async (topic: string, audience: string
 
     const ai = getGeminiAI();
     return ai.models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3-pro-preview',
         contents: { parts: contents },
         config: {
             responseMimeType: "application/json",
@@ -434,7 +434,7 @@ export const generateReportContent = async (topic: string, type: string, length:
     const prompt = `Write a professional ${type} about "${topic}". Length: ${length}. Language: ${language}. Use Markdown formatting. Include headers, bullet points, and data placeholders where necessary.`;
     const ai = getGeminiAI();
     return ai.models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3-pro-preview',
         contents: prompt,
         config: {
             tools: [{ googleSearch: {} }] // Use search for reports
@@ -514,7 +514,7 @@ export const reviewCode = async (code: string): Promise<GenerateContentResponse>
             },
             fixedCode: { type: Type.STRING }
         }
-    }, 'gemini-2.5-pro');
+    }, 'gemini-3-pro-preview');
 };
 
 export const generateBrandGuidelines = async (brandProfile: any): Promise<GenerateContentResponse> => {
@@ -688,7 +688,7 @@ export const generateSongConcept = async (genre: string, mood: string, topic: st
             chordProgression: { type: Type.STRING },
             arrangementDescription: { type: Type.STRING }
         }
-    }, 'gemini-2.5-pro');
+    }, 'gemini-3-pro-preview');
 };
 
 export const generateTrendReport = async (topic: string): Promise<GenerateContentResponse> => {
@@ -698,7 +698,7 @@ export const generateTrendReport = async (topic: string): Promise<GenerateConten
     
     const ai = getGeminiAI();
     return ai.models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3-pro-preview',
         contents: prompt,
         config: {
             tools: [{ googleSearch: {} }]
@@ -764,7 +764,7 @@ export const generateAbTestCopy = async (product: string, message: string, audie
 export const expandContent = async (topic: string, contentType: string, tone: string): Promise<GenerateContentResponse> => {
     const prompt = `Write a high-quality ${contentType} about "${topic}". Tone: ${tone}.
     Ensure the content is engaging, well-structured, and ready to publish. Output as Markdown.`;
-    return generateText(prompt, 'gemini-2.5-pro');
+    return generateText(prompt, 'gemini-3-pro-preview');
 };
 
 // --- Strands Generator ---
@@ -785,7 +785,7 @@ export const generateBrandEssence = async (concept: string, audience: string, ke
         properties: {
             brandEssence: { type: Type.STRING }
         }
-    }, 'gemini-2.5-pro');
+    }, 'gemini-3-pro-preview');
 };
 
 export const generateNameSuggestions = async (brandEssence: string, instruction: string): Promise<GenerateContentResponse> => {
@@ -920,5 +920,5 @@ export const generateSmartQuiz = async (input: string, isTopic: boolean): Promis
                 }
             }
         }
-    }, 'gemini-2.5-pro');
+    }, 'gemini-3-pro-preview');
 };

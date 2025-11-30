@@ -154,7 +154,7 @@ const SoundStudio: React.FC<TabProps> = ({ onShare }) => {
         setMusicResult(null);
         try {
             const fullPrompt = `Generate musical ideas or lyrics for a song about "${musicPrompt}" in a "${musicStyle}" style. Provide chord progression suggestions and instrumentation ideas.`;
-            const response = await generateText(fullPrompt, 'gemini-2.5-pro');
+            const response = await generateText(fullPrompt, 'gemini-3-pro-preview');
             setMusicResult(response.text);
         } catch (err) {
             setMusicResult("Error generating ideas.");

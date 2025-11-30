@@ -142,7 +142,7 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
             setLoadingStep('joke');
             setLoadingMessage('Writing some hilarious jokes...');
             const jokePrompt = `Write a short, viral-style standup comedy routine about "${topic}". The comedian's style is ${comedianStyle}, performing for an audience at a ${audienceType}. The routine should be about 3-5 sentences long.`;
-            const jokeResponse = await generateText(jokePrompt, 'gemini-2.5-pro');
+            const jokeResponse = await generateText(jokePrompt, 'gemini-3-pro-preview');
             const script = jokeResponse.text;
             setJokeScript(script);
 
