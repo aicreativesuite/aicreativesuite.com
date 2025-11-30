@@ -1,9 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
-import { performGroundedSearch, generateOutreachPitch } from '../../services/geminiService';
+import React, { useState, useEffect, useRef } from 'react';
+import { performGroundedSearch, generateOutreachPitch, generateText } from '../../services/geminiService';
 import Loader from '../common/Loader';
 import { GroundingChunk } from '@google/genai';
 import { PITCH_SERVICES } from '../../constants';
+import { TRAFFIC_TOOLS, TrafficTool, ToolType } from './trafficConstants';
+import { Remarkable } from 'remarkable';
+
+const md = new Remarkable({ html: true });
 
 interface PitchModalProps {
     show: boolean;
@@ -64,7 +68,6 @@ const PitchGeneratorModal: React.FC<PitchModalProps> = ({ show, businessName, fo
         } else if (format === 'sms') {
             url = `sms:?body=${encodeURIComponent(pitch)}`;
         } else {
-            // Phone script - perhaps copy to clipboard is best "send" action
             navigator.clipboard.writeText(pitch);
             displayToast('Script copied to clipboard for your call!');
             return;
@@ -129,10 +132,6 @@ const PitchGeneratorModal: React.FC<PitchModalProps> = ({ show, businessName, fo
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                                                 <span>Download</span>
                                             </button>
-                                            <button onClick={() => setPitch('')} className="flex items-center space-x-1 text-xs bg-red-900/50 hover:bg-red-700 text-red-200 px-3 py-1.5 rounded transition" title="Discard">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                                                <span>Discard</span>
-                                            </button>
                                         </div>
                                         <div className="flex space-x-1">
                                             <button onClick={() => { navigator.clipboard.writeText(pitch); displayToast('Copied!'); }} className="p-1.5 text-slate-400 hover:text-white transition" title="Copy">
@@ -154,9 +153,6 @@ const PitchGeneratorModal: React.FC<PitchModalProps> = ({ show, businessName, fo
                                             onClick={handleSend} 
                                             className={`flex items-center space-x-2 font-bold py-2 px-6 rounded-lg transition-colors ${format === 'email' ? 'bg-blue-600 hover:bg-blue-700' : format === 'sms' ? 'bg-green-600 hover:bg-green-700' : 'bg-cyan-600 hover:bg-cyan-700'} text-white`}
                                         >
-                                            {format === 'email' && <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>}
-                                            {format === 'sms' && <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm2.5 4a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" /></svg>}
-                                            {format === 'phone script' && <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>}
                                             <span>{format === 'email' ? 'Send Email' : format === 'sms' ? 'Send SMS' : 'Copy for Call'}</span>
                                         </button>
                                     </div>
@@ -170,7 +166,152 @@ const PitchGeneratorModal: React.FC<PitchModalProps> = ({ show, businessName, fo
     );
 };
 
+// --- New Components for Tool Directory ---
+
+const ToolCard: React.FC<{ tool: TrafficTool, onClick: () => void }> = ({ tool, onClick }) => {
+    const getColor = (type: ToolType) => {
+        switch(type) {
+            case 'Browser Extension': return 'border-orange-500/50 bg-orange-900/10 text-orange-400';
+            case 'SaaS Tool': return 'border-blue-500/50 bg-blue-900/10 text-blue-400';
+            case 'AI Scraper': return 'border-purple-500/50 bg-purple-900/10 text-purple-400';
+            case 'Custom Scraper': return 'border-green-500/50 bg-green-900/10 text-green-400';
+            case 'Hybrid': return 'border-cyan-500/50 bg-cyan-900/10 text-cyan-400';
+            default: return 'border-slate-700 bg-slate-800 text-slate-300';
+        }
+    }
+
+    const colorClass = getColor(tool.type);
+
+    return (
+        <div 
+            onClick={onClick}
+            className={`p-4 rounded-xl border transition-all cursor-pointer hover:scale-[1.02] hover:shadow-lg flex flex-col h-full bg-slate-900/50 hover:bg-slate-800 ${colorClass.split(' ')[0]}`}
+        >
+            <div className="flex justify-between items-start mb-2">
+                <span className={`text-[10px] font-bold px-2 py-1 rounded border uppercase ${colorClass}`}>
+                    {tool.type}
+                </span>
+                <span className="text-[10px] text-slate-500">#{tool.id}</span>
+            </div>
+            <h4 className="text-sm font-bold text-white mb-1 leading-tight">{tool.name}</h4>
+            <p className="text-[11px] text-slate-400">{tool.category}</p>
+        </div>
+    );
+};
+
+const ToolRunnerModal: React.FC<{ tool: TrafficTool | null, onClose: () => void }> = ({ tool, onClose }) => {
+    const [loading, setLoading] = useState(false);
+    const [output, setOutput] = useState<string | null>(null);
+    const [inputContext, setInputContext] = useState('');
+
+    useEffect(() => {
+        setOutput(null);
+        setInputContext('');
+    }, [tool]);
+
+    if (!tool) return null;
+
+    const handleRun = async () => {
+        setLoading(true);
+        setOutput(null);
+        try {
+            let prompt = "";
+            if (tool.type === 'Custom Scraper' || tool.type === 'Browser Extension') {
+                prompt = `You are an expert developer. Create a ${tool.type === 'Browser Extension' ? 'JavaScript snippet (console runnable)' : 'Python script'} for a tool named "${tool.name}" (${tool.category}).
+                Context/Target: ${inputContext || 'General use'}.
+                
+                Provide the full code and instructions on how to run it. Wrap code in markdown.`;
+            } else {
+                prompt = `Act as the "${tool.name}" (${tool.type}).
+                Category: ${tool.category}.
+                
+                The user wants to use this tool for: "${inputContext || 'General discovery'}".
+                
+                Simulate the output of this tool. If it's a lead scraper, generate a sample list of 5 leads with realistic data (Name, Email, Role, Company) in a Markdown table.
+                If it's an analysis tool, provide a detailed dummy report based on the context.`;
+            }
+
+            const response = await generateText(prompt, 'gemini-2.5-flash');
+            setOutput(response.text);
+        } catch (e) {
+            setOutput("Error generating output. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 modal-overlay" onClick={onClose}>
+            <div className="bg-slate-900 rounded-xl w-full max-w-4xl h-[85vh] mx-4 border border-slate-700 flex flex-col shadow-2xl modal-content" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950 rounded-t-xl">
+                    <div>
+                        <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                            {tool.name}
+                            <span className="text-xs font-normal text-slate-400 px-2 py-1 rounded bg-slate-800 border border-slate-700">{tool.type}</span>
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-1">{tool.category}</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
+                    {/* Input Panel */}
+                    <div className="w-full md:w-1/3 p-6 bg-slate-900 border-r border-slate-800 flex flex-col gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Target / Keywords</label>
+                            <textarea 
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none h-32"
+                                placeholder="e.g., Software Engineers in San Francisco, or 'Coffee Shops'"
+                                value={inputContext}
+                                onChange={e => setInputContext(e.target.value)}
+                            />
+                        </div>
+                        
+                        <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700 text-xs text-slate-400">
+                            <p className="mb-2 font-bold text-slate-300">Tool Capability:</p>
+                            {tool.type === 'Custom Scraper' ? (
+                                <p>Generates a custom Python/Node script to scrape data based on your criteria.</p>
+                            ) : (
+                                <p>Simulates the data output you would get from running this specific automation tool.</p>
+                            )}
+                        </div>
+
+                        <button 
+                            onClick={handleRun}
+                            disabled={loading}
+                            className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center items-center mt-auto"
+                        >
+                            {loading ? <Loader /> : (tool.type === 'Custom Scraper' || tool.type === 'Browser Extension' ? 'Generate Script' : 'Run Simulation')}
+                        </button>
+                    </div>
+
+                    {/* Output Panel */}
+                    <div className="w-full md:w-2/3 bg-slate-950 p-6 overflow-y-auto custom-scrollbar">
+                        {loading ? (
+                            <div className="h-full flex flex-col items-center justify-center text-cyan-500">
+                                <Loader message="Initializing Traffic Booster..." />
+                            </div>
+                        ) : output ? (
+                            <div className="prose prose-invert prose-sm max-w-none">
+                                <div dangerouslySetInnerHTML={{ __html: md.render(output) }} />
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-50">
+                                <svg className="w-16 h-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                <p>Output will appear here.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
+    const [activeTab, setActiveTab] = useState<'live' | 'directory'>('live');
     const [query, setQuery] = useState('');
     const [manualLocationQuery, setManualLocationQuery] = useState('');
     const [useGeo, setUseGeo] = useState(true);
@@ -181,6 +322,11 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pitchModalState, setPitchModalState] = useState<{ show: boolean; businessName: string; format: 'email' | 'sms' | 'phone script'; } | null>(null);
+
+    // Directory State
+    const [searchTool, setSearchTool] = useState('');
+    const [toolCategory, setToolCategory] = useState<string>('All');
+    const [selectedTool, setSelectedTool] = useState<TrafficTool | null>(null);
 
     const handleUseCurrentLocation = () => {
         setUseGeo(true);
@@ -195,7 +341,7 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
     };
 
     useEffect(() => {
-        handleUseCurrentLocation(); // Try to get location on component mount
+        handleUseCurrentLocation(); 
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -228,8 +374,13 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
         setPitchModalState({ show: true, businessName, format });
     };
 
+    const filteredTools = TRAFFIC_TOOLS.filter(t => 
+        (toolCategory === 'All' || t.type === toolCategory) &&
+        (t.name.toLowerCase().includes(searchTool.toLowerCase()) || t.category.toLowerCase().includes(searchTool.toLowerCase()))
+    );
+
     return (
-        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px] relative">
+        <div className="flex flex-col h-[calc(100vh-10rem)] min-h-[600px] relative">
              <PitchGeneratorModal
                 show={pitchModalState?.show ?? false}
                 businessName={pitchModalState?.businessName ?? ''}
@@ -237,108 +388,177 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
                 onClose={() => setPitchModalState(null)}
             />
             
-            {/* Sidebar Controls */}
-            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Business Type</label>
-                        <input
-                            type="text"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500"
-                            placeholder="e.g., coffee shops, plumbers"
-                        />
-                    </div>
+            <ToolRunnerModal tool={selectedTool} onClose={() => setSelectedTool(null)} />
 
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Location</label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                value={manualLocationQuery}
-                                onChange={(e) => { setManualLocationQuery(e.target.value); setUseGeo(false); }}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm pr-10 focus:ring-2 focus:ring-cyan-500"
-                                placeholder="City, State or Zip Code"
-                            />
-                            <button type="button" onClick={handleUseCurrentLocation} title="Use Current Location" className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${useGeo ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-400 hover:bg-cyan-500 hover:text-white'}`}>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
-                            </button>
-                        </div>
-                        {useGeo && manualLocationQuery === '' && <p className="text-[10px] text-cyan-400 mt-1">Using current location.</p>}
-                    </div>
-
-                    <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2">
-                        {loading ? <Loader /> : 'Find Leads'}
+            {/* Top Navigation for Hub */}
+            <div className="flex justify-center mb-6">
+                <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex gap-1">
+                    <button 
+                        onClick={() => setActiveTab('live')}
+                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'live' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        Lead Finder (Live)
                     </button>
-                    {(error || locationError) && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error || locationError}</p>}
-                </form>
-            </div>
-
-            {/* Main Result Area */}
-            <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
-                <div className="p-4 border-b border-slate-800 bg-slate-900">
-                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Search Results</h3>
+                    <button 
+                        onClick={() => setActiveTab('directory')}
+                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'directory' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        Tool Directory (200+)
+                    </button>
                 </div>
-
-                <div className="flex-grow overflow-y-auto p-6 relative custom-scrollbar">
-                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
-                    
-                    {loading && (
-                        <div className="h-full flex flex-col items-center justify-center">
-                            <Loader message="Scouting locations..." />
-                        </div>
-                    )}
-
-                    {!loading && results.length === 0 && !summary && (
-                        <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"></path></svg>
-                            <p className="text-lg">Enter criteria to find businesses.</p>
-                        </div>
-                    )}
-
-                    {!loading && (results.length > 0 || summary) && (
-                        <div className="space-y-6 relative z-10 max-w-5xl mx-auto">
-                            {summary && <div className="p-4 bg-slate-800 rounded-lg text-slate-300 border border-slate-700 text-sm leading-relaxed">{summary}</div>}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {results.map((chunk, index) => (
-                                    chunk.maps && (
-                                        <div key={index} className="flex flex-col p-4 bg-slate-800/80 rounded-xl border border-slate-700 hover:border-cyan-500/50 transition-all shadow-lg hover:shadow-cyan-900/20 group">
-                                            <div className="flex-grow mb-4">
-                                                <h4 className="font-bold text-white text-lg leading-tight mb-2 truncate">{chunk.maps.title}</h4>
-                                                <p className="text-xs text-slate-400 line-clamp-3">{(chunk.maps.placeAnswerSources?.reviewSnippets?.[0] as any)?.snippet ?? 'No review snippet available.'}</p>
-                                            </div>
-                                            
-                                            <a href={chunk.maps.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center mb-4 transition-colors">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
-                                                View on Maps
-                                            </a>
-                                            
-                                            <div className="pt-3 border-t border-slate-700">
-                                                <h5 className="text-[10px] font-bold text-slate-500 uppercase mb-2">Outreach Actions</h5>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    <button onClick={() => openPitchModal(chunk.maps!.title, 'email')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-cyan-600">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>
-                                                        <span>Email</span>
-                                                    </button>
-                                                    <button onClick={() => openPitchModal(chunk.maps!.title, 'sms')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-green-600">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm2.5 4a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" /></svg>
-                                                        <span>SMS</span>
-                                                    </button>
-                                                    <button onClick={() => openPitchModal(chunk.maps!.title, 'phone script')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-purple-600">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
-                                                        <span>Call</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                ))}
+            </div>
+            
+            {activeTab === 'live' ? (
+                <div className="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
+                    {/* Sidebar Controls */}
+                    <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Business Type</label>
+                                <input
+                                    type="text"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500"
+                                    placeholder="e.g., coffee shops, plumbers"
+                                />
                             </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Location</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={manualLocationQuery}
+                                        onChange={(e) => { setManualLocationQuery(e.target.value); setUseGeo(false); }}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm pr-10 focus:ring-2 focus:ring-cyan-500"
+                                        placeholder="City, State or Zip Code"
+                                    />
+                                    <button type="button" onClick={handleUseCurrentLocation} title="Use Current Location" className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${useGeo ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-400 hover:bg-cyan-500 hover:text-white'}`}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
+                                    </button>
+                                </div>
+                                {useGeo && manualLocationQuery === '' && <p className="text-[10px] text-cyan-400 mt-1">Using current location.</p>}
+                            </div>
+
+                            <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2">
+                                {loading ? <Loader /> : 'Find Leads'}
+                            </button>
+                            {(error || locationError) && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error || locationError}</p>}
+                        </form>
+                    </div>
+
+                    {/* Main Result Area */}
+                    <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                        <div className="p-4 border-b border-slate-800 bg-slate-900">
+                            <h3 className="font-bold text-white text-sm uppercase tracking-wider">Search Results</h3>
                         </div>
-                    )}
+
+                        <div className="flex-grow overflow-y-auto p-6 relative custom-scrollbar">
+                            <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                            
+                            {loading && (
+                                <div className="h-full flex flex-col items-center justify-center">
+                                    <Loader message="Scouting locations..." />
+                                </div>
+                            )}
+
+                            {!loading && results.length === 0 && !summary && (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"></path></svg>
+                                    <p className="text-lg">Enter criteria to find businesses.</p>
+                                </div>
+                            )}
+
+                            {!loading && (results.length > 0 || summary) && (
+                                <div className="space-y-6 relative z-10 max-w-5xl mx-auto">
+                                    {summary && <div className="p-4 bg-slate-800 rounded-lg text-slate-300 border border-slate-700 text-sm leading-relaxed">{summary}</div>}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {results.map((chunk, index) => (
+                                            chunk.maps && (
+                                                <div key={index} className="flex flex-col p-4 bg-slate-800/80 rounded-xl border border-slate-700 hover:border-cyan-500/50 transition-all shadow-lg hover:shadow-cyan-900/20 group">
+                                                    <div className="flex-grow mb-4">
+                                                        <h4 className="font-bold text-white text-lg leading-tight mb-2 truncate">{chunk.maps.title}</h4>
+                                                        <p className="text-xs text-slate-400 line-clamp-3">{(chunk.maps.placeAnswerSources?.reviewSnippets?.[0] as any)?.snippet ?? 'No review snippet available.'}</p>
+                                                    </div>
+                                                    
+                                                    <a href={chunk.maps.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center mb-4 transition-colors">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
+                                                        View on Maps
+                                                    </a>
+                                                    
+                                                    <div className="pt-3 border-t border-slate-700">
+                                                        <h5 className="text-[10px] font-bold text-slate-500 uppercase mb-2">Outreach Actions</h5>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            <button onClick={() => openPitchModal(chunk.maps!.title, 'email')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-cyan-600">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>
+                                                                <span>Email</span>
+                                                            </button>
+                                                            <button onClick={() => openPitchModal(chunk.maps!.title, 'sms')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-green-600">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm2.5 4a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" /></svg>
+                                                                <span>SMS</span>
+                                                            </button>
+                                                            <button onClick={() => openPitchModal(chunk.maps!.title, 'phone script')} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-medium py-1.5 px-2 rounded transition flex flex-col items-center gap-1 group-hover:bg-slate-600 group-hover:hover:bg-purple-600">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
+                                                                <span>Call</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div className="flex flex-col h-full overflow-hidden">
+                    {/* Filters */}
+                    <div className="flex flex-col md:flex-row gap-4 mb-6 px-4 md:px-0">
+                        <div className="relative w-full md:w-96">
+                            <input 
+                                type="text" 
+                                placeholder="Search 200+ tools..." 
+                                value={searchTool}
+                                onChange={(e) => setSearchTool(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 px-4 text-white focus:ring-2 focus:ring-cyan-500 pl-10"
+                            />
+                            <svg className="w-5 h-5 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                            {['All', 'Browser Extension', 'SaaS Tool', 'AI Scraper', 'Custom Scraper', 'Hybrid'].map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setToolCategory(cat)}
+                                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border transition-colors ${
+                                        toolCategory === cat 
+                                            ? 'bg-slate-800 text-white border-cyan-500' 
+                                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-600'
+                                    }`}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Directory Grid */}
+                    <div className="flex-grow overflow-y-auto px-4 md:px-0 custom-scrollbar">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-12">
+                            {filteredTools.map(tool => (
+                                <ToolCard key={tool.id} tool={tool} onClick={() => setSelectedTool(tool)} />
+                            ))}
+                        </div>
+                        {filteredTools.length === 0 && (
+                            <div className="text-center py-20 text-slate-500">
+                                <p>No tools found matching your criteria.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
