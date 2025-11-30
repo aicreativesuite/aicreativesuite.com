@@ -530,30 +530,6 @@ export const analyzeLayoutForResize = async (targetPlatform: string, originalCon
     return generateText(prompt, 'gemini-2.5-flash');
 };
 
-export const generateDomainAndHostingRecommendations = async (description: string, projectType: string): Promise<GenerateContentResponse> => {
-    const prompt = `Suggest 5 creative domain names and 3 free/cheap hosting providers for a "${projectType}" project described as: "${description}".
-    Return JSON: { domains: string[], hosting: { name, description, bestFor, freeTierFeatures }[] }.`;
-    
-    return generateJsonContent(prompt, {
-        type: Type.OBJECT,
-        properties: {
-            domains: { type: Type.ARRAY, items: { type: Type.STRING } },
-            hosting: { 
-                type: Type.ARRAY, 
-                items: { 
-                    type: Type.OBJECT, 
-                    properties: {
-                        name: { type: Type.STRING },
-                        description: { type: Type.STRING },
-                        bestFor: { type: Type.STRING },
-                        freeTierFeatures: { type: Type.STRING }
-                    } 
-                } 
-            }
-        }
-    });
-};
-
 export const generateSpeech = async (text: string, voiceName: string = 'Puck', referenceAudioBase64?: string): Promise<string | null> => {
     const ai = getGeminiAI();
     

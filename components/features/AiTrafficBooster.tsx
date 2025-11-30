@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { generateTrafficStrategy } from '../../services/geminiService';
 import Loader from '../common/Loader';
 
@@ -268,7 +268,7 @@ const ENGINEERING_PLAN = [
 ];
 
 const AiTrafficBooster: React.FC<AiTrafficBoosterProps> = ({ onShare }) => {
-    const [activeTab, setActiveTab] = useState<'strategy' | 'roadmap'>('strategy');
+    const [activeTab, setActiveTab] = useState<'strategy' | 'roadmap'>('roadmap');
     
     // Strategy State
     const [niche, setNiche] = useState('');
@@ -280,6 +280,7 @@ const AiTrafficBooster: React.FC<AiTrafficBoosterProps> = ({ onShare }) => {
 
     // Roadmap State
     const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
+    const [completedCriteria, setCompletedCriteria] = useState<Set<string>>(new Set());
 
     const toggleStory = (id: string) => {
         const newSet = new Set(expandedStories);
@@ -291,10 +292,20 @@ const AiTrafficBooster: React.FC<AiTrafficBoosterProps> = ({ onShare }) => {
         setExpandedStories(newSet);
     };
 
+    const toggleCriteria = (id: string) => {
+        const newSet = new Set(completedCriteria);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        setCompletedCriteria(newSet);
+    };
+
     const handleCopyPlan = () => {
         const textPlan = ENGINEERING_PLAN.map(epic => 
             `## ${epic.title} (${epic.duration})\n${epic.stories.map(s => 
-                `  - [ ] ${s.title}: ${s.description}`
+                `  - [${completedCriteria.has(`${s.id}-all`) ? 'x' : ' '}] ${s.title}: ${s.description}`
             ).join('\n')}`
         ).join('\n\n');
         navigator.clipboard.writeText(textPlan);
@@ -352,6 +363,12 @@ ${res.growthStrategy.adTargeting.map(t => `- ${t}`).join('\n')}
         `.trim();
     };
 
+    // Calculate Progress
+    const totalCriteriaCount = useMemo(() => ENGINEERING_PLAN.reduce((acc, epic) => 
+        acc + epic.stories.reduce((sAcc, story) => sAcc + story.criteria.length, 0), 0
+    ), []);
+    const progress = Math.round((completedCriteria.size / totalCriteriaCount) * 100) || 0;
+
     return (
         <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
             {/* Sidebar Controls */}
@@ -360,16 +377,16 @@ ${res.growthStrategy.adTargeting.map(t => `- ${t}`).join('\n')}
                 {/* Navigation Tabs */}
                 <div className="flex bg-slate-800 p-1 rounded-lg">
                     <button 
-                        onClick={() => setActiveTab('strategy')} 
-                        className={`flex-1 py-2 text-xs font-bold rounded-md transition ${activeTab === 'strategy' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                    >
-                        Generator
-                    </button>
-                    <button 
                         onClick={() => setActiveTab('roadmap')} 
                         className={`flex-1 py-2 text-xs font-bold rounded-md transition ${activeTab === 'roadmap' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}`}
                     >
                         Engineering Plan
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('strategy')} 
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition ${activeTab === 'strategy' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        Strategy Gen
                     </button>
                 </div>
 
@@ -423,21 +440,38 @@ ${res.growthStrategy.adTargeting.map(t => `- ${t}`).join('\n')}
                         {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
                     </form>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         <div>
-                            <h3 className="text-lg font-bold text-white mb-2">Execution Plan</h3>
-                            <p className="text-xs text-slate-400">8-Week Engineering Timeline</p>
+                            <h3 className="text-lg font-bold text-white mb-2">Execution Dashboard</h3>
+                            <p className="text-xs text-slate-400">Track implementation progress.</p>
                         </div>
-                        <div className="text-xs text-slate-400">
-                            <p className="mb-2">Total Epics: <span className="text-white font-bold">{ENGINEERING_PLAN.length}</span></p>
-                            <p className="mb-2">Total Weeks: <span className="text-white font-bold">8</span></p>
+                        
+                        <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-700">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-bold text-slate-300 uppercase">Overall Progress</span>
+                                <span className="text-sm font-bold text-cyan-400">{progress}%</span>
+                            </div>
+                            <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                            </div>
+                            <div className="flex justify-between mt-3 text-[10px] text-slate-500">
+                                <span>{completedCriteria.size} / {totalCriteriaCount} Tasks Complete</span>
+                                <span>8 Weeks Total</span>
+                            </div>
                         </div>
+
+                        <div className="text-xs text-slate-400 bg-slate-800/30 p-4 rounded-lg">
+                            <p className="mb-2 font-bold text-slate-300">Stats</p>
+                            <div className="flex justify-between mb-1"><span>Epics:</span> <span className="text-white">{ENGINEERING_PLAN.length}</span></div>
+                            <div className="flex justify-between"><span>Active Sprints:</span> <span className="text-white">1</span></div>
+                        </div>
+
                         <button 
                             onClick={handleCopyPlan}
                             className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-xl transition border border-slate-700 flex justify-center items-center gap-2 text-xs"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                            Copy Full Plan to Clipboard
+                            Export Status to Clipboard
                         </button>
                     </div>
                 )}
@@ -579,8 +613,8 @@ ${res.growthStrategy.adTargeting.map(t => `- ${t}`).join('\n')}
                     <div className="flex-grow p-8 overflow-y-auto relative custom-scrollbar bg-slate-950/50">
                         <div className="max-w-5xl mx-auto space-y-8">
                             <div className="text-center mb-8">
-                                <h2 className="text-2xl font-bold text-white">8-Week Engineering Plan</h2>
-                                <p className="text-slate-400">AI Traffic Booster Platform Execution</p>
+                                <h2 className="text-2xl font-bold text-white">Interactive Execution Plan</h2>
+                                <p className="text-slate-400">Click checkboxes to track your progress.</p>
                             </div>
 
                             {ENGINEERING_PLAN.map((epic) => (
@@ -600,15 +634,22 @@ ${res.growthStrategy.adTargeting.map(t => `- ${t}`).join('\n')}
                                     <div className="divide-y divide-slate-700/50">
                                         {epic.stories.map((story) => {
                                             const isExpanded = expandedStories.has(story.id);
+                                            const isStoryComplete = story.criteria.every((_, i) => completedCriteria.has(`${story.id}-${i}`));
+                                            
                                             return (
-                                                <div key={story.id} className="bg-slate-800/50">
+                                                <div key={story.id} className={`bg-slate-800/50 transition-colors ${isStoryComplete ? 'border-l-4 border-green-500' : ''}`}>
                                                     <div 
                                                         onClick={() => toggleStory(story.id)}
                                                         className="p-4 cursor-pointer hover:bg-slate-700/50 transition flex items-center justify-between"
                                                     >
                                                         <div className="flex items-center space-x-3">
-                                                            <div className="bg-purple-900/30 text-purple-400 text-xs font-mono px-2 py-1 rounded border border-purple-500/20">{story.id}</div>
-                                                            <span className="text-sm font-medium text-slate-200">{story.title}</span>
+                                                            <div className={`text-xs font-mono px-2 py-1 rounded border ${isStoryComplete ? 'bg-green-900/30 text-green-400 border-green-500/20' : 'bg-purple-900/30 text-purple-400 border-purple-500/20'}`}>
+                                                                {story.id}
+                                                            </div>
+                                                            <span className={`text-sm font-medium ${isStoryComplete ? 'text-green-300' : 'text-slate-200'}`}>
+                                                                {story.title}
+                                                            </span>
+                                                            {isStoryComplete && <span className="text-xs text-green-500 bg-green-900/20 px-2 py-0.5 rounded-full ml-2">Complete</span>}
                                                         </div>
                                                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -623,9 +664,19 @@ ${res.growthStrategy.adTargeting.map(t => `- ${t}`).join('\n')}
                                                                 <h5 className="text-xs font-bold text-green-400 uppercase mb-2">Acceptance Criteria</h5>
                                                                 <ul className="space-y-2">
                                                                     {story.criteria.map((c, i) => (
-                                                                        <li key={i} className="flex items-start text-sm text-slate-300">
-                                                                            <div className="w-4 h-4 rounded border border-slate-500 mr-3 flex-shrink-0 mt-0.5"></div>
-                                                                            <span>{c}</span>
+                                                                        <li 
+                                                                            key={i} 
+                                                                            onClick={(e) => { e.stopPropagation(); toggleCriteria(`${story.id}-${i}`); }}
+                                                                            className="flex items-start text-sm text-slate-300 cursor-pointer group hover:text-white transition-colors"
+                                                                        >
+                                                                            <div className={`w-4 h-4 rounded border mr-3 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${
+                                                                                completedCriteria.has(`${story.id}-${i}`) 
+                                                                                ? 'bg-green-500 border-green-500 text-white' 
+                                                                                : 'border-slate-500 group-hover:border-slate-300'
+                                                                            }`}>
+                                                                                {completedCriteria.has(`${story.id}-${i}`) && <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                                                                            </div>
+                                                                            <span className={completedCriteria.has(`${story.id}-${i}`) ? 'line-through text-slate-500' : ''}>{c}</span>
                                                                         </li>
                                                                     ))}
                                                                 </ul>

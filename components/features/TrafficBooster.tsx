@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { performGroundedSearch, generateOutreachPitch, generateText } from '../../services/geminiService';
 import Loader from '../common/Loader';
 import { GroundingChunk } from '@google/genai';
@@ -166,152 +166,12 @@ const PitchGeneratorModal: React.FC<PitchModalProps> = ({ show, businessName, fo
     );
 };
 
-// --- New Components for Tool Directory ---
-
-const ToolCard: React.FC<{ tool: TrafficTool, onClick: () => void }> = ({ tool, onClick }) => {
-    const getColor = (type: ToolType) => {
-        switch(type) {
-            case 'Browser Extension': return 'border-orange-500/50 bg-orange-900/10 text-orange-400';
-            case 'SaaS Tool': return 'border-blue-500/50 bg-blue-900/10 text-blue-400';
-            case 'AI Scraper': return 'border-purple-500/50 bg-purple-900/10 text-purple-400';
-            case 'Custom Scraper': return 'border-green-500/50 bg-green-900/10 text-green-400';
-            case 'Hybrid': return 'border-cyan-500/50 bg-cyan-900/10 text-cyan-400';
-            default: return 'border-slate-700 bg-slate-800 text-slate-300';
-        }
-    }
-
-    const colorClass = getColor(tool.type);
-
-    return (
-        <div 
-            onClick={onClick}
-            className={`p-4 rounded-xl border transition-all cursor-pointer hover:scale-[1.02] hover:shadow-lg flex flex-col h-full bg-slate-900/50 hover:bg-slate-800 ${colorClass.split(' ')[0]}`}
-        >
-            <div className="flex justify-between items-start mb-2">
-                <span className={`text-[10px] font-bold px-2 py-1 rounded border uppercase ${colorClass}`}>
-                    {tool.type}
-                </span>
-                <span className="text-[10px] text-slate-500">#{tool.id}</span>
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1 leading-tight">{tool.name}</h4>
-            <p className="text-[11px] text-slate-400">{tool.category}</p>
-        </div>
-    );
-};
-
-const ToolRunnerModal: React.FC<{ tool: TrafficTool | null, onClose: () => void }> = ({ tool, onClose }) => {
-    const [loading, setLoading] = useState(false);
-    const [output, setOutput] = useState<string | null>(null);
-    const [inputContext, setInputContext] = useState('');
-
-    useEffect(() => {
-        setOutput(null);
-        setInputContext('');
-    }, [tool]);
-
-    if (!tool) return null;
-
-    const handleRun = async () => {
-        setLoading(true);
-        setOutput(null);
-        try {
-            let prompt = "";
-            if (tool.type === 'Custom Scraper' || tool.type === 'Browser Extension') {
-                prompt = `You are an expert developer. Create a ${tool.type === 'Browser Extension' ? 'JavaScript snippet (console runnable)' : 'Python script'} for a tool named "${tool.name}" (${tool.category}).
-                Context/Target: ${inputContext || 'General use'}.
-                
-                Provide the full code and instructions on how to run it. Wrap code in markdown.`;
-            } else {
-                prompt = `Act as the "${tool.name}" (${tool.type}).
-                Category: ${tool.category}.
-                
-                The user wants to use this tool for: "${inputContext || 'General discovery'}".
-                
-                Simulate the output of this tool. If it's a lead scraper, generate a sample list of 5 leads with realistic data (Name, Email, Role, Company) in a Markdown table.
-                If it's an analysis tool, provide a detailed dummy report based on the context.`;
-            }
-
-            const response = await generateText(prompt, 'gemini-2.5-flash');
-            setOutput(response.text);
-        } catch (e) {
-            setOutput("Error generating output. Please try again.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 modal-overlay" onClick={onClose}>
-            <div className="bg-slate-900 rounded-xl w-full max-w-4xl h-[85vh] mx-4 border border-slate-700 flex flex-col shadow-2xl modal-content" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950 rounded-t-xl">
-                    <div>
-                        <h2 className="text-xl font-bold text-white flex items-center gap-3">
-                            {tool.name}
-                            <span className="text-xs font-normal text-slate-400 px-2 py-1 rounded bg-slate-800 border border-slate-700">{tool.type}</span>
-                        </h2>
-                        <p className="text-xs text-slate-500 mt-1">{tool.category}</p>
-                    </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-
-                <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
-                    {/* Input Panel */}
-                    <div className="w-full md:w-1/3 p-6 bg-slate-900 border-r border-slate-800 flex flex-col gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Target / Keywords</label>
-                            <textarea 
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none h-32"
-                                placeholder="e.g., Software Engineers in San Francisco, or 'Coffee Shops'"
-                                value={inputContext}
-                                onChange={e => setInputContext(e.target.value)}
-                            />
-                        </div>
-                        
-                        <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700 text-xs text-slate-400">
-                            <p className="mb-2 font-bold text-slate-300">Tool Capability:</p>
-                            {tool.type === 'Custom Scraper' ? (
-                                <p>Generates a custom Python/Node script to scrape data based on your criteria.</p>
-                            ) : (
-                                <p>Simulates the data output you would get from running this specific automation tool.</p>
-                            )}
-                        </div>
-
-                        <button 
-                            onClick={handleRun}
-                            disabled={loading}
-                            className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center items-center mt-auto"
-                        >
-                            {loading ? <Loader /> : (tool.type === 'Custom Scraper' || tool.type === 'Browser Extension' ? 'Generate Script' : 'Run Simulation')}
-                        </button>
-                    </div>
-
-                    {/* Output Panel */}
-                    <div className="w-full md:w-2/3 bg-slate-950 p-6 overflow-y-auto custom-scrollbar">
-                        {loading ? (
-                            <div className="h-full flex flex-col items-center justify-center text-cyan-500">
-                                <Loader message="Initializing Traffic Booster..." />
-                            </div>
-                        ) : output ? (
-                            <div className="prose prose-invert prose-sm max-w-none">
-                                <div dangerouslySetInnerHTML={{ __html: md.render(output) }} />
-                            </div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-50">
-                                <svg className="w-16 h-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                <p>Output will appear here.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
+// --- Main Component ---
 
 const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
     const [activeTab, setActiveTab] = useState<'live' | 'directory'>('live');
+    
+    // Live Search State
     const [query, setQuery] = useState('');
     const [manualLocationQuery, setManualLocationQuery] = useState('');
     const [useGeo, setUseGeo] = useState(true);
@@ -323,10 +183,13 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
     const [error, setError] = useState<string | null>(null);
     const [pitchModalState, setPitchModalState] = useState<{ show: boolean; businessName: string; format: 'email' | 'sms' | 'phone script'; } | null>(null);
 
-    // Directory State
+    // Directory State (Super Automation Hub Layout)
     const [searchTool, setSearchTool] = useState('');
     const [toolCategory, setToolCategory] = useState<string>('All');
     const [selectedTool, setSelectedTool] = useState<TrafficTool | null>(null);
+    const [toolContext, setToolContext] = useState('');
+    const [toolResult, setToolResult] = useState<string | null>(null);
+    const [toolLoading, setToolLoading] = useState(false);
 
     const handleUseCurrentLocation = () => {
         setUseGeo(true);
@@ -344,6 +207,7 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
         handleUseCurrentLocation(); 
     }, []);
 
+    // Live Search Handler
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!query) { setError('Please enter a business type.'); return; }
@@ -370,6 +234,37 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
         }
     };
     
+    // Directory Tool Run Handler
+    const handleToolRun = async () => {
+        if (!selectedTool) return;
+        setToolLoading(true);
+        setToolResult(null);
+        try {
+             let prompt = "";
+            if (selectedTool.type === 'Custom Scraper' || selectedTool.type === 'Browser Extension') {
+                prompt = `You are an expert developer. Create a ${selectedTool.type === 'Browser Extension' ? 'JavaScript snippet (console runnable)' : 'Python script'} for a tool named "${selectedTool.name}" (${selectedTool.category}).
+                Context/Target: ${toolContext || 'General use'}.
+                
+                Provide the full code and instructions on how to run it. Wrap code in markdown.`;
+            } else {
+                prompt = `Act as the "${selectedTool.name}" (${selectedTool.type}).
+                Category: ${selectedTool.category}.
+                
+                The user wants to use this tool for: "${toolContext || 'General discovery'}".
+                
+                Simulate the output of this tool. If it's a lead scraper, generate a sample list of 5 leads with realistic data (Name, Email, Role, Company) in a Markdown table.
+                If it's an analysis tool, provide a detailed dummy report based on the context.`;
+            }
+
+            const response = await generateText(prompt, 'gemini-2.5-flash');
+            setToolResult(response.text);
+        } catch (e) {
+            setToolResult("Error generating output. Please try again.");
+        } finally {
+            setToolLoading(false);
+        }
+    };
+    
     const openPitchModal = (businessName: string, format: 'email' | 'sms' | 'phone script') => {
         setPitchModalState({ show: true, businessName, format });
     };
@@ -378,6 +273,17 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
         (toolCategory === 'All' || t.type === toolCategory) &&
         (t.name.toLowerCase().includes(searchTool.toLowerCase()) || t.category.toLowerCase().includes(searchTool.toLowerCase()))
     );
+
+    const getToolColor = (type: ToolType) => {
+        switch(type) {
+            case 'Browser Extension': return 'border-orange-500/50 bg-orange-900/10 text-orange-400';
+            case 'SaaS Tool': return 'border-blue-500/50 bg-blue-900/10 text-blue-400';
+            case 'AI Scraper': return 'border-purple-500/50 bg-purple-900/10 text-purple-400';
+            case 'Custom Scraper': return 'border-green-500/50 bg-green-900/10 text-green-400';
+            case 'Hybrid': return 'border-cyan-500/50 bg-cyan-900/10 text-cyan-400';
+            default: return 'border-slate-700 bg-slate-800 text-slate-300';
+        }
+    };
 
     return (
         <div className="flex flex-col h-[calc(100vh-10rem)] min-h-[600px] relative">
@@ -388,10 +294,8 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
                 onClose={() => setPitchModalState(null)}
             />
             
-            <ToolRunnerModal tool={selectedTool} onClose={() => setSelectedTool(null)} />
-
             {/* Top Navigation for Hub */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-6 flex-shrink-0">
                 <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex gap-1">
                     <button 
                         onClick={() => setActiveTab('live')}
@@ -400,7 +304,7 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
                         Lead Finder (Live)
                     </button>
                     <button 
-                        onClick={() => setActiveTab('directory')}
+                        onClick={() => { setActiveTab('directory'); setSelectedTool(null); setToolResult(null); setToolContext(''); }}
                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'directory' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                     >
                         Tool Directory (200+)
@@ -514,48 +418,161 @@ const TrafficBooster: React.FC<{onShare: (options: any) => void;}> = () => {
                     </div>
                 </div>
             ) : (
-                <div className="flex flex-col h-full overflow-hidden">
-                    {/* Filters */}
-                    <div className="flex flex-col md:flex-row gap-4 mb-6 px-4 md:px-0">
-                        <div className="relative w-full md:w-96">
-                            <input 
-                                type="text" 
-                                placeholder="Search 200+ tools..." 
-                                value={searchTool}
-                                onChange={(e) => setSearchTool(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 px-4 text-white focus:ring-2 focus:ring-cyan-500 pl-10"
-                            />
-                            <svg className="w-5 h-5 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                            {['All', 'Browser Extension', 'SaaS Tool', 'AI Scraper', 'Custom Scraper', 'Hybrid'].map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setToolCategory(cat)}
-                                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border transition-colors ${
-                                        toolCategory === cat 
-                                            ? 'bg-slate-800 text-white border-cyan-500' 
-                                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-600'
-                                    }`}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                <div className="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
+                    {/* Directory Sidebar - Now with Config View */}
+                    <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 flex flex-col gap-4 overflow-hidden transition-all duration-300">
+                        {!selectedTool ? (
+                            <>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white mb-1">Tool Directory</h3>
+                                    <p className="text-xs text-slate-400">200+ specialized automation tools.</p>
+                                </div>
 
-                    {/* Directory Grid */}
-                    <div className="flex-grow overflow-y-auto px-4 md:px-0 custom-scrollbar">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-12">
-                            {filteredTools.map(tool => (
-                                <ToolCard key={tool.id} tool={tool} onClick={() => setSelectedTool(tool)} />
-                            ))}
-                        </div>
-                        {filteredTools.length === 0 && (
-                            <div className="text-center py-20 text-slate-500">
-                                <p>No tools found matching your criteria.</p>
+                                {/* Search */}
+                                <div className="relative">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search tools..." 
+                                        value={searchTool}
+                                        onChange={(e) => setSearchTool(e.target.value)}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 px-4 text-white text-xs focus:ring-2 focus:ring-cyan-500 pl-9"
+                                    />
+                                    <svg className="w-4 h-4 text-slate-500 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </div>
+
+                                {/* Filter Tabs */}
+                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide flex-shrink-0">
+                                    {['All', 'Browser Extension', 'SaaS Tool', 'AI Scraper', 'Custom Scraper', 'Hybrid'].map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setToolCategory(cat)}
+                                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-colors ${
+                                                toolCategory === cat 
+                                                    ? 'bg-cyan-600 text-white' 
+                                                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                                            }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Tool List */}
+                                <div className="flex-grow space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                                    {filteredTools.map(tool => {
+                                        const colorClass = getToolColor(tool.type);
+                                        return (
+                                            <div 
+                                                key={tool.id}
+                                                onClick={() => setSelectedTool(tool)}
+                                                className="p-3 rounded-xl border border-slate-800 bg-slate-950/50 hover:border-cyan-500/50 hover:bg-slate-800 cursor-pointer transition flex flex-col gap-1"
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <h4 className="text-xs font-bold text-white">{tool.name}</h4>
+                                                    <span className="text-[9px] text-slate-500">#{tool.id}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <span className="text-[10px] text-slate-400 truncate max-w-[60%]">{tool.category}</span>
+                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${colorClass}`}>
+                                                        {tool.type.split(' ')[0]}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {filteredTools.length === 0 && (
+                                        <div className="text-center py-8 text-slate-500 text-xs">
+                                            No tools match your search.
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex flex-col h-full animate-fadeIn">
+                                <button 
+                                    onClick={() => setSelectedTool(null)}
+                                    className="flex items-center space-x-2 text-xs text-slate-400 hover:text-white mb-4 transition-colors"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                                    <span>Back to Directory</span>
+                                </button>
+
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-bold text-white mb-1 leading-tight">{selectedTool.name}</h3>
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                        <span className={`text-[9px] px-2 py-0.5 rounded border uppercase ${getToolColor(selectedTool.type)}`}>{selectedTool.type}</span>
+                                        <span className="text-[9px] px-2 py-0.5 rounded border border-slate-700 text-slate-400 uppercase">{selectedTool.category}</span>
+                                    </div>
+                                    <p className="text-xs text-slate-400">{selectedTool.description || `Specialized tool for ${selectedTool.category.toLowerCase()}.`}</p>
+                                </div>
+
+                                <div className="flex-grow flex flex-col gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">Target / Context</label>
+                                        <textarea
+                                            value={toolContext}
+                                            onChange={(e) => setToolContext(e.target.value)}
+                                            className="w-full h-40 bg-slate-950 border border-slate-700 rounded-xl p-3 text-white text-xs focus:ring-2 focus:ring-cyan-500 resize-none"
+                                            placeholder="e.g., Software Engineers in San Francisco, or 'Coffee Shops'"
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={handleToolRun}
+                                        disabled={toolLoading}
+                                        className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 transition shadow-lg flex justify-center items-center gap-2 mt-auto"
+                                    >
+                                        {toolLoading ? <Loader /> : (
+                                            <>
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                <span>{selectedTool.type === 'Custom Scraper' || selectedTool.type === 'Browser Extension' ? 'Generate Script' : 'Run Simulation'}</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         )}
+                    </div>
+
+                    {/* Main Workspace Area */}
+                    <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                        <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                            <h3 className="font-bold text-white text-sm uppercase tracking-wider">
+                                {selectedTool ? `${selectedTool.name} Output` : 'Tool Workspace'}
+                            </h3>
+                            {selectedTool && (
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => openPitchModal("Target Business", 'email')}
+                                        className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-1.5 px-3 rounded transition flex items-center gap-2"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                        Draft Pitch
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-grow p-8 overflow-y-auto custom-scrollbar relative">
+                            <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                            
+                            {toolLoading ? (
+                                <div className="h-full flex flex-col items-center justify-center text-cyan-500">
+                                    <Loader message={`Running ${selectedTool?.name}...`} />
+                                </div>
+                            ) : toolResult ? (
+                                <div className="prose prose-invert prose-sm max-w-none relative z-10 animate-fadeIn">
+                                    <div dangerouslySetInnerHTML={{ __html: md.render(toolResult) }} />
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
+                                    <div className="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mb-6 border border-slate-700">
+                                        <svg className="w-10 h-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-300 mb-2">Select a Tool</h3>
+                                    <p className="text-sm max-w-xs text-center">Choose from 200+ specialized automation tools in the directory sidebar to begin configuration.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
