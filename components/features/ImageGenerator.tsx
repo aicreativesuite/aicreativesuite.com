@@ -1,8 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { generateImage, enhancePrompt } from '../../services/geminiService';
-import { DESIGN_STYLES, ASPECT_RATIOS, ART_TECHNIQUES_BY_DESIGN, ARTISTIC_STYLES, VISUAL_EFFECTS, BACKGROUND_OPTIONS } from '../../constants';
+import { DESIGN_STYLES, DESIGN_TYPES, PACKAGING_TYPES, PACKAGING_MATERIALS, ASPECT_RATIOS, ART_TECHNIQUES_BY_DESIGN, ARTISTIC_STYLES, VISUAL_EFFECTS, BACKGROUND_OPTIONS } from '../../constants';
 import Loader from '../common/Loader';
+import ImageUploader from '../common/ImageUploader';
+import ApiKeyDialog from '../common/ApiKeyDialog';
+import { fileToBase64 } from '../../utils';
 import QRCode from 'qrcode';
 
 interface ImageGeneratorProps {
@@ -52,34 +55,65 @@ const addQrCodeToImage = (imageBase64: string): Promise<string> => {
 
 
 const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
+    // Core Inputs
+    const [designType, setDesignType] = useState('General Art');
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
+    
+    // Style & Config
     const [designStyle, setDesignStyle] = useState(DESIGN_STYLES[0]);
-    const [artTechnique, setArtTechnique] = useState('');
-    const [artisticStyle, setArtisticStyle] = useState(ARTISTIC_STYLES[0]);
-    const [visualEffect, setVisualEffect] = useState(VISUAL_EFFECTS[0]);
-    const [background, setBackground] = useState(BACKGROUND_OPTIONS[0].value);
     const [aspectRatio, setAspectRatio] = useState(ASPECT_RATIOS[0]);
+    const [isHighQuality, setIsHighQuality] = useState(false);
+    
+    // Packaging Specifics
+    const [packagingType, setPackagingType] = useState(PACKAGING_TYPES[0]);
+    const [packagingMaterial, setPackagingMaterial] = useState(PACKAGING_MATERIALS[0]);
+    
+    // Advanced
+    const [referenceImage, setReferenceImage] = useState<File | null>(null);
+    const [showAdvanced, setShowAdvanced] = useState(false);
     const [addQr, setAddQr] = useState(false);
-    const [seed, setSeed] = useState<string>('');
+
+    // System State
     const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSaved, setIsSaved] = useState(false);
-    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+    const [apiKeyReady, setApiKeyReady] = useState(false);
 
     useEffect(() => {
-        const availableArtTechniques = ART_TECHNIQUES_BY_DESIGN[designStyle] || [];
-        setArtTechnique(availableArtTechniques.length > 0 ? availableArtTechniques[0] : '');
-    }, [designStyle]);
+        const checkKey = async () => {
+            // @ts-ignore
+            if (typeof window.aistudio !== 'undefined') {
+                // @ts-ignore
+                if (await window.aistudio.hasSelectedApiKey()) {
+                    setApiKeyReady(true);
+                }
+            } else {
+                setApiKeyReady(true);
+            }
+        };
+        checkKey();
+    }, []);
+
+    const handleSelectKey = async () => {
+        // @ts-ignore
+        if (window.aistudio) {
+            // @ts-ignore
+            await window.aistudio.openSelectKey();
+            setApiKeyReady(true);
+            setShowApiKeyDialog(false);
+        }
+    };
 
     const handleEnhancePrompt = async () => {
         if (!prompt) return;
         setIsEnhancing(true);
         try {
             const response = await enhancePrompt(prompt, 'image');
-            setPrompt(response.text.replace(/^"|"$/g, '')); // Remove potential quotes
+            setPrompt(response.text.replace(/^"|"$/g, '')); 
         } catch (err) {
             console.error(err);
         } finally {
@@ -89,39 +123,66 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Check billing for High Quality model
+        // @ts-ignore
+        if (isHighQuality && !apiKeyReady && typeof window.aistudio !== 'undefined') {
+            setShowApiKeyDialog(true);
+            return;
+        }
+
         if (!prompt) {
             setError('Please enter a prompt.');
             return;
         }
+        
         setLoading(true);
         setError(null);
         setImage(null);
         setIsSaved(false);
+        
         try {
-            let fullPrompt = `${prompt}, in a ${designStyle} design style${artTechnique ? `, using a ${artTechnique} technique` : ''}${artisticStyle !== 'None' ? `, with a ${artisticStyle} artistic style` : ''}${visualEffect !== 'None' ? `, featuring ${visualEffect} visual effects` : ''}`;
+            // Construct Prompt based on Design Type
+            let fullPrompt = "";
             
-            if (background) {
-                fullPrompt += `, ${background}`;
+            if (designType === 'Packaging Design') {
+                fullPrompt = `Professional packaging design for a ${packagingType} made of ${packagingMaterial}. Product description: ${prompt}. Style: ${designStyle}. High resolution 8k render, studio lighting.`;
+            } else if (designType === 'Logo Design') {
+                fullPrompt = `Minimalist vector logo design for: ${prompt}. Style: ${designStyle}. Clean background, scalable vector aesthetics.`;
+            } else if (designType === 'UI/UX Mockup') {
+                fullPrompt = `High fidelity UI/UX design mockup for: ${prompt}. Style: ${designStyle}. Modern interface, clean layout, user-centric design.`;
+            } else {
+                fullPrompt = `${prompt}, in a ${designStyle} style. High quality, detailed.`;
             }
-            
-            if (seed) {
-                fullPrompt += ` (Seed: ${seed})`;
-            }
-            
-            fullPrompt += '.';
 
             if (negativePrompt) {
-                fullPrompt += `, avoiding ${negativePrompt}`;
+                fullPrompt += ` Excluding: ${negativePrompt}`;
             }
-            const imageBytes = await generateImage(fullPrompt, aspectRatio);
+
+            // Handle Reference Image
+            let refBase64 = undefined;
+            let refMime = undefined;
+            if (referenceImage) {
+                refBase64 = await fileToBase64(referenceImage);
+                refMime = referenceImage.type;
+            }
+
+            const imageBytes = await generateImage(fullPrompt, aspectRatio, refBase64, refMime, isHighQuality);
+            
             if (addQr) {
                 const imageWithQrDataUrl = await addQrCodeToImage(imageBytes);
                 setImage(imageWithQrDataUrl);
             } else {
                 setImage(`data:image/jpeg;base64,${imageBytes}`);
             }
-        } catch (err) {
-            setError('Failed to generate image. Please try again.');
+        } catch (err: any) {
+            if (err.message?.includes("Requested entity was not found") && isHighQuality) {
+                setError("An API Key error occurred with the High Quality model. Please select a valid key.");
+                setApiKeyReady(false);
+                setShowApiKeyDialog(true);
+            } else {
+                setError('Failed to generate image. Please try again.');
+            }
             console.error(err);
         } finally {
             setLoading(false);
@@ -132,184 +193,168 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onShare }) => {
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 2000);
     };
-    
-    const availableArtTechniques = ART_TECHNIQUES_BY_DESIGN[designStyle] || [];
 
     return (
-        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
-            {/* Sidebar Controls */}
-            <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <label htmlFor="prompt" className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Your Vision</label>
-                            <button 
-                                type="button" 
-                                onClick={handleEnhancePrompt} 
-                                disabled={isEnhancing || !prompt}
-                                className="text-[10px] bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded flex items-center space-x-1 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        <>
+            <ApiKeyDialog show={showApiKeyDialog} onSelectKey={handleSelectKey} />
+            <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
+                {/* Sidebar Controls */}
+                <div className="w-full lg:w-80 flex-shrink-0 bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 overflow-y-auto custom-scrollbar">
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        
+                        {/* Design Type Selector */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Design Mode</label>
+                            <select 
+                                value={designType} 
+                                onChange={(e) => setDesignType(e.target.value)} 
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500"
                             >
-                                {isEnhancing ? (
-                                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" /></svg>
-                                )}
-                                <span>Magic Enhance</span>
-                            </button>
-                        </div>
-                        <textarea
-                            id="prompt"
-                            rows={4}
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 placeholder-slate-600 resize-none transition"
-                            placeholder="e.g., A futuristic cityscape at sunset"
-                        />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Style</label>
-                            <select id="design-style" value={designStyle} onChange={(e) => setDesignStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
-                                {DESIGN_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                {DESIGN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
+
+                        {/* Packaging Specifics */}
+                        {designType === 'Packaging Design' && (
+                            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 animate-fadeIn">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Type</label>
+                                    <select value={packagingType} onChange={(e) => setPackagingType(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-xs text-white">
+                                        {PACKAGING_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Material</label>
+                                    <select value={packagingMaterial} onChange={(e) => setPackagingMaterial(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-xs text-white">
+                                        {PACKAGING_MATERIALS.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Prompt Input */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Artistry</label>
-                            <select id="artistic-style" value={artisticStyle} onChange={(e) => setArtisticStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
-                                {ARTISTIC_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    {designType === 'Packaging Design' ? 'Product Description' : 'Prompt'}
+                                </label>
+                                <button 
+                                    type="button" 
+                                    onClick={handleEnhancePrompt} 
+                                    disabled={isEnhancing || !prompt}
+                                    className="text-[10px] bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded flex items-center space-x-1 transition disabled:opacity-50"
+                                >
+                                    {isEnhancing ? <span className="animate-spin">✨</span> : <span>✨ Enhance</span>}
+                                </button>
+                            </div>
+                            <textarea
+                                rows={4}
+                                value={prompt}
+                                onChange={(e) => setPrompt(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:ring-2 focus:ring-cyan-500 resize-none placeholder-slate-600"
+                                placeholder={designType === 'Packaging Design' ? "e.g., Organic orange juice brand called 'Sunrise'" : "e.g., A futuristic cityscape"}
+                            />
                         </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                        {availableArtTechniques.length > 0 && (
+                        
+                        {/* Reference Image (Style DNA) */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Style Reference (Optional)</label>
+                            <ImageUploader onImageUpload={setReferenceImage} onImageClear={() => setReferenceImage(null)} />
+                        </div>
+
+                        {/* Style & Aspect Ratio */}
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Technique</label>
-                                <select id="art-technique" value={artTechnique} onChange={(e) => setArtTechnique(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
-                                    {availableArtTechniques.map((s) => <option key={s} value={s}>{s}</option>)}
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Style</label>
+                                <select value={designStyle} onChange={(e) => setDesignStyle(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                                    {DESIGN_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
                                 </select>
                             </div>
-                        )}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Ratio</label>
+                                <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                                    {ASPECT_RATIOS.map((r) => <option key={r} value={r}>{r}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Quality Toggle */}
+                        <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                            <span className="text-xs font-bold text-white">High Quality (HD)</span>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked={isHighQuality} onChange={() => setIsHighQuality(!isHighQuality)} className="sr-only peer" />
+                                <div className="w-9 h-5 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                            </label>
+                        </div>
+
+                        {/* Advanced Toggle */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Effect</label>
-                            <select id="visual-effect" value={visualEffect} onChange={(e) => setVisualEffect(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
-                                {VISUAL_EFFECTS.map((s) => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                            <button 
+                                type="button" 
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                            >
+                                <span>{showAdvanced ? 'Hide' : 'Show'} Advanced</span>
+                                <svg className={`w-3 h-3 transform transition ${showAdvanced ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            </button>
+                            {showAdvanced && (
+                                <div className="mt-3 space-y-3 p-3 bg-slate-950/50 rounded-lg border border-slate-800 animate-fadeIn">
+                                    <div>
+                                        <label className="block text-[10px] text-slate-500 mb-1">Negative Prompt</label>
+                                        <input type="text" value={negativePrompt} onChange={e => setNegativePrompt(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs text-white" placeholder="blur, bad quality" />
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <input id="add-qr" type="checkbox" checked={addQr} onChange={(e) => setAddQr(e.target.checked)} className="h-3 w-3 rounded bg-slate-800 text-cyan-600" />
+                                        <label htmlFor="add-qr" className="text-xs text-slate-400">Add QR Code</label>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </div>
 
-                    <div>
-                        <label htmlFor="background" className="block text-xs font-bold text-slate-400 uppercase mb-2">Background</label>
-                        <select id="background" value={background} onChange={(e) => setBackground(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
-                            {BACKGROUND_OPTIONS.map((bg) => <option key={bg.label} value={bg.value}>{bg.label}</option>)}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Aspect Ratio</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {ASPECT_RATIOS.map((ratio) => (
-                                <button key={ratio} type="button" onClick={() => setAspectRatio(ratio)} className={`py-2 px-1 rounded-lg border text-xs font-medium transition ${aspectRatio === ratio ? 'bg-cyan-600 border-cyan-500 text-white' : 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-400'}`}>
-                                    {ratio}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Advanced Settings Toggle */}
-                    <div>
-                        <button 
-                            type="button" 
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 hover:text-white"
-                        >
-                            <span>Advanced Settings</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transform transition ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center space-x-2">
+                            {loading ? <Loader /> : <span>Generate Design</span>}
                         </button>
-                        
-                        {showAdvanced && (
-                            <div className="space-y-4 p-3 bg-slate-950/50 rounded-lg border border-slate-800 animate-fadeIn">
-                                <div>
-                                    <label htmlFor="seed" className="block text-xs text-slate-500 mb-1">Seed (Optional)</label>
-                                    <input
-                                        id="seed"
-                                        type="number"
-                                        value={seed}
-                                        onChange={(e) => setSeed(e.target.value)}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs placeholder-slate-600"
-                                        placeholder="Random seed for reproducibility"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="negative-prompt" className="block text-xs text-slate-500 mb-1">Negative Prompt</label>
-                                    <textarea
-                                        id="negative-prompt"
-                                        rows={2}
-                                        value={negativePrompt}
-                                        onChange={(e) => setNegativePrompt(e.target.value)}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs placeholder-slate-600 resize-none"
-                                        placeholder="e.g., text, watermarks, blurry"
-                                    />
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        id="add-qr"
-                                        type="checkbox"
-                                        checked={addQr}
-                                        onChange={(e) => setAddQr(e.target.checked)}
-                                        className="h-3 w-3 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-cyan-500"
-                                    />
-                                    <label htmlFor="add-qr" className="block text-xs text-slate-400">Add verification QR</label>
-                                </div>
+                        {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
+                    </form>
+                </div>
+
+                 {/* Output Area */}
+                 <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
+                    <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                        <h3 className="font-bold text-white text-sm uppercase tracking-wider">Result</h3>
+                        {image && (
+                            <div className="flex space-x-2">
+                                 <a href={image} download={`design-${Date.now()}.jpg`} className="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-white" title="Download">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                </a>
+                                <button onClick={handleSave} className={`p-2 rounded hover:bg-slate-800 transition-colors ${isSaved ? 'text-green-400' : 'text-slate-400 hover:text-white'}`} title="Save">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                </button>
+                                <button onClick={() => onShare({ contentUrl: image, contentText: prompt, contentType: 'image' })} className="p-2 rounded hover:bg-slate-800 text-purple-400 hover:text-purple-300" title="Share">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
+                                </button>
                             </div>
                         )}
                     </div>
 
-                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center space-x-2">
-                        {loading ? <Loader /> : <span>Generate Image</span>}
-                    </button>
-                    {error && <p className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded">{error}</p>}
-                </form>
-            </div>
-
-             {/* Output Area */}
-             <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 flex flex-col overflow-hidden relative">
-                {/* Header */}
-                <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
-                    <h3 className="font-bold text-white text-sm uppercase tracking-wider">Result</h3>
-                    {image && (
-                        <div className="flex space-x-2">
-                             <a href={image} download={`generated-image-${Date.now()}.jpg`} className="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-white" title="Download">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                            </a>
-                            <button onClick={handleSave} className={`p-2 rounded hover:bg-slate-800 transition-colors ${isSaved ? 'text-green-400' : 'text-slate-400 hover:text-white'}`} title="Save">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                            </button>
-                            <button onClick={() => onShare({ contentUrl: image, contentText: prompt, contentType: 'image' })} className="p-2 rounded hover:bg-slate-800 text-purple-400 hover:text-purple-300" title="Share">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex-grow p-8 flex items-center justify-center relative bg-slate-950/30">
-                    <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
-                    {loading && <Loader message="Creating your vision..." />}
-                    {!loading && image && (
-                         <div className="relative group max-w-full max-h-full">
-                            <img src={image} alt="Generated" className="max-w-full max-h-[calc(100vh-16rem)] rounded-lg object-contain shadow-2xl shadow-black/50" />
-                        </div>
-                    )}
-                    {!loading && !image && (
-                         <div className="text-center text-slate-600 opacity-60">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-20 w-20 mb-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM5 19V5H19V19H5ZM16.5 16L13.5 12L10 16.5L7.5 13L5 17.5H19L16.5 16Z"></path></svg>
-                            <p className="text-lg">Enter a prompt to create an image</p>
-                        </div>
-                    )}
+                    <div className="flex-grow p-8 flex items-center justify-center relative bg-slate-950/30">
+                        <div className="absolute inset-0 bg-grid-slate-800/20 pointer-events-none"></div>
+                        {loading && <Loader message="Rendering design..." />}
+                        {!loading && image && (
+                             <div className="relative group max-w-full max-h-full">
+                                <img src={image} alt="Generated" className="max-w-full max-h-[calc(100vh-16rem)] rounded-lg object-contain shadow-2xl shadow-black/50" />
+                            </div>
+                        )}
+                        {!loading && !image && (
+                             <div className="text-center text-slate-600 opacity-60">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-20 w-20 mb-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3ZM5 19V5H19V19H5ZM16.5 16L13.5 12L10 16.5L7.5 13L5 17.5H19L16.5 16Z"></path></svg>
+                                <p className="text-lg">Configure settings to generate designs</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 

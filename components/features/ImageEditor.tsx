@@ -26,73 +26,37 @@ interface PhotoTool {
 
 const PHOTO_TOOLS: PhotoTool[] = [
     // --- AI Magic ---
-    { id: 'enhancer', name: 'AI Photo Enhancer', category: 'AI Magic', icon: '✨', prompt: 'Enhance this photo, improve clarity, fix lighting, and remove noise to make it high definition.' },
-    { id: 'remove-bg', name: 'Background Remover', category: 'AI Magic', icon: '✂️', prompt: 'Remove the background from this image, leaving only the main subject on a transparent background.' },
+    { id: 'object-edit', name: 'Object Editor', category: 'AI Magic', icon: '🪄', prompt: 'Change the [Object] to [New Object]. Maintain perspective and lighting.' },
+    { id: 'enhancer', name: 'AI Enhancer', category: 'AI Magic', icon: '✨', prompt: 'Enhance this photo, improve clarity, fix lighting, and remove noise to make it high definition.' },
+    { id: 'remove-bg', name: 'BG Remover', category: 'AI Magic', icon: '✂️', prompt: 'Remove the background from this image, leaving only the main subject on a transparent background.' },
     { id: 'magic-eraser', name: 'Magic Eraser', category: 'AI Magic', icon: '🧽', prompt: 'Clean up this picture, remove distractions and blemishes.' },
-    { id: 'upscaler', name: 'AI Image Upscaler', category: 'AI Magic', icon: '📈', prompt: 'Upscale this image to 4k resolution, adding detail and sharpness.' },
-    { id: 'generative-fill', name: 'AI Generative Fill', category: 'AI Magic', icon: '🖌️', prompt: 'Fill in the missing parts of this image naturally.' },
-    { id: 'expander', name: 'AI Image Expander', category: 'AI Magic', icon: '↔️', prompt: 'Outpaint and expand the borders of this image seamlessly.' },
-    { id: 'colorize', name: 'Colorize B&W', category: 'AI Magic', icon: '🎨', prompt: 'Colorize this black and white photo realistically.' },
-    { id: 'remove-text', name: 'AI Text Remover', category: 'AI Magic', icon: '📝', prompt: 'Remove all text from this image while preserving the background.' },
-    { id: 'headshot', name: 'AI Headshot Gen', category: 'AI Magic', icon: '👤', prompt: 'Transform this selfie into a professional studio headshot.' },
-    { id: 'remove-black-bg', name: 'Remove Black BG', category: 'AI Magic', icon: '⬛', prompt: 'Remove the black background from this image.' },
-    { id: 'remove-white-bg', name: 'Remove White BG', category: 'AI Magic', icon: '⬜', prompt: 'Remove the white background from this image.' },
-    { id: 'logo-bg-remove', name: 'Logo BG Remover', category: 'AI Magic', icon: '🏢', prompt: 'Isolate this logo on a transparent background.' },
-    { id: 'signature-bg', name: 'Signature Extractor', category: 'AI Magic', icon: '✍️', prompt: 'Extract this signature onto a transparent background.' },
-    { id: 'faceswap', name: 'Face Swap', category: 'AI Magic', icon: '😊', prompt: 'Swap the face in this image with a generic pleasing face.' },
+    { id: 'upscaler', name: 'AI Upscaler', category: 'AI Magic', icon: '📈', prompt: 'Upscale this image to 4k resolution, adding detail and sharpness.' },
+    { id: 'generative-fill', name: 'Generative Fill', category: 'AI Magic', icon: '🖌️', prompt: 'Fill in the missing parts of this image naturally.' },
+    { id: 'colorize', name: 'Colorize', category: 'AI Magic', icon: '🎨', prompt: 'Colorize this black and white photo realistically.' },
+    { id: 'packaging-mockup', name: 'Packaging Mockup', category: 'AI Magic', icon: '📦', prompt: 'Place this design onto a realistic box packaging mockup in a studio setting.' },
 
     // --- Artistic ---
-    { id: 'cartoon', name: 'AI Cartoon Gen', category: 'Artistic', icon: '🤡', prompt: 'Convert this photo into a high-quality cartoon style.' },
-    { id: 'anime', name: 'Photo to Anime', category: 'Artistic', icon: '🎌', prompt: 'Transform this image into an anime style illustration.' },
-    { id: 'sketch', name: 'Photo to Sketch', category: 'Artistic', icon: '✏️', prompt: 'Convert this photo into a detailed pencil sketch.' },
-    { id: 'vintage', name: 'Vintage Filter', category: 'Artistic', icon: '🕰️', prompt: 'Apply a nostalgic vintage aesthetic to this photo.' },
-    { id: 'pattern', name: 'Pattern Generator', category: 'Artistic', icon: '💠', prompt: 'Create a seamless pattern based on the elements in this image.' },
-    { id: 'overlay', name: 'Overlay Images', category: 'Artistic', icon: '🖼️', prompt: 'Create an artistic double exposure overlay effect.' },
-    { id: 'textures', name: 'Texture Overlay', category: 'Artistic', icon: '🧱', prompt: 'Apply a homey, lived-in texture to the image.' },
-    { id: 'glitch', name: 'Glitch Effect', category: 'Artistic', icon: '👾', prompt: 'Apply a cool digital glitch distortion effect to the image.' },
+    { id: 'cartoon', name: 'Cartoon Style', category: 'Artistic', icon: '🤡', prompt: 'Convert this photo into a high-quality cartoon style.' },
+    { id: 'anime', name: 'Anime Style', category: 'Artistic', icon: '🎌', prompt: 'Transform this image into an anime style illustration.' },
+    { id: 'sketch', name: 'Pencil Sketch', category: 'Artistic', icon: '✏️', prompt: 'Convert this photo into a detailed pencil sketch.' },
+    { id: 'cyberpunk', name: 'Cyberpunk', category: 'Artistic', icon: '🤖', prompt: 'Apply a futuristic cyberpunk aesthetic with neon lights.' },
+    { id: 'oil-painting', name: 'Oil Painting', category: 'Artistic', icon: '🖼️', prompt: 'Transform this image into a classic oil painting.' },
     
-    // --- Text ---
-    { id: 'curved-text', name: 'Curved Text', category: 'Text', icon: '↪️', prompt: 'Add the text "Hello World" with a stylish curved arch effect.' },
-    { id: '3d-text', name: '3D Text Effects', category: 'Text', icon: '🧊', prompt: 'Add visual depth to text with 3D effects.' },
-    
-    // --- Elements ---
-    { id: 'icons', name: 'Icons', category: 'Elements', icon: '⭐', prompt: 'Add a professional icon to the design.' },
-    { id: 'stickers', name: 'Stickers', category: 'Elements', icon: '🦄', prompt: 'Add a fun sticker to the photo.' },
-    { id: 'speech-bubble', name: 'Speech Bubble', category: 'Elements', icon: '💬', prompt: 'Add a comic-style speech bubble.' },
-    { id: 'clipart', name: 'Clipart', category: 'Elements', icon: '📎', prompt: 'Add stylish clipart to the design.' },
-    
-    // --- Adjust (CSS/AI Mixed) ---
-    { id: 'brighten', name: 'Brighten Image', category: 'Adjust', icon: '☀️', cssFilter: 'brightness(1.2)' },
-    { id: 'darken', name: 'Darken Image', category: 'Adjust', icon: '🌙', cssFilter: 'brightness(0.8)' },
-    { id: 'sharpen', name: 'Sharpen Image', category: 'Adjust', icon: '🔪', prompt: 'Sharpen this image to enhance edges and details.' }, // AI for better sharpening
-    { id: 'blur', name: 'Photo Blur', category: 'Adjust', icon: '💧', cssFilter: 'blur(4px)' },
-    { id: 'blur-bg', name: 'Blur Background', category: 'Adjust', icon: '🌫️', prompt: 'Blur the background of this image while keeping the subject sharp (Bokeh effect).' },
-    { id: 'bw-filter', name: 'B&W Filter', category: 'Adjust', icon: '📓', cssFilter: 'grayscale(100%)' },
+    // --- Adjust (CSS) ---
+    { id: 'brighten', name: 'Brighten', category: 'Adjust', icon: '☀️', cssFilter: 'brightness(1.2)' },
+    { id: 'darken', name: 'Darken', category: 'Adjust', icon: '🌙', cssFilter: 'brightness(0.8)' },
+    { id: 'blur', name: 'Blur', category: 'Adjust', icon: '💧', cssFilter: 'blur(4px)' },
     { id: 'grayscale', name: 'Grayscale', category: 'Adjust', icon: '🗿', cssFilter: 'grayscale(100%) contrast(1.2)' },
-    { id: 'invert', name: 'Color Inverter', category: 'Adjust', icon: '🔄', cssFilter: 'invert(100%)' },
-    { id: 'change-color', name: 'Change Color', category: 'Adjust', icon: '🌈', prompt: 'Shift the hues of this image to be more vibrant and colorful.' },
-    { id: 'vignette', name: 'Vignette', category: 'Adjust', icon: '🌑', prompt: 'Add a cinematic vignette to this photo.' },
+    { id: 'invert', name: 'Invert', category: 'Adjust', icon: '🔄', cssFilter: 'invert(100%)' },
 
     // --- Geometry (CSS) ---
-    { id: 'rotate', name: 'Rotate Image', category: 'Geometry', icon: '🔃', cssTransform: 'rotate(90deg)' },
-    { id: 'flip', name: 'Flip Image', category: 'Geometry', icon: '↔️', cssTransform: 'scaleX(-1)' },
-    { id: 'mirror', name: 'Mirror Images', category: 'Geometry', icon: '🪞', cssTransform: 'scaleX(-1)' }, // Simplified for CSS demo
-    { id: 'straighten', name: 'Photo Straightener', category: 'Geometry', icon: '📏', prompt: 'Straighten this image and fix the horizon line.' }, // AI better for straightening
+    { id: 'rotate', name: 'Rotate', category: 'Geometry', icon: '🔃', cssTransform: 'rotate(90deg)' },
+    { id: 'flip', name: 'Flip H', category: 'Geometry', icon: '↔️', cssTransform: 'scaleX(-1)' },
     { id: 'circle-crop', name: 'Circle Crop', category: 'Geometry', icon: '⭕', action: 'setCircle' },
-    { id: 'crop', name: 'Crop Image', category: 'Geometry', icon: '✂️', prompt: 'Crop this image to improve composition.' },
-    { id: 'frame', name: 'Add Frames', category: 'Geometry', icon: '🖼️', prompt: 'Add an artistic frame around this photo.' },
-    { id: 'borders', name: 'Photo Borders', category: 'Geometry', icon: '⬜', prompt: 'Add a clean white border around this photo.' },
-    { id: 'grids', name: 'Design Grids', category: 'Geometry', icon: '▦', prompt: 'Overlay a crisp design grid for layout composition.' },
 
     // --- Convert (Functionality) ---
-    { id: 'ascii', name: 'ASCII Art', category: 'Convert', icon: '🔢', prompt: 'Convert this image into ASCII art characters.' },
     { id: 'jpg-png', name: 'JPG to PNG', category: 'Convert', icon: '📄', action: 'convert-png' },
     { id: 'png-jpg', name: 'PNG to JPG', category: 'Convert', icon: '🖼️', action: 'convert-jpg' },
-    { id: 'webp-jpg', name: 'WEBP to JPG', category: 'Convert', icon: '🌐', action: 'convert-jpg' },
-    { id: 'heic-jpg', name: 'HEIC to JPG', category: 'Convert', icon: '🍏', action: 'convert-jpg' }, // Sim via canvas
-    { id: 'svg-png', name: 'SVG to PNG', category: 'Convert', icon: '📐', action: 'convert-png' },
-    { id: 'pdf-convert', name: 'Image to PDF', category: 'Convert', icon: '📕', action: 'convert-pdf' },
-    { id: 'gif-text', name: 'Add Text to GIF', category: 'Convert', icon: '👾', prompt: 'Add text to this image: "Reaction!"' },
 ];
 
 const addQrCodeToImage = (imageBase64: string): Promise<string> => {
@@ -141,7 +105,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
     const [originalImage, setOriginalImage] = useState<File | null>(null);
     const [editedImage, setEditedImage] = useState<string | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const [addQr, setAddQr] = useState(true);
+    const [addQr, setAddQr] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSaved, setIsSaved] = useState(false);
@@ -164,7 +128,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
             return;
         }
 
-        // Check if it's a conversion request
         if (convertFormat) {
             handleDownload(convertFormat);
             return;
@@ -182,9 +145,13 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
 
         try {
             const imageBase64 = await fileToBase64(originalImage);
-            // Append instruction for filters if applied manually but sending to AI
             let finalPrompt = prompt;
             
+            // If Object Editor is generic, force user to elaborate
+            if (prompt.includes('[Object]')) {
+                 // Fallback or specific logic could go here, but UI allows editing textarea
+            }
+
             const resultBase64 = await editImage(finalPrompt, imageBase64, originalImage.type);
             if (resultBase64) {
                 if (addQr) {
@@ -210,7 +177,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
         setPreviewImage(URL.createObjectURL(file));
         setError(null);
         setIsSaved(false);
-        // Reset CSS
         setActiveFilter('');
         setActiveTransform('');
         setIsCircle(false);
@@ -239,26 +205,18 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
         setError(null);
         setConvertFormat(null);
 
-        // 1. Handle AI Prompt Tools
         if (tool.prompt) {
             setPrompt(tool.prompt);
-            // If it's purely AI, reset CSS previews to avoid confusion, 
-            // unless we want to send the CSS-modified image to AI (complex without canvas intermediate)
-            // For now, AI works on original.
         }
 
-        // 2. Handle CSS Filters (Live Preview)
         if (tool.cssFilter) {
-            setActiveFilter(prev => prev === tool.cssFilter ? '' : tool.cssFilter!); // Toggle
-            setPrompt(`Apply filter: ${tool.name}`); // Just for context
+            setActiveFilter(prev => prev === tool.cssFilter ? '' : tool.cssFilter!); 
         }
 
-        // 3. Handle CSS Transforms
         if (tool.cssTransform) {
-            setActiveTransform(prev => prev === tool.cssTransform ? '' : tool.cssTransform!); // Toggle
+            setActiveTransform(prev => prev === tool.cssTransform ? '' : tool.cssTransform!);
         }
 
-        // 4. Handle Special Actions
         if (tool.action) {
             if (tool.action === 'setCircle') {
                 setIsCircle(!isCircle);
@@ -276,7 +234,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
         const imageSrc = editedImage || previewImage;
         if (!imageSrc) return;
 
-        // If we have live CSS filters/transforms/crops, we need to draw to canvas to save them
         if ((activeFilter || activeTransform || isCircle || formatOverride) && !editedImage && previewImage) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -302,8 +259,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                         ctx.scale(-1, 1);
                     }
                     if (activeTransform.includes('rotate(90deg)')) {
-                         // Simple rotation handling requires canvas resizing, skipping complex rotation for simple demo
-                         // Just draw normally if rotation is complex without resize
+                         // Simple rotation skipped for brevity in canvas logic
                     }
 
                     ctx.drawImage(img, 0, 0);
@@ -311,7 +267,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                     let mimeType = 'image/png';
                     let ext = 'png';
                     if (formatOverride === 'jpg') { mimeType = 'image/jpeg'; ext = 'jpg'; }
-                    if (formatOverride === 'pdf') { /* PDF logic would go here (requires library usually), fallback to PNG */ }
 
                     const dataUrl = canvas.toDataURL(mimeType);
                     link.href = dataUrl;
@@ -320,7 +275,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                 }
             };
         } else {
-            // Direct download
             link.href = imageSrc;
             link.download = `image-${Date.now()}.${formatOverride || 'png'}`;
             link.click();
@@ -347,10 +301,9 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                     
                     {/* Main Preview Area */}
                     <div className="flex-grow bg-slate-900/50 border border-slate-700 rounded-2xl p-6 flex items-center justify-center relative overflow-hidden group">
-                        {/* Background Grid */}
                         <div className="absolute inset-0 bg-grid-slate-800/20 [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none"></div>
 
-                        {loading && <Loader message="Processing image..." />}
+                        {loading && <Loader message="Processing magic..." />}
                         
                         {!loading && (editedImage || previewImage) ? (
                             <div className="relative max-w-full max-h-full flex flex-col items-center">
@@ -365,7 +318,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                                     }}
                                 />
                                 
-                                {/* Quick Actions Overlay */}
                                 <div className="absolute bottom-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-2 rounded-xl backdrop-blur-sm">
                                     <button onClick={() => handleDownload(convertFormat || undefined)} className="bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-600 transition">
                                         Download {convertFormat ? convertFormat.toUpperCase() : ''}
@@ -390,16 +342,16 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                 {/* Right: Toolkit */}
                 <div className="lg:col-span-1 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 flex flex-col overflow-hidden shadow-xl">
                     <div className="p-4 border-b border-slate-800 bg-slate-950">
-                        <h3 className="font-bold text-white mb-3">Photo Toolkit</h3>
+                        <h3 className="font-bold text-white mb-3">Editor Toolkit</h3>
                         <input 
                             type="text" 
-                            placeholder="Search tools (e.g. crop, cartoon)..." 
+                            placeholder="Search tools..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:ring-2 focus:ring-cyan-500 mb-3"
                         />
                         <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                            {['AI Magic', 'Artistic', 'Text', 'Elements', 'Adjust', 'Geometry', 'Convert'].map(cat => (
+                            {['AI Magic', 'Artistic', 'Adjust', 'Geometry', 'Convert'].map(cat => (
                                 <button
                                     key={cat}
                                     onClick={() => setActiveCategory(cat as ToolCategory)}
@@ -435,9 +387,15 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
                                 className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-cyan-500 resize-none"
-                                placeholder="Select a tool or type instruction..."
+                                placeholder="Select a tool or type a natural language edit instruction..."
                             />
                         </div>
+                        
+                        <div className="flex items-center space-x-2 mb-2">
+                            <input id="add-qr" type="checkbox" checked={addQr} onChange={(e) => setAddQr(e.target.checked)} className="h-3 w-3 rounded bg-slate-800 text-cyan-600" />
+                            <label htmlFor="add-qr" className="text-xs text-slate-400">Add Watermark</label>
+                        </div>
+
                         {convertFormat ? (
                             <button
                                 onClick={() => handleDownload(convertFormat)}
@@ -451,7 +409,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
                                 disabled={loading || !originalImage}
                                 className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 rounded-lg transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? 'Processing...' : 'Apply AI Edit'}
+                                {loading ? 'Processing...' : 'Apply Edit'}
                             </button>
                         )}
                         {error && <p className="text-red-400 text-xs text-center">{error}</p>}

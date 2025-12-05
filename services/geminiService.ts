@@ -55,18 +55,49 @@ export const createChatSession = (systemInstruction?: string, config?: any): Cha
 };
 
 // --- Image Generation & Editing ---
-export const generateImage = async (prompt: string, aspectRatio: string): Promise<string> => {
-    // Using gemini-2.5-flash-image as default for efficiency
+export const generateImage = async (prompt: string, aspectRatio: string, referenceImageBase64?: string, referenceMimeType?: string, highQuality: boolean = false): Promise<string> => {
     const ai = getGeminiAI();
+    // Select model based on quality preference. Use pro-image for high quality.
+    const model = highQuality ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
+    
+    // Construct contents. If reference image exists, add it (multimodal prompting for style/structure).
+    const contents: any = { parts: [] };
+    
+    if (referenceImageBase64 && referenceMimeType) {
+        contents.parts.push({ 
+            inlineData: { 
+                data: referenceImageBase64, 
+                mimeType: referenceMimeType 
+            } 
+        });
+        // Guide model to use image as reference
+        contents.parts.push({ text: "Use the attached image as a style reference." });
+    }
+    
+    contents.parts.push({ text: prompt });
+
+    // Config options
+    const config: any = { 
+        responseModalities: [Modality.IMAGE],
+        imageConfig: { aspectRatio: aspectRatio as any }
+    };
+    
+    // Only set imageSize for Pro model
+    if (highQuality) {
+        config.imageConfig.imageSize = "2K"; // Request higher res if supported/needed
+    }
+
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: { parts: [{ text: prompt }] },
-        config: { 
-            responseModalities: [Modality.IMAGE],
-            imageConfig: { aspectRatio: aspectRatio as any }
-        },
+        model,
+        contents,
+        config,
     });
-    const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    
+    // Helper to find image part
+    const findImagePart = (parts: any[]) => parts.find((p: any) => p.inlineData && p.inlineData.mimeType.startsWith('image'));
+
+    const part = response.candidates?.[0]?.content?.parts ? findImagePart(response.candidates[0].content.parts) : undefined;
+    
     if (!part?.inlineData?.data) throw new Error("No image generated");
     return part.inlineData.data;
 };

@@ -59,8 +59,8 @@ export const FEATURES = [
     { id: 'realtime-transcriber', title: 'Realtime Transcriber', description: 'Live speech-to-text transcription.', category: 'Assist & Analyze', icon: <TranscribeIcon /> },
     { id: 'text-to-speech', title: 'Text to Speech', description: 'Convert text into lifelike spoken audio.', category: 'Create & Edit', icon: <TextToSpeechIcon /> },
     { id: 'sound-studio', title: 'Sound Studio', description: 'All-in-one audio suite: SFX, Music, and Speech.', category: 'Create & Edit', icon: <SoundStudioIcon /> },
-    { id: 'image-generator', title: 'Image Generator', description: 'Create stunning images from text prompts.', category: 'Create & Edit', icon: <ImageGeneratorIcon /> },
-    { id: 'image-editor', title: 'Image Editor', description: 'Edit and refine your images with AI.', category: 'Create & Edit', icon: <ImageEditorIcon /> },
+    { id: 'image-generator', title: 'AI Design Generator', description: 'Create stunning images, logos, packaging, and art.', category: 'Create & Edit', icon: <ImageGeneratorIcon /> },
+    { id: 'image-editor', title: 'AI Image Editor', description: 'Edit, refine, and transform images with AI tools.', category: 'Create & Edit', icon: <ImageEditorIcon /> },
     { id: 'slide-deck', title: 'Slide Deck Generator', description: 'Create comprehensive slide decks, reports, and visual aids.', category: 'Create & Edit', icon: <SlideDeckIcon /> },
     { id: 'video-generator', title: 'Video Generator', description: 'Turn text and images into captivating videos.', category: 'Create & Edit', icon: <VideoGeneratorIcon /> },
     { id: 'global-avatar', title: 'Global Avatar Creator', description: 'Create multilingual speaking avatars.', category: 'Create & Edit', icon: <GlobalAvatarIcon /> },
@@ -134,6 +134,10 @@ export const PLATFORMS: Platform[] = [
 // --- Options & Configurations ---
 
 export const DESIGN_STYLES = ['Photorealistic', 'Cinematic', '3D Render', 'Anime', 'Digital Art', 'Oil Painting', 'Watercolor', 'Pixel Art', 'Cyberpunk', 'Steampunk', 'Minimalist', 'Retro', 'Futuristic', 'Gothic', 'Pop Art', 'Concept Art'];
+export const DESIGN_TYPES = ['General Art', 'Logo Design', 'Packaging Design', 'UI/UX Mockup', 'Interior Design', 'Fashion Design', 'Character Design', 'Poster/Cover Art'];
+export const PACKAGING_TYPES = ['Box', 'Bottle', 'Pouch', 'Can', 'Tube', 'Bag', 'Jar', 'Wrapper'];
+export const PACKAGING_MATERIALS = ['Cardboard', 'Glass', 'Plastic', 'Metal', 'Paper', 'Foil', 'Wood'];
+
 export const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9'];
 export const VIDEO_ASPECT_RATIOS = ['16:9', '9:16'];
 export const ART_TECHNIQUES_BY_DESIGN: Record<string, string[]> = {
