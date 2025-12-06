@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { 
     generateSlideDeckStructure, 
     generateReportContent, 
@@ -8,7 +9,7 @@ import {
     generatePodcastScript,
     generateMultiSpeakerSpeech,
     generateVideoFromPrompt,
-    pollVideoOperation
+    processVideoOperation
 } from '../../services/geminiService';
 import { 
     SLIDE_DECK_THEMES, 
@@ -26,9 +27,8 @@ import {
 } from '../../constants';
 import Loader from '../common/Loader';
 import ImageUploader from '../common/ImageUploader';
-import { fileToBase64, pcmToWav, decode } from '../../utils';
+import { fileToBase64, pcmToWav, decode, addQrCodeToImage } from '../../utils';
 import { Remarkable } from 'remarkable';
-import QRCode from 'qrcode';
 import { GroundingChunk } from '@google/genai';
 import ApiKeyDialog from '../common/ApiKeyDialog';
 
@@ -105,8 +105,6 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
     // Video Overview State
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [videoLoadingMessage, setVideoLoadingMessage] = useState('');
-    const pollIntervalRef = useRef<number | null>(null);
-    const messageIntervalRef = useRef<number | null>(null);
     
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -121,48 +119,10 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
         return () => {
             if (audioUrl) URL.revokeObjectURL(audioUrl);
             if (videoUrl) URL.revokeObjectURL(videoUrl);
-            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-            if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
         };
     }, [audioUrl, videoUrl]);
 
     // Helpers
-    const addQrCodeToImage = (imageBase64: string): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-            const verificationUrl = `https://aicreativesuite.dev/verify?id=${uniqueId}`;
-            const baseImage = new Image();
-            baseImage.crossOrigin = 'anonymous';
-            baseImage.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = baseImage.width;
-                canvas.height = baseImage.height;
-                const ctx = canvas.getContext('2d');
-                if (!ctx) return reject('Could not get canvas context');
-                ctx.drawImage(baseImage, 0, 0);
-                QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: 'H', margin: 1, width: 128 }, (err, qrUrl) => {
-                    if (err) return reject(err);
-                    const qrImage = new Image();
-                    qrImage.crossOrigin = 'anonymous';
-                    qrImage.onload = () => {
-                        const qrSize = Math.max(64, Math.floor(baseImage.width * 0.1));
-                        const padding = qrSize * 0.1;
-                        const x = canvas.width - qrSize - padding;
-                        const y = canvas.height - qrSize - padding;
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                        ctx.fillRect(x - (padding / 2), y - (padding / 2), qrSize + padding, qrSize + padding);
-                        ctx.drawImage(qrImage, x, y, qrSize, qrSize);
-                        resolve(canvas.toDataURL('image/jpeg'));
-                    };
-                    qrImage.onerror = reject;
-                    qrImage.src = qrUrl;
-                });
-            };
-            baseImage.onerror = reject;
-            baseImage.src = `data:image/jpeg;base64,${imageBase64}`;
-        });
-    };
-
     const generateSlideImage = async (index: number) => {
         if (!slides[index]) return;
         try {
@@ -197,26 +157,6 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
             await window.aistudio.openSelectKey();
             setApiKeyReady(true);
             setShowApiKeyDialog(false);
-        }
-    };
-
-    const startVideoLoadingMessages = () => {
-        let i = 0;
-        setVideoLoadingMessage(VEO_LOADING_MESSAGES[0]);
-        messageIntervalRef.current = window.setInterval(() => {
-            i = (i + 1) % VEO_LOADING_MESSAGES.length;
-            setVideoLoadingMessage(VEO_LOADING_MESSAGES[i]);
-        }, 3000);
-    };
-
-    const stopVideoLoading = () => {
-        if (messageIntervalRef.current) {
-            clearInterval(messageIntervalRef.current);
-            messageIntervalRef.current = null;
-        }
-        if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
         }
     };
 
@@ -288,49 +228,29 @@ const SlideDeckGenerator: React.FC<SlideDeckGeneratorProps> = ({ onShare }) => {
             } else if (activeTab === 'video') {
                 // Video Overview Logic
                 setVideoUrl(null);
-                startVideoLoadingMessages();
-                const videoPrompt = `A professional cinematic video presentation about "${topic}". The video should visually summarize the key concepts suitable for an audience of ${audience}. Style: ${designStyle}.`;
                 
-                const operation = await generateVideoFromPrompt(videoPrompt, aspectRatio === '9:16' ? '9:16' : '16:9', false);
-                
-                let op = operation;
-                pollIntervalRef.current = window.setInterval(async () => {
-                    try {
-                        op = await pollVideoOperation(op);
-                        if (op.done) {
-                            stopVideoLoading();
-                            setLoading(false);
-                            const uri = op.response?.generatedVideos?.[0]?.video?.uri;
-                            if (uri) {
-                                const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
-                                const blob = await response.blob();
-                                setVideoUrl(URL.createObjectURL(blob));
-                            } else {
-                                setError('Video generation finished, but no video URL was returned.');
-                            }
-                        }
-                    } catch (err: any) {
-                        stopVideoLoading();
-                        setLoading(false);
-                        if(err.message?.includes("Requested entity was not found")) {
-                            setError("An API Key error occurred. Please select a valid key.");
-                            setApiKeyReady(false);
-                            setShowApiKeyDialog(true);
-                        } else {
-                            setError('An error occurred while checking video status.');
-                        }
-                    }
-                }, 10000);
-                // Return early to avoid setting loading to false immediately
-                return;
+                let i = 0;
+                const msgInterval = setInterval(() => {
+                    i = (i + 1) % VEO_LOADING_MESSAGES.length;
+                    setVideoLoadingMessage(VEO_LOADING_MESSAGES[i]);
+                }, 3000);
+                setVideoLoadingMessage(VEO_LOADING_MESSAGES[0]);
+
+                try {
+                    const videoPrompt = `A professional cinematic video presentation about "${topic}". The video should visually summarize the key concepts suitable for an audience of ${audience}. Style: ${designStyle}.`;
+                    const operation = await generateVideoFromPrompt(videoPrompt, aspectRatio === '9:16' ? '9:16' : '16:9', false);
+                    
+                    const blob = await processVideoOperation(operation);
+                    setVideoUrl(URL.createObjectURL(blob));
+                } finally {
+                    clearInterval(msgInterval);
+                }
             }
 
         } catch (err: any) {
             setError(err.message || 'Generation failed. Please try again.');
         } finally {
-            if (activeTab !== 'video') {
-                setLoading(false);
-            }
+            setLoading(false);
         }
     };
 

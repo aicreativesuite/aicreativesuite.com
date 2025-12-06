@@ -6,7 +6,7 @@ import {
     generateImage,
     generateSpeech,
     generateVideoFromImage,
-    pollVideoOperation
+    processVideoOperation
 } from '../../services/geminiService';
 import { MEME_STYLES, VEO_LOADING_MESSAGES, TTS_VOICES } from '../../constants';
 import Loader from '../common/Loader';
@@ -30,7 +30,6 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
     const [mode, setMode] = useState<GenerationMode>('generate');
     const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
     const [uploadedVideoFile, setUploadedVideoFile] = useState<File | null>(null);
-    const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
 
     // Outputs & Assets
     const [memeConcept, setMemeConcept] = useState<{ imageDescription: string; topText: string; bottomText: string; } | null>(null);
@@ -50,17 +49,9 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
     const [error, setError] = useState<string | null>(null);
     const [apiKeyReady, setApiKeyReady] = useState(false);
     const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
-    const [isSaved, setIsSaved] = useState(false);
-    
-    // Refs
-    const pollIntervalRef = useRef<number | null>(null);
-    const messageIntervalRef = useRef<number | null>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
     
     useEffect(() => {
         return () => {
-            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-            if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
             if (memeVideoUrl) URL.revokeObjectURL(memeVideoUrl);
             if (finalVideoUrl) URL.revokeObjectURL(finalVideoUrl);
             if (memeAudioUrl) URL.revokeObjectURL(memeAudioUrl);
@@ -173,41 +164,6 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
         }
     };
 
-    const stopLoading = () => {
-        setLoadingStep('');
-        if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
-        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    };
-
-    const handlePolling = (initialOperation: any) => {
-        let op = initialOperation;
-        pollIntervalRef.current = window.setInterval(async () => {
-            try {
-                op = await pollVideoOperation(op);
-                if (op.done) {
-                    stopLoading();
-                    const uri = op.response?.generatedVideos?.[0]?.video?.uri;
-                    if (uri) {
-                        const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
-                        const blob = await response.blob();
-                        setMemeVideoUrl(URL.createObjectURL(blob));
-                    } else {
-                        setError('Video generation finished, but no video was returned.');
-                    }
-                }
-            } catch (err: any) {
-                stopLoading();
-                if (err.message?.includes("Requested entity was not found")) {
-                    setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
-                    setApiKeyReady(false);
-                    setShowApiKeyDialog(true);
-                } else {
-                    setError('An error occurred while checking video status.');
-                }
-            }
-        }, 10000);
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -228,7 +184,7 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
         setMemeAudioUrl(null);
         setMemeVideoUrl(null);
         setFinalVideoUrl(null);
-        setUniqueId(Date.now().toString()); // For QR
+        setUniqueId(Date.now().toString()); 
 
         try {
             // 1. Concept
@@ -248,7 +204,7 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
             setMemeConcept(conceptResult);
             setTopText(conceptResult.topText);
             setBottomText(conceptResult.bottomText);
-            setMemeScript(conceptResult.topText + " " + conceptResult.bottomText); // Simple script
+            setMemeScript(conceptResult.topText + " " + conceptResult.bottomText); 
 
             // 2. Image (if generating)
             let imageBytes = '';
@@ -260,7 +216,7 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
             } else if (mode === 'upload' && uploadedImageFile) {
                 const base64 = await fileToBase64(uploadedImageFile);
                 setMemeImage({ base64, mimeType: uploadedImageFile.type });
-                imageBytes = base64; // Need base64 for video gen if used
+                imageBytes = base64; 
             }
 
             // 3. Audio
@@ -275,37 +231,39 @@ const ViralMemeGenerator: React.FC<ViralMemeGeneratorProps> = ({ onShare }) => {
             }
 
             // 4. Video (Veo)
-            if (mode !== 'video') { // If not using uploaded video
+            if (mode !== 'video') { 
                 setLoadingStep('video');
+                
                 let i = 0;
-                setLoadingMessage(VEO_LOADING_MESSAGES[i]);
-                messageIntervalRef.current = window.setInterval(() => {
+                const msgInterval = setInterval(() => {
                     i = (i + 1) % VEO_LOADING_MESSAGES.length;
                     setLoadingMessage(VEO_LOADING_MESSAGES[i]);
                 }, 3000);
+                setLoadingMessage(VEO_LOADING_MESSAGES[0]);
 
-                // Use image-to-video if we have an image (generated or uploaded)
-                if (imageBytes) {
-                     const operation = await generateVideoFromImage(
-                        `Animate this meme image. ${conceptResult.imageDescription}`, 
-                        imageBytes, 
-                        'image/jpeg', 
-                        '9:16', 
-                        false
-                    );
-                    handlePolling(operation);
+                try {
+                    if (imageBytes) {
+                         const operation = await generateVideoFromImage(
+                            `Animate this meme image. ${conceptResult.imageDescription}`, 
+                            imageBytes, 
+                            'image/jpeg', 
+                            '9:16', 
+                            false
+                        );
+                        
+                        const blob = await processVideoOperation(operation);
+                        setMemeVideoUrl(URL.createObjectURL(blob));
+                    }
+                } finally {
+                    clearInterval(msgInterval);
                 }
             }
 
         } catch (err: any) {
-            stopLoading();
             setError(err.message || 'Generation failed.');
+        } finally {
+            setLoadingStep('');
         }
-    };
-
-    const handleSave = () => {
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 2000);
     };
 
     return (

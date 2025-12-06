@@ -5,7 +5,7 @@ import Loader from '../common/Loader';
 import { Remarkable } from 'remarkable';
 import { GroundingChunk } from '@google/genai';
 
-const md = new Remarkable({ html: true });
+const md = new Remarkable({ html: false });
 
 interface TrendForecasterProps {
     onShare: (options: { contentText: string; contentType: 'text' }) => void;
@@ -110,20 +110,24 @@ const TrendForecaster: React.FC<TrendForecasterProps> = ({ onShare }) => {
                     
                     {loading && (
                         <div className="h-full flex flex-col items-center justify-center">
-                            <Loader message="Scanning global trends..." />
+                            <Loader message="Analyzing real-time trends..." />
                         </div>
                     )}
 
                     {!loading && !report && (
                         <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                            <p className="text-lg">Enter a topic to forecast trends.</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                            <p className="text-lg">Enter a topic to generate a forecast.</p>
                         </div>
                     )}
 
                     {report && (
-                        <div className="max-w-4xl mx-auto bg-slate-900/80 backdrop-blur-md p-8 rounded-xl border border-slate-700 shadow-2xl relative z-10 prose prose-invert prose-sm max-w-none">
-                            <div dangerouslySetInnerHTML={{ __html: md.render(report) }}></div>
+                        <div className="relative z-10 max-w-4xl mx-auto">
+                            <div className="bg-white text-slate-900 p-8 rounded-xl shadow-lg prose prose-sm max-w-none">
+                                <div dangerouslySetInnerHTML={{ __html: md.render(report) }} />
+                            </div>
                         </div>
                     )}
                 </div>

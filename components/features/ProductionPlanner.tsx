@@ -4,7 +4,7 @@ import { generateText, generateImage } from '../../services/geminiService';
 import Loader from '../common/Loader';
 import { Remarkable } from 'remarkable';
 
-const md = new Remarkable({ html: true });
+const md = new Remarkable({ html: false });
 
 interface ProductionPlannerProps { onShare: (options: { contentText: string; contentType: 'text' }) => void; }
 

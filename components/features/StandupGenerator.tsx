@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { generateText, generateImage, generateSpeech, generateVideoFromImage, pollVideoOperation } from '../../services/geminiService';
+import { generateText, generateImage, generateSpeech, generateVideoFromImage, processVideoOperation } from '../../services/geminiService';
 import { COMEDIAN_STYLES, AUDIENCE_TYPES, VEO_LOADING_MESSAGES, TTS_VOICES, AVATAR_EXPRESSIONS } from '../../constants';
 import Loader from '../common/Loader';
 import ApiKeyDialog from '../common/ApiKeyDialog';
@@ -32,11 +32,8 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
     const [error, setError] = useState<string | null>(null);
     const [apiKeyReady, setApiKeyReady] = useState(false);
     const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
-    const [isSaved, setIsSaved] = useState(false);
     
     // Refs
-    const pollIntervalRef = useRef<number | null>(null);
-    const messageIntervalRef = useRef<number | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -58,11 +55,6 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
             }
         };
         checkKey();
-
-        return () => {
-            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-            if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
-        };
     }, []);
     
     const handleSelectKey = async () => {
@@ -73,47 +65,6 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
             setApiKeyReady(true);
             setShowApiKeyDialog(false);
         }
-    };
-
-    const stopLoading = () => {
-        setLoadingStep('');
-        if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
-    };
-
-    const cleanupPolling = () => {
-        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    };
-
-    const handlePolling = (initialOperation: any) => {
-        let op = initialOperation;
-        pollIntervalRef.current = window.setInterval(async () => {
-            try {
-                op = await pollVideoOperation(op);
-                if (op.done) {
-                    cleanupPolling();
-                    const uri = op.response?.generatedVideos?.[0]?.video?.uri;
-                    if (uri) {
-                        const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
-                        const blob = await response.blob();
-                        setComedianVideoUrl(URL.createObjectURL(blob));
-                        stopLoading();
-                    } else {
-                        setError('Video generation finished, but no video was returned.');
-                        stopLoading();
-                    }
-                }
-            } catch (err: any) {
-                if (err.message?.includes("Requested entity was not found")) {
-                    setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
-                    setApiKeyReady(false);
-                    setShowApiKeyDialog(true);
-                } else {
-                    setError('An error occurred while checking video status.');
-                }
-                cleanupPolling();
-                stopLoading();
-            }
-        }, 10000);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -129,13 +80,11 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
             return;
         }
         
-        // Reset previous results
         setError(null);
         setJokeScript(null);
         setComedianImage(null);
         setJokeAudioUrl(null);
         setComedianVideoUrl(null);
-        setIsSaved(false);
 
         try {
             // Step 1: Generate Joke
@@ -168,15 +117,21 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
 
             // Step 4: Generate Video
             setLoadingStep('video');
-            let i = 0;
-            setLoadingMessage(VEO_LOADING_MESSAGES[i]);
-            messageIntervalRef.current = window.setInterval(() => {
-                i = (i + 1) % VEO_LOADING_MESSAGES.length;
-                setLoadingMessage(VEO_LOADING_MESSAGES[i]);
+            let msgIdx = 0;
+            const msgInterval = setInterval(() => {
+                msgIdx = (msgIdx + 1) % VEO_LOADING_MESSAGES.length;
+                setLoadingMessage(VEO_LOADING_MESSAGES[msgIdx]);
             }, 3000);
-            const videoPrompt = `A medium shot of the standup comedian in the image performing on stage at a ${audienceType}. They are gesturing and moving as if telling a joke. There should be no audible speech.`;
-            const operation = await generateVideoFromImage(videoPrompt, imageBytes, 'image/jpeg', '9:16', false);
-            handlePolling(operation);
+            
+            try {
+                const videoPrompt = `A medium shot of the standup comedian in the image performing on stage at a ${audienceType}. They are gesturing and moving as if telling a joke. There should be no audible speech.`;
+                const operation = await generateVideoFromImage(videoPrompt, imageBytes, 'image/jpeg', '9:16', false);
+                
+                const blob = await processVideoOperation(operation);
+                setComedianVideoUrl(URL.createObjectURL(blob));
+            } finally {
+                clearInterval(msgInterval);
+            }
 
         } catch (err: any) {
             if (err.message?.includes("Requested entity was not found")) {
@@ -186,8 +141,9 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
             } else {
                 setError(err.message || 'An error occurred during generation.');
             }
-            stopLoading();
             console.error(err);
+        } finally {
+            setLoadingStep('');
         }
     };
     
@@ -198,11 +154,6 @@ const StandupGenerator: React.FC<StandupGeneratorProps> = ({ onShare }) => {
             videoRef.current.play();
             audioRef.current.play();
         }
-    };
-
-    const handleSave = () => {
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 2000);
     };
 
     const isLoading = loadingStep !== '';

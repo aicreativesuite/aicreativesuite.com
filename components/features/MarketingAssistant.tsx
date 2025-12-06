@@ -6,7 +6,7 @@ import Loader from '../common/Loader';
 import { Remarkable } from 'remarkable';
 import { AGENT_TYPES } from '../../constants';
 
-const md = new Remarkable({ html: true });
+const md = new Remarkable({ html: false });
 
 interface Message {
     role: 'user' | 'model';

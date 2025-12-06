@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { generateVideoFromPrompt, pollVideoOperation } from '../../services/geminiService';
+import React, { useState, useEffect } from 'react';
+import { generateVideoFromPrompt, processVideoOperation } from '../../services/geminiService';
 import { DANCE_STYLES, VIDEO_ASPECT_RATIOS, VEO_LOADING_MESSAGES } from '../../constants';
 import Loader from '../common/Loader';
 import ApiKeyDialog from '../common/ApiKeyDialog';
@@ -21,8 +21,6 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState(VEO_LOADING_MESSAGES[0]);
     const [error, setError] = useState<string | null>(null);
-    const pollIntervalRef = useRef<number | null>(null);
-    const messageIntervalRef = useRef<number | null>(null);
     const [isSaved, setIsSaved] = useState(false);
     
     // API Key State
@@ -47,11 +45,6 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
             }
         };
         checkKey();
-
-        return () => {
-            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-            if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
-        };
     }, []);
 
     const handleSelectKey = async () => {
@@ -59,61 +52,9 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
         if (window.aistudio) {
             // @ts-ignore
             await window.aistudio.openSelectKey();
-            // Assume success to avoid race conditions
             setApiKeyReady(true);
             setShowApiKeyDialog(false);
         }
-    };
-
-    const startLoadingMessages = () => {
-        let i = 0;
-        setLoadingMessage(VEO_LOADING_MESSAGES[0]);
-        messageIntervalRef.current = window.setInterval(() => {
-            i = (i + 1) % VEO_LOADING_MESSAGES.length;
-            setLoadingMessage(VEO_LOADING_MESSAGES[i]);
-        }, 3000);
-    };
-
-    const stopLoading = () => {
-        setLoading(false);
-        if (messageIntervalRef.current) {
-            clearInterval(messageIntervalRef.current);
-            messageIntervalRef.current = null;
-        }
-        if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-        }
-    };
-
-    const handlePolling = (initialOperation: any) => {
-        let op = initialOperation;
-        pollIntervalRef.current = window.setInterval(async () => {
-            try {
-                op = await pollVideoOperation(op);
-                if (op.done) {
-                    stopLoading();
-                    const uri = op.response?.generatedVideos?.[0]?.video?.uri;
-                    if (uri) {
-                        const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
-                        const blob = await response.blob();
-                        setVideoUrl(URL.createObjectURL(blob));
-                    } else {
-                        setError('Video generation finished, but no video URL was returned.');
-                    }
-                }
-            } catch (err: any) {
-                stopLoading();
-                 if(err.message?.includes("Requested entity was not found")) {
-                    setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
-                    setApiKeyReady(false);
-                    setShowApiKeyDialog(true);
-                } else {
-                    setError('An error occurred while checking video status.');
-                }
-                console.error(err);
-            }
-        }, 10000);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -134,22 +75,31 @@ const DanceGenerator: React.FC<DanceGeneratorProps> = ({ onShare }) => {
         setError(null);
         setVideoUrl(null);
         setIsSaved(false);
-        startLoadingMessages();
+        
+        let msgIdx = 0;
+        const msgInterval = setInterval(() => {
+            msgIdx = (msgIdx + 1) % VEO_LOADING_MESSAGES.length;
+            setLoadingMessage(VEO_LOADING_MESSAGES[msgIdx]);
+        }, 3000);
 
         try {
             const prompt = `A video of a ${characterDescription} performing a ${danceStyle} dance in ${setting}.`;
-            const operation = await generateVideoFromPrompt(prompt, aspectRatio, false); // use standard quality for speed
-            handlePolling(operation);
+            const operation = await generateVideoFromPrompt(prompt, aspectRatio, false); 
+            
+            const blob = await processVideoOperation(operation);
+            setVideoUrl(URL.createObjectURL(blob));
+
         } catch (err: any) {
-            stopLoading();
             if(err.message?.includes("Requested entity was not found")) {
                 setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
                 setApiKeyReady(false);
                 setShowApiKeyDialog(true);
             } else {
-                setError('Failed to start video generation. Please check your prompt and try again.');
+                setError('Failed to generate dance. ' + err.message);
             }
-            console.error(err);
+        } finally {
+            clearInterval(msgInterval);
+            setLoading(false);
         }
     };
     

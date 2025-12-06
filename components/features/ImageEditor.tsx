@@ -1,17 +1,16 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { editImage } from '../../services/geminiService';
 import ImageUploader from '../common/ImageUploader';
-import { fileToBase64 } from '../../utils';
+import { fileToBase64, addQrCodeToImage } from '../../utils';
 import Loader from '../common/Loader';
-import QRCode from 'qrcode';
 
 interface ImageEditorProps {
     onShare: (options: { contentUrl: string; contentText: string; contentType: 'image' }) => void;
 }
 
 // --- Tool Definitions ---
-type ToolCategory = 'AI Magic' | 'Artistic' | 'Adjust' | 'Geometry' | 'Convert' | 'Elements' | 'Text';
+type ToolCategory = 'AI Magic' | 'Design' | 'Product' | 'Adjust' | 'Geometry';
 
 interface PhotoTool {
     id: string;
@@ -26,394 +25,216 @@ interface PhotoTool {
 
 const PHOTO_TOOLS: PhotoTool[] = [
     // --- AI Magic ---
-    { id: 'object-edit', name: 'Object Editor', category: 'AI Magic', icon: '🪄', prompt: 'Change the [Object] to [New Object]. Maintain perspective and lighting.' },
-    { id: 'enhancer', name: 'AI Enhancer', category: 'AI Magic', icon: '✨', prompt: 'Enhance this photo, improve clarity, fix lighting, and remove noise to make it high definition.' },
-    { id: 'remove-bg', name: 'BG Remover', category: 'AI Magic', icon: '✂️', prompt: 'Remove the background from this image, leaving only the main subject on a transparent background.' },
-    { id: 'magic-eraser', name: 'Magic Eraser', category: 'AI Magic', icon: '🧽', prompt: 'Clean up this picture, remove distractions and blemishes.' },
-    { id: 'upscaler', name: 'AI Upscaler', category: 'AI Magic', icon: '📈', prompt: 'Upscale this image to 4k resolution, adding detail and sharpness.' },
-    { id: 'generative-fill', name: 'Generative Fill', category: 'AI Magic', icon: '🖌️', prompt: 'Fill in the missing parts of this image naturally.' },
-    { id: 'colorize', name: 'Colorize', category: 'AI Magic', icon: '🎨', prompt: 'Colorize this black and white photo realistically.' },
-    { id: 'packaging-mockup', name: 'Packaging Mockup', category: 'AI Magic', icon: '📦', prompt: 'Place this design onto a realistic box packaging mockup in a studio setting.' },
-
-    // --- Artistic ---
-    { id: 'cartoon', name: 'Cartoon Style', category: 'Artistic', icon: '🤡', prompt: 'Convert this photo into a high-quality cartoon style.' },
-    { id: 'anime', name: 'Anime Style', category: 'Artistic', icon: '🎌', prompt: 'Transform this image into an anime style illustration.' },
-    { id: 'sketch', name: 'Pencil Sketch', category: 'Artistic', icon: '✏️', prompt: 'Convert this photo into a detailed pencil sketch.' },
-    { id: 'cyberpunk', name: 'Cyberpunk', category: 'Artistic', icon: '🤖', prompt: 'Apply a futuristic cyberpunk aesthetic with neon lights.' },
-    { id: 'oil-painting', name: 'Oil Painting', category: 'Artistic', icon: '🖼️', prompt: 'Transform this image into a classic oil painting.' },
+    { id: 'object-edit', name: 'Object Replace', category: 'AI Magic', icon: '🪄', prompt: 'Change the [Object] to [New Object]. Maintain perspective and lighting.' },
+    { id: 'remove-bg', name: 'Remove BG', category: 'AI Magic', icon: '✂️', prompt: 'Remove the background from this image, leaving only the main subject on a transparent background.' },
+    { id: 'generative-fill', name: 'Magic Fill', category: 'AI Magic', icon: '🖌️', prompt: 'Fill in the missing parts of this image naturally.' },
+    { id: 'style-transfer', name: 'Style Transfer', category: 'AI Magic', icon: '🎨', prompt: 'Transform this image into the style of [Style].' },
     
     // --- Adjust (CSS) ---
     { id: 'brighten', name: 'Brighten', category: 'Adjust', icon: '☀️', cssFilter: 'brightness(1.2)' },
     { id: 'darken', name: 'Darken', category: 'Adjust', icon: '🌙', cssFilter: 'brightness(0.8)' },
-    { id: 'blur', name: 'Blur', category: 'Adjust', icon: '💧', cssFilter: 'blur(4px)' },
-    { id: 'grayscale', name: 'Grayscale', category: 'Adjust', icon: '🗿', cssFilter: 'grayscale(100%) contrast(1.2)' },
-    { id: 'invert', name: 'Invert', category: 'Adjust', icon: '🔄', cssFilter: 'invert(100%)' },
+    { id: 'contrast', name: 'Contrast', category: 'Adjust', icon: '🌗', cssFilter: 'contrast(1.2)' },
+    { id: 'grayscale', name: 'B&W', category: 'Adjust', icon: '🗿', cssFilter: 'grayscale(100%)' },
 
     // --- Geometry (CSS) ---
-    { id: 'rotate', name: 'Rotate', category: 'Geometry', icon: '🔃', cssTransform: 'rotate(90deg)' },
+    { id: 'rotate', name: 'Rotate 90°', category: 'Geometry', icon: '🔃', cssTransform: 'rotate(90deg)' },
     { id: 'flip', name: 'Flip H', category: 'Geometry', icon: '↔️', cssTransform: 'scaleX(-1)' },
-    { id: 'circle-crop', name: 'Circle Crop', category: 'Geometry', icon: '⭕', action: 'setCircle' },
-
-    // --- Convert (Functionality) ---
-    { id: 'jpg-png', name: 'JPG to PNG', category: 'Convert', icon: '📄', action: 'convert-png' },
-    { id: 'png-jpg', name: 'PNG to JPG', category: 'Convert', icon: '🖼️', action: 'convert-jpg' },
 ];
 
-const addQrCodeToImage = (imageBase64: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-        const verificationUrl = `https://aicreativesuite.dev/verify?id=${uniqueId}`;
-
-        const baseImage = new Image();
-        baseImage.crossOrigin = 'anonymous';
-        baseImage.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = baseImage.width;
-            canvas.height = baseImage.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return reject('Could not get canvas context');
-
-            ctx.drawImage(baseImage, 0, 0);
-
-            QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: 'H', margin: 1, width: 128 }, (err, qrUrl) => {
-                if (err) return reject(err);
-
-                const qrImage = new Image();
-                qrImage.crossOrigin = 'anonymous';
-                qrImage.onload = () => {
-                    const qrSize = Math.max(64, Math.floor(baseImage.width * 0.1));
-                    const padding = qrSize * 0.1;
-                    const x = canvas.width - qrSize - padding;
-                    const y = canvas.height - qrSize - padding;
-                    
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                    ctx.fillRect(x - (padding / 2), y - (padding / 2), qrSize + padding, qrSize + padding);
-                    ctx.drawImage(qrImage, x, y, qrSize, qrSize);
-                    resolve(canvas.toDataURL('image/png'));
-                };
-                qrImage.onerror = reject;
-                qrImage.src = qrUrl;
-            });
-        };
-        baseImage.onerror = reject;
-        baseImage.src = `data:image/png;base64,${imageBase64}`;
-    });
-};
+const LayerItem: React.FC<{ name: string; active?: boolean; visible?: boolean }> = ({ name, active, visible = true }) => (
+    <div className={`flex items-center justify-between p-2 rounded-lg mb-1 cursor-pointer ${active ? 'bg-cyan-900/30 border border-cyan-500/30' : 'hover:bg-slate-800'}`}>
+        <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border border-slate-600 rounded bg-slate-700"></div>
+            <span className={`text-xs ${active ? 'text-cyan-400 font-bold' : 'text-slate-400'}`}>{name}</span>
+        </div>
+        <button className="text-slate-500 hover:text-white">
+            {visible ? '👁️' : '🚫'}
+        </button>
+    </div>
+);
 
 const ImageEditor: React.FC<ImageEditorProps> = ({ onShare }) => {
     const [prompt, setPrompt] = useState('');
     const [originalImage, setOriginalImage] = useState<File | null>(null);
     const [editedImage, setEditedImage] = useState<string | null>(null);
-    const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const [addQr, setAddQr] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isSaved, setIsSaved] = useState(false);
+    const [activeToolId, setActiveToolId] = useState<string | null>(null);
     
-    // UI State
-    const [activeCategory, setActiveCategory] = useState<ToolCategory>('AI Magic');
-    const [searchTerm, setSearchTerm] = useState('');
+    // Visual State
+    const [cssFilters, setCssFilters] = useState<string>('');
+    const [rotation, setRotation] = useState(0);
+    const [flipH, setFlipH] = useState(false);
     
-    // Live CSS States
-    const [activeFilter, setActiveFilter] = useState('');
-    const [activeTransform, setActiveTransform] = useState('');
-    const [isCircle, setIsCircle] = useState(false);
-    const [convertFormat, setConvertFormat] = useState<string | null>(null);
+    // For Object Editor
+    const [targetObject, setTargetObject] = useState('');
+    const [replacementObject, setReplacementObject] = useState('');
 
-    const handleSubmit = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+    const handleToolClick = async (tool: PhotoTool) => {
+        setActiveToolId(tool.id);
         
-        if (!originalImage) {
-            setError('Please upload an image first.');
+        if (tool.cssFilter) {
+            setCssFilters(prev => prev.includes(tool.cssFilter!) ? prev.replace(tool.cssFilter!, '') : prev + ' ' + tool.cssFilter);
             return;
         }
+        if (tool.id === 'rotate') { setRotation(prev => prev + 90); return; }
+        if (tool.id === 'flip') { setFlipH(prev => !prev); return; }
 
-        if (convertFormat) {
-            handleDownload(convertFormat);
-            return;
+        if (tool.prompt) {
+            setPrompt(tool.prompt);
         }
+    };
 
-        if (!prompt) {
-            setError('Please select a tool or enter an instruction.');
-            return;
-        }
+    const handleProcess = async () => {
+        if (!originalImage) { setError('Please upload an image first.'); return; }
+        if (!prompt) { setError('Please describe the edit.'); return; }
 
         setLoading(true);
         setError(null);
         setEditedImage(null);
-        setIsSaved(false);
 
         try {
-            const imageBase64 = await fileToBase64(originalImage);
-            let finalPrompt = prompt;
+            const base64 = await fileToBase64(originalImage);
             
-            // If Object Editor is generic, force user to elaborate
-            if (prompt.includes('[Object]')) {
-                 // Fallback or specific logic could go here, but UI allows editing textarea
+            let finalPrompt = prompt;
+            if (activeToolId === 'object-edit') {
+                if (!targetObject || !replacementObject) throw new Error("Please specify objects.");
+                finalPrompt = prompt.replace('[Object]', targetObject).replace('[New Object]', replacementObject);
+            } else if (activeToolId === 'style-transfer') {
+                 if (!replacementObject) throw new Error("Please specify a style.");
+                 finalPrompt = prompt.replace('[Style]', replacementObject);
             }
 
-            const resultBase64 = await editImage(finalPrompt, imageBase64, originalImage.type);
+            const resultBase64 = await editImage(finalPrompt, base64, originalImage.type);
+            
             if (resultBase64) {
-                if (addQr) {
-                    const imageWithQr = await addQrCodeToImage(resultBase64);
-                    setEditedImage(imageWithQr);
-                } else {
-                    setEditedImage(`data:image/png;base64,${resultBase64}`);
-                }
+                const resultWithQr = await addQrCodeToImage(resultBase64);
+                setEditedImage(resultWithQr);
             } else {
-                throw new Error("The model did not return an image.");
+                throw new Error("No image returned from API.");
             }
-        } catch (err) {
-            setError('Failed to process image. Please try again.');
-            console.error(err);
+        } catch (err: any) {
+            setError(err.message || 'Failed to edit image.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleImageUpload = (file: File) => {
-        setOriginalImage(file);
-        setEditedImage(null);
-        setPreviewImage(URL.createObjectURL(file));
-        setError(null);
-        setIsSaved(false);
-        setActiveFilter('');
-        setActiveTransform('');
-        setIsCircle(false);
-        setConvertFormat(null);
-    };
-
-    const handleImageClear = () => {
-        setOriginalImage(null);
-        setEditedImage(null);
-        setPreviewImage(null);
-        setError(null);
-        setPrompt('');
-        setIsSaved(false);
-        setActiveFilter('');
-        setActiveTransform('');
-        setIsCircle(false);
-        setConvertFormat(null);
-    };
-    
-    const handleSave = () => {
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 2000);
-    };
-
-    const handleToolClick = (tool: PhotoTool) => {
-        setError(null);
-        setConvertFormat(null);
-
-        if (tool.prompt) {
-            setPrompt(tool.prompt);
-        }
-
-        if (tool.cssFilter) {
-            setActiveFilter(prev => prev === tool.cssFilter ? '' : tool.cssFilter!); 
-        }
-
-        if (tool.cssTransform) {
-            setActiveTransform(prev => prev === tool.cssTransform ? '' : tool.cssTransform!);
-        }
-
-        if (tool.action) {
-            if (tool.action === 'setCircle') {
-                setIsCircle(!isCircle);
-            }
-            if (tool.action.startsWith('convert-')) {
-                const format = tool.action.split('-')[1];
-                setConvertFormat(format);
-                setPrompt(`Convert image to ${format.toUpperCase()}`);
-            }
-        }
-    };
-
-    const handleDownload = (formatOverride?: string) => {
-        const link = document.createElement('a');
-        const imageSrc = editedImage || previewImage;
-        if (!imageSrc) return;
-
-        if ((activeFilter || activeTransform || isCircle || formatOverride) && !editedImage && previewImage) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.src = previewImage;
-            img.onload = () => {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                
-                if (ctx) {
-                    if (isCircle) {
-                        ctx.beginPath();
-                        ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2, 0, Math.PI * 2);
-                        ctx.clip();
-                    }
-                    
-                    if (activeFilter) {
-                        ctx.filter = activeFilter;
-                    }
-
-                    if (activeTransform.includes('scaleX(-1)')) {
-                        ctx.translate(canvas.width, 0);
-                        ctx.scale(-1, 1);
-                    }
-                    if (activeTransform.includes('rotate(90deg)')) {
-                         // Simple rotation skipped for brevity in canvas logic
-                    }
-
-                    ctx.drawImage(img, 0, 0);
-                    
-                    let mimeType = 'image/png';
-                    let ext = 'png';
-                    if (formatOverride === 'jpg') { mimeType = 'image/jpeg'; ext = 'jpg'; }
-
-                    const dataUrl = canvas.toDataURL(mimeType);
-                    link.href = dataUrl;
-                    link.download = `edited-image.${ext}`;
-                    link.click();
-                }
-            };
-        } else {
-            link.href = imageSrc;
-            link.download = `image-${Date.now()}.${formatOverride || 'png'}`;
-            link.click();
-        }
-    };
-
-    const filteredTools = PHOTO_TOOLS.filter(t => 
-        (t.category === activeCategory) && 
-        t.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     return (
-        <div className="space-y-8 h-[calc(100vh-10rem)] flex flex-col">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
-                
-                {/* Left: Canvas & Upload */}
-                <div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
-                    <div className="flex-shrink-0">
-                        <ImageUploader 
-                            onImageUpload={handleImageUpload}
-                            onImageClear={handleImageClear} 
-                        />
-                    </div>
-                    
-                    {/* Main Preview Area */}
-                    <div className="flex-grow bg-slate-900/50 border border-slate-700 rounded-2xl p-6 flex items-center justify-center relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-grid-slate-800/20 [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none"></div>
+        <div className="flex h-[calc(100vh-10rem)] min-h-[600px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+            
+            {/* LEFT TOOLBAR */}
+            <div className="w-16 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-4 gap-4 z-20">
+                {PHOTO_TOOLS.map(tool => (
+                    <button
+                        key={tool.id}
+                        onClick={() => handleToolClick(tool)}
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl transition-all ${activeToolId === tool.id ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                        title={tool.name}
+                    >
+                        {tool.icon}
+                    </button>
+                ))}
+            </div>
 
-                        {loading && <Loader message="Processing magic..." />}
-                        
-                        {!loading && (editedImage || previewImage) ? (
-                            <div className="relative max-w-full max-h-full flex flex-col items-center">
-                                <img 
-                                    src={editedImage || previewImage!} 
-                                    alt="Preview" 
-                                    className="max-w-full max-h-[50vh] object-contain transition-all duration-300"
-                                    style={{
-                                        filter: !editedImage ? activeFilter : 'none',
-                                        transform: !editedImage ? activeTransform : 'none',
-                                        borderRadius: (!editedImage && isCircle) ? '50%' : '8px'
-                                    }}
-                                />
-                                
-                                <div className="absolute bottom-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-2 rounded-xl backdrop-blur-sm">
-                                    <button onClick={() => handleDownload(convertFormat || undefined)} className="bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-600 transition">
-                                        Download {convertFormat ? convertFormat.toUpperCase() : ''}
-                                    </button>
-                                    <button onClick={handleSave} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${isSaved ? 'bg-green-600 text-white' : 'bg-slate-700 text-white hover:bg-slate-600'}`}>
-                                        {isSaved ? 'Saved' : 'Save'}
-                                    </button>
-                                    <button onClick={() => onShare({ contentUrl: editedImage || previewImage!, contentText: prompt, contentType: 'image' })} className="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-purple-500 transition">
-                                        Share
-                                    </button>
+            {/* CENTER CANVAS */}
+            <div className="flex-grow relative bg-grid-slate-900/50 flex items-center justify-center overflow-hidden p-8">
+                {loading && (
+                    <div className="absolute inset-0 bg-black/70 z-50 flex items-center justify-center backdrop-blur-sm">
+                        <Loader message="AI Magic in progress..." />
+                    </div>
+                )}
+                
+                <div 
+                    className="relative max-w-full max-h-full transition-all duration-300 shadow-2xl"
+                    style={{ 
+                        filter: cssFilters, 
+                        transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1})` 
+                    }}
+                >
+                    {editedImage ? (
+                        <img src={editedImage} alt="Edited" className="max-w-full max-h-[calc(100vh-12rem)] object-contain" />
+                    ) : originalImage ? (
+                        <img src={URL.createObjectURL(originalImage)} alt="Original" className="max-w-full max-h-[calc(100vh-12rem)] object-contain" />
+                    ) : (
+                        <div className="text-center text-slate-600 opacity-50 border-2 border-dashed border-slate-700 rounded-xl p-12">
+                            <p>Upload an image to start editing</p>
+                        </div>
+                    )}
+                </div>
+                
+                {/* Floating Bottom Bar for Zoom/Undo (Simulated) */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-800/90 backdrop-blur rounded-full px-4 py-2 flex gap-4 text-slate-300 text-sm border border-slate-700">
+                    <button className="hover:text-white">-</button>
+                    <span>100%</span>
+                    <button className="hover:text-white">+</button>
+                    <div className="w-px bg-slate-600 h-4 my-auto"></div>
+                    <button className="hover:text-white">Undo</button>
+                    <button className="hover:text-white">Redo</button>
+                </div>
+            </div>
+
+            {/* RIGHT PROPERTIES PANEL */}
+            <div className="w-80 flex-shrink-0 bg-slate-900 border-l border-slate-800 flex flex-col z-20">
+                <div className="p-4 border-b border-slate-800">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Properties</h3>
+                </div>
+                
+                <div className="p-4 overflow-y-auto custom-scrollbar flex-grow space-y-6">
+                    {/* Upload Section */}
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Source Asset</label>
+                        <ImageUploader onImageUpload={setOriginalImage} onImageClear={() => { setOriginalImage(null); setEditedImage(null); }} />
+                    </div>
+
+                    {/* Dynamic Tool Settings */}
+                    {activeToolId && (
+                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 animate-fadeIn">
+                            <h4 className="text-xs font-bold text-cyan-400 uppercase mb-3 flex items-center gap-2">
+                                {PHOTO_TOOLS.find(t => t.id === activeToolId)?.icon}
+                                {PHOTO_TOOLS.find(t => t.id === activeToolId)?.name} Settings
+                            </h4>
+                            
+                            {activeToolId === 'object-edit' && (
+                                <div className="space-y-3 mb-3">
+                                    <input type="text" placeholder="Select Object (e.g. Cat)" value={targetObject} onChange={e => setTargetObject(e.target.value)} className="w-full bg-slate-950 border border-slate-600 rounded p-2 text-xs text-white" />
+                                    <input type="text" placeholder="Replace With (e.g. Dog)" value={replacementObject} onChange={e => setReplacementObject(e.target.value)} className="w-full bg-slate-950 border border-slate-600 rounded p-2 text-xs text-white" />
                                 </div>
+                            )}
+
+                            {activeToolId === 'style-transfer' && (
+                                <div className="mb-3">
+                                    <input type="text" placeholder="Enter Style (e.g. Van Gogh)" value={replacementObject} onChange={e => setReplacementObject(e.target.value)} className="w-full bg-slate-950 border border-slate-600 rounded p-2 text-xs text-white" />
+                                </div>
+                            )}
+
+                            <div className="mb-3">
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Instruction</label>
+                                <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} className="w-full bg-slate-950 border border-slate-600 rounded p-2 text-xs text-white resize-none" />
                             </div>
-                        ) : (
-                            !loading && <div className="text-slate-500 flex flex-col items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 opacity-20 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                <p>Upload an image to start editing</p>
-                            </div>
-                        )}
+
+                            <button onClick={handleProcess} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-lg text-xs transition shadow-lg">Apply Effect</button>
+                            {error && <p className="text-red-400 text-[10px] mt-2 text-center">{error}</p>}
+                        </div>
+                    )}
+
+                    {/* Layers Panel */}
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Layers</label>
+                            <button className="text-[10px] text-cyan-400 hover:text-white">+ New</button>
+                        </div>
+                        <div className="bg-slate-950/50 p-2 rounded-xl border border-slate-800 h-32 overflow-y-auto">
+                            {editedImage && <LayerItem name="AI Generated Layer" active />}
+                            {originalImage && <LayerItem name="Background Image" />}
+                        </div>
                     </div>
                 </div>
 
-                {/* Right: Toolkit */}
-                <div className="lg:col-span-1 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 flex flex-col overflow-hidden shadow-xl">
-                    <div className="p-4 border-b border-slate-800 bg-slate-950">
-                        <h3 className="font-bold text-white mb-3">Editor Toolkit</h3>
-                        <input 
-                            type="text" 
-                            placeholder="Search tools..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:ring-2 focus:ring-cyan-500 mb-3"
-                        />
-                        <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                            {['AI Magic', 'Artistic', 'Adjust', 'Geometry', 'Convert'].map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setActiveCategory(cat as ToolCategory)}
-                                    className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${activeCategory === cat ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="flex-grow overflow-y-auto p-4 custom-scrollbar">
-                        <div className="grid grid-cols-2 gap-3">
-                            {filteredTools.map(tool => (
-                                <button
-                                    key={tool.id}
-                                    onClick={() => handleToolClick(tool)}
-                                    className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800 border border-slate-700 hover:border-cyan-500 hover:bg-slate-700 transition group text-center h-24"
-                                >
-                                    <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">{tool.icon}</span>
-                                    <span className="text-xs font-medium text-slate-300 group-hover:text-white leading-tight">{tool.name}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="p-4 border-t border-slate-800 bg-slate-950 space-y-3">
-                        <div>
-                            <label htmlFor="edit-prompt" className="block text-xs font-bold text-slate-500 uppercase mb-1">Instruction</label>
-                            <textarea
-                                id="edit-prompt"
-                                rows={2}
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-cyan-500 resize-none"
-                                placeholder="Select a tool or type a natural language edit instruction..."
-                            />
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 mb-2">
-                            <input id="add-qr" type="checkbox" checked={addQr} onChange={(e) => setAddQr(e.target.checked)} className="h-3 w-3 rounded bg-slate-800 text-cyan-600" />
-                            <label htmlFor="add-qr" className="text-xs text-slate-400">Add Watermark</label>
-                        </div>
-
-                        {convertFormat ? (
-                            <button
-                                onClick={() => handleDownload(convertFormat)}
-                                className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition shadow-lg"
-                            >
-                                Download as {convertFormat.toUpperCase()}
-                            </button>
-                        ) : (
-                            <button
-                                onClick={() => handleSubmit()}
-                                disabled={loading || !originalImage}
-                                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 rounded-lg transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {loading ? 'Processing...' : 'Apply Edit'}
-                            </button>
-                        )}
-                        {error && <p className="text-red-400 text-xs text-center">{error}</p>}
-                    </div>
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-2">
+                    <button className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-2 rounded-lg border border-slate-700">Export</button>
+                    <button onClick={() => editedImage && onShare({ contentUrl: editedImage, contentText: prompt, contentType: 'image' })} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2 rounded-lg">Share</button>
                 </div>
             </div>
         </div>

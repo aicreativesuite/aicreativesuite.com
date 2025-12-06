@@ -5,7 +5,7 @@ import Loader from '../common/Loader';
 import { GenerateContentResponse, GroundingChunk } from '@google/genai';
 import { Remarkable } from 'remarkable';
 
-const md = new Remarkable({ html: true });
+const md = new Remarkable({ html: false });
 
 const GroundingChunkDisplay: React.FC<{ chunk: GroundingChunk }> = ({ chunk }) => {
     if (chunk.web) {

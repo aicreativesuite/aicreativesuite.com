@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 
 interface ProfileAndSettingsProps {
     onShare?: (options: any) => void;
+    onSignOut?: () => void;
 }
 
-const ProfileAndSettings: React.FC<ProfileAndSettingsProps> = () => {
+const ProfileAndSettings: React.FC<ProfileAndSettingsProps> = ({ onSignOut }) => {
     const [loading, setLoading] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     
@@ -54,7 +55,7 @@ const ProfileAndSettings: React.FC<ProfileAndSettingsProps> = () => {
         setLoading('signout');
         setTimeout(() => {
             setLoading(null);
-            showToast("You have been signed out safely.");
+            if (onSignOut) onSignOut();
         }, 1000);
     };
 

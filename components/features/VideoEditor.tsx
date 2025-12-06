@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { generateVideoFromPrompt, extendVideo, pollVideoOperation } from '../../services/geminiService';
+import React, { useState, useEffect } from 'react';
+import { generateVideoFromPrompt, extendVideo, processVideoOperation, pollVideoOperation } from '../../services/geminiService';
 import { VIDEO_ASPECT_RATIOS, VEO_LOADING_MESSAGES, VIDEO_EXTENSION_SUGGESTIONS } from '../../constants';
 import Loader from '../common/Loader';
 import ApiKeyDialog from '../common/ApiKeyDialog';
@@ -28,8 +28,6 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
     // Common state
     const [loadingMessage, setLoadingMessage] = useState(VEO_LOADING_MESSAGES[0]);
     const [error, setError] = useState<string | null>(null);
-    const pollIntervalRef = useRef<number | null>(null);
-    const messageIntervalRef = useRef<number | null>(null);
     
     // API Key State
     const [apiKeyReady, setApiKeyReady] = useState(false);
@@ -43,21 +41,12 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
                 if (await window.aistudio.hasSelectedApiKey()) {
                     setApiKeyReady(true);
                     setShowApiKeyDialog(false);
-                } else {
-                    setApiKeyReady(false);
-                    setShowApiKeyDialog(true);
                 }
             } else {
                 setApiKeyReady(true);
-                setShowApiKeyDialog(false);
             }
         };
         checkKey();
-
-        return () => {
-            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-            if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
-        };
     }, []);
 
     const handleSelectKey = async () => {
@@ -73,49 +62,11 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
     const startLoadingMessages = () => {
         let i = 0;
         setLoadingMessage(VEO_LOADING_MESSAGES[0]);
-        messageIntervalRef.current = window.setInterval(() => {
+        const interval = setInterval(() => {
             i = (i + 1) % VEO_LOADING_MESSAGES.length;
             setLoadingMessage(VEO_LOADING_MESSAGES[i]);
         }, 3000);
-    };
-
-    const stopLoading = () => {
-        setLoadingInitial(false);
-        setLoadingExtension(false);
-        if (messageIntervalRef.current) {
-            clearInterval(messageIntervalRef.current);
-            messageIntervalRef.current = null;
-        }
-        if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-        }
-    };
-
-    const handleApiError = (err: any) => {
-        stopLoading();
-        if (err.message?.includes("Requested entity was not found")) {
-            setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
-            setApiKeyReady(false);
-            setShowApiKeyDialog(true);
-        } else {
-            setError('Failed to start video generation. Please check your prompt and try again.');
-        }
-        console.error(err);
-    };
-    
-    const handlePolling = (operation: any, onComplete: (finalOp: any) => void) => {
-        let op = operation;
-        pollIntervalRef.current = window.setInterval(async () => {
-            try {
-                op = await pollVideoOperation(op);
-                if (op.done) {
-                    onComplete(op);
-                }
-            } catch (err: any) {
-                handleApiError(err);
-            }
-        }, 10000);
+        return interval;
     };
 
     const handleInitialSubmit = async (e: React.FormEvent) => {
@@ -136,25 +87,39 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
         setInitialVideoUrl(null);
         setExtendedVideoUrl(null);
         setInitialOperation(null);
-        startLoadingMessages();
+        const msgInterval = startLoadingMessages();
 
         try {
             const operation = await generateVideoFromPrompt(initialPrompt, aspectRatio, true);
-            handlePolling(operation, async (finalOp) => {
-                stopLoading();
-                const uri = finalOp.response?.generatedVideos?.[0]?.video?.uri;
-                if (uri) {
-                    const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
-                    const blob = await response.blob();
-                    setInitialVideoUrl(URL.createObjectURL(blob));
-                    setInitialOperation(finalOp);
-                    setActiveMode('extend'); // Auto-switch to extend mode
-                } else {
-                    setError('Base video generation finished, but no video URL was returned.');
-                }
-            });
+            let op = operation;
+            
+            while (!op.done) {
+                await new Promise(r => setTimeout(r, 5000));
+                op = await pollVideoOperation(op);
+            }
+            
+            const uri = op.response?.generatedVideos?.[0]?.video?.uri;
+            if (uri) {
+                const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
+                const blob = await response.blob();
+                setInitialVideoUrl(URL.createObjectURL(blob));
+                setInitialOperation(op);
+                setActiveMode('extend');
+            } else {
+                setError('Base video generation finished, but no video URL was returned.');
+            }
+
         } catch (err: any) {
-            handleApiError(err);
+            if (err.message?.includes("Requested entity was not found")) {
+                setError("API Key Error. Please ensure billing is enabled.");
+                setApiKeyReady(false);
+                setShowApiKeyDialog(true);
+            } else {
+                setError('Failed to generate base video.');
+            }
+        } finally {
+            clearInterval(msgInterval);
+            setLoadingInitial(false);
         }
     };
 
@@ -178,29 +143,32 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
         setLoadingExtension(true);
         setError(null);
         setExtendedVideoUrl(null);
-        startLoadingMessages();
+        const msgInterval = startLoadingMessages();
 
         try {
             const previousVideo = initialOperation.response.generatedVideos[0].video;
             const operation = await extendVideo(extensionPrompt, previousVideo, aspectRatio);
-            handlePolling(operation, async (finalOp) => {
-                stopLoading();
-                const uri = finalOp.response?.generatedVideos?.[0]?.video?.uri;
-                if (uri) {
-                    const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
-                    const blob = await response.blob();
-                    setExtendedVideoUrl(URL.createObjectURL(blob));
-                } else {
-                    setError('Video extension finished, but no video URL was returned.');
-                }
-            });
+            
+            const blob = await processVideoOperation(operation);
+            setExtendedVideoUrl(URL.createObjectURL(blob));
+
         } catch (err: any) {
-            handleApiError(err);
+            if (err.message?.includes("Requested entity was not found")) {
+                setError("API Key Error.");
+                setApiKeyReady(false);
+                setShowApiKeyDialog(true);
+            } else {
+                setError('Failed to extend video.');
+            }
+        } finally {
+            clearInterval(msgInterval);
+            setLoadingExtension(false);
         }
     };
     
     const handleReset = () => {
-        stopLoading();
+        setLoadingInitial(false);
+        setLoadingExtension(false);
         setInitialPrompt('');
         setExtensionPrompt('');
         setInitialOperation(null);
@@ -215,7 +183,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
             <ApiKeyDialog show={showApiKeyDialog} onSelectKey={handleSelectKey} />
             
             <div className="flex flex-col xl:flex-row gap-6 h-[calc(100vh-140px)] min-h-[600px]">
-                {/* Controls Column - Fixed width on desktop for better space utilization */}
+                {/* Controls Column */}
                 <div className="w-full xl:w-80 flex-shrink-0 flex flex-col gap-4">
                     <div className="bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 flex flex-col h-full overflow-y-auto custom-scrollbar shadow-xl">
                          <div className="flex justify-between items-center mb-6">
@@ -340,10 +308,9 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
                     </div>
                 </div>
 
-                {/* Preview Column - Takes remaining space */}
+                {/* Preview Column */}
                 <div className="flex-grow flex flex-col gap-4 min-h-0">
                     <div className="flex-grow bg-slate-900/50 rounded-2xl border border-slate-800 p-4 overflow-hidden flex flex-col relative">
-                         {/* Empty State or Split View */}
                          {(!initialVideoUrl && !loadingInitial) ? (
                              <div className="flex-grow flex flex-col items-center justify-center text-slate-600 opacity-50">
                                  <div className="w-24 h-24 rounded-full bg-slate-800 mb-4 flex items-center justify-center">
@@ -354,7 +321,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
                          ) : (
                              <div className={`grid gap-4 h-full min-h-0 ${extendedVideoUrl || loadingExtension ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
                                  
-                                 {/* Base Video - Only show if we don't have an extension yet OR if we are on large screens */}
+                                 {/* Base Video */}
                                  <div className="flex flex-col h-full bg-slate-950/50 rounded-xl border border-slate-800 overflow-hidden">
                                      <div className="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900">
                                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Base Clip</span>
@@ -372,7 +339,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ onShare }) => {
                                      </div>
                                  </div>
 
-                                 {/* Extended Video - Show if it exists or is loading, or if we are in extend mode to show placeholder */}
+                                 {/* Extended Video */}
                                  {(extendedVideoUrl || loadingExtension || activeMode === 'extend') && (
                                      <div className="flex flex-col h-full bg-slate-950/50 rounded-xl border border-slate-800 overflow-hidden relative">
                                           <div className="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900">

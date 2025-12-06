@@ -3,52 +3,11 @@ import React, { useState } from 'react';
 import { generateImage } from '../../services/geminiService';
 import { ASPECT_RATIOS, AVATAR_HAIR_COLORS, AVATAR_EYE_COLORS, AVATAR_CLOTHING_STYLES, AVATAR_EXPRESSIONS, BACKGROUND_OPTIONS } from '../../constants';
 import Loader from '../common/Loader';
-import QRCode from 'qrcode';
+import { addQrCodeToImage } from '../../utils';
 
 interface AvatarGeneratorProps {
     onShare: (options: { contentUrl: string; contentText: string; contentType: 'image' }) => void;
 }
-
-const addQrCodeToImage = (imageBase64: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-        const verificationUrl = `https://aicreativesuite.dev/verify?id=${uniqueId}`;
-
-        const baseImage = new Image();
-        baseImage.crossOrigin = 'anonymous';
-        baseImage.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = baseImage.width;
-            canvas.height = baseImage.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return reject('Could not get canvas context');
-
-            ctx.drawImage(baseImage, 0, 0);
-
-            QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: 'H', margin: 1, width: 128 }, (err, qrUrl) => {
-                if (err) return reject(err);
-
-                const qrImage = new Image();
-                qrImage.crossOrigin = 'anonymous';
-                qrImage.onload = () => {
-                    const qrSize = Math.max(64, Math.floor(baseImage.width * 0.1));
-                    const padding = qrSize * 0.1;
-                    const x = canvas.width - qrSize - padding;
-                    const y = canvas.height - qrSize - padding;
-                    
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                    ctx.fillRect(x - (padding / 2), y - (padding / 2), qrSize + padding, qrSize + padding);
-                    ctx.drawImage(qrImage, x, y, qrSize, qrSize);
-                    resolve(canvas.toDataURL('image/jpeg'));
-                };
-                qrImage.onerror = reject;
-                qrImage.src = qrUrl;
-            });
-        };
-        baseImage.onerror = reject;
-        baseImage.src = `data:image/jpeg;base64,${imageBase64}`;
-    });
-};
 
 const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ onShare }) => {
     const [prompt, setPrompt] = useState('');

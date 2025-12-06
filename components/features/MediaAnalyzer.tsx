@@ -6,7 +6,7 @@ import Loader from '../common/Loader';
 import { GenerateContentResponse } from '@google/genai';
 import { Remarkable } from 'remarkable';
 
-const md = new Remarkable({ html: true });
+const md = new Remarkable({ html: false });
 
 type Mode = 'image' | 'video' | 'audio';
 

@@ -1,45 +1,17 @@
 
 import React, { useState, useMemo } from 'react';
 import { FEATURES, FeatureId, CATEGORY_DETAILS, PricingIcon, AccountIcon } from './constants';
-import ImageGenerator from './components/features/ImageGenerator';
-import ImageEditor from './components/features/ImageEditor';
-import VideoGenerator from './components/features/VideoGenerator';
-import VoiceChat from './components/features/VoiceChat';
-import Chatbot from './components/features/Chatbot';
-import GroundedSearch from './components/features/GroundedSearch';
-import MediaAnalyzer from './components/features/MediaAnalyzer';
-import AvatarGenerator from './components/features/AvatarGenerator';
-import VideoEditor from './components/features/VideoEditor';
-import SoundStudio from './components/features/SoundStudio';
-import SongsGenerator from './components/features/SongsGenerator';
-import MarketingAssistant from './components/features/MarketingAssistant';
 import Pricing from './components/features/Pricing';
 import ProfileAndSettings from './components/features/ProfileAndSettings';
-import MovieGenerator from './components/features/MovieGenerator';
-import ContentGenerator from './components/features/ContentGenerator';
-import StandupGenerator from './components/features/StandupGenerator';
-import StrandsGenerator from './components/features/StrandsGenerator';
-import DanceGenerator from './components/features/DanceGenerator';
-import TrafficBooster from './components/features/TrafficBooster';
-import AiTrafficBooster from './components/features/AiTrafficBooster';
-import ViralMemeGenerator from './components/features/ViralMemeGenerator';
-import TrendForecaster from './components/features/TrendForecaster';
-import ProductionPlanner from './components/features/ProductionPlanner';
-import GlobalAvatarCreator from './components/features/GlobalAvatarCreator';
-import SmartQuizGenerator from './components/features/SmartQuizGenerator';
-import SlideDeckGenerator from './components/features/SlideDeckGenerator';
-import TextToSpeech from './components/features/TextToSpeech';
-import AudiobookCreator from './components/features/AudiobookCreator';
-import VideoDubber from './components/features/VideoDubber';
-import VoiceLab from './components/features/VoiceLab';
-import RealtimeTranscriber from './components/features/RealtimeTranscriber';
-import BrandKit from './components/features/BrandKit';
-import VideoToolkit from './components/features/VideoToolkit';
-import OfficeSuite from './components/features/OfficeSuite';
-import AutomationHub from './components/features/AutomationHub';
-import DevStudio from './components/features/DevStudio';
-import PodcastGenerator from './components/features/PodcastGenerator';
-import VideoOverview from './components/features/VideoOverview';
+import ImageOS from './components/features/ImageOS';
+import ScriptOS from './components/features/ScriptOS';
+import VideoOS from './components/features/VideoOS';
+import AudioOS from './components/features/AudioOS';
+import ThreeDBuilder from './components/features/ThreeDBuilder';
+import CodeOS from './components/features/CodeOS';
+import BrandOS from './components/features/BrandOS';
+import AutomationOS from './components/features/AutomationOS';
+import AuthScreen from './components/features/AuthScreen';
 import { TrafficBoosterModal } from './components/common/TrafficBoosterModal';
 
 const FeatureCard: React.FC<{ feature: typeof FEATURES[number]; onClick: () => void }> = ({ feature, onClick }) => (
@@ -62,8 +34,19 @@ const FeatureCard: React.FC<{ feature: typeof FEATURES[number]; onClick: () => v
     </div>
 );
 
+const Marketplace = () => (
+    <div className="h-full flex flex-col items-center justify-center text-slate-500 p-8 text-center bg-slate-900/30 rounded-xl border border-slate-800 border-dashed">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+        <h2 className="text-2xl font-bold text-white mb-2">Marketplace Coming Soon</h2>
+        <p className="max-w-md">Browse templates, plugins, models, and assets created by the community.</p>
+    </div>
+);
+
 const App: React.FC = () => {
-    const [activeFeature, setActiveFeature] = useState<FeatureId | null>(null);
+    // Auth State
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    
+    const [activeFeature, setActiveFeature] = useState<FeatureId | 'marketplace' | null>(null);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [trafficBoosterState, setTrafficBoosterState] = useState<{
         show: boolean;
@@ -71,6 +54,16 @@ const App: React.FC = () => {
         contentText?: string | null;
         contentType?: 'image' | 'video' | 'text' | 'audio';
     }>({ show: false });
+
+    // --- Authentication Handlers ---
+    const handleLogin = () => {
+        setIsAuthenticated(true);
+    };
+
+    const handleLogout = () => {
+        setIsAuthenticated(false);
+        setActiveFeature(null);
+    };
 
     const openTrafficBooster = (content: {
         contentUrl?: string | null;
@@ -87,45 +80,17 @@ const App: React.FC = () => {
     const ActiveComponent = useMemo(() => {
         if (!activeFeature) return null;
         switch (activeFeature) {
-            case 'dev-studio': return DevStudio;
-            case 'podcast-generator': return PodcastGenerator;
-            case 'video-overview': return VideoOverview;
-            case 'automation-hub': return AutomationHub;
-            case 'office-suite': return OfficeSuite;
-            case 'video-toolkit': return VideoToolkit;
-            case 'brand-kit': return BrandKit;
-            case 'audiobook-creator': return AudiobookCreator;
-            case 'video-dubber': return VideoDubber;
-            case 'voice-lab': return VoiceLab;
-            case 'realtime-transcriber': return RealtimeTranscriber;
-            case 'text-to-speech': return TextToSpeech;
-            case 'slide-deck': return SlideDeckGenerator;
-            case 'image-generator': return ImageGenerator;
-            case 'image-editor': return ImageEditor;
-            case 'video-generator': return VideoGenerator;
-            case 'global-avatar': return GlobalAvatarCreator;
-            case 'movie-generator': return MovieGenerator;
-            case 'smart-quiz': return SmartQuizGenerator;
-            case 'voice-chat': return VoiceChat;
-            case 'chatbot': return Chatbot;
-            case 'grounded-search': return GroundedSearch;
-            case 'trend-forecaster': return TrendForecaster;
-            case 'media-analyzer': return MediaAnalyzer;
-            case 'avatar-generator': return AvatarGenerator;
-            case 'video-editor': return VideoEditor;
-            case 'sound-studio': return SoundStudio;
-            case 'songs-generator': return SongsGenerator;
-            case 'marketing-assistant': return MarketingAssistant;
-            case 'content-generator': return ContentGenerator;
-            case 'standup-generator': return StandupGenerator;
-            case 'strands-generator': return StrandsGenerator;
-            case 'dance-generator': return DanceGenerator;
-            case 'traffic-booster': return TrafficBooster;
-            case 'ai-traffic-booster': return AiTrafficBooster;
-            case 'viral-meme-generator': return ViralMemeGenerator;
-            case 'production-planner': return ProductionPlanner;
+            case 'image-os': return ImageOS;
+            case 'script-os': return ScriptOS;
+            case 'video-os': return VideoOS;
+            case 'audio-os': return AudioOS;
+            case '3d-os': return ThreeDBuilder;
+            case 'code-os': return CodeOS;
+            case 'brand-os': return BrandOS;
+            case 'automation-os': return AutomationOS;
             case 'pricing': return Pricing;
             case 'profile-settings': return ProfileAndSettings;
+            case 'marketplace': return Marketplace;
             default: return null;
         }
     }, [activeFeature]);
@@ -134,10 +99,10 @@ const App: React.FC = () => {
 
     const categorizedFeatures = useMemo(() => {
         const categories: { [key: string]: (typeof FEATURES[number])[] } = {
-            'Create & Edit': [],
-            'Assist & Analyze': [],
+            'Creative Engines': [],
+            'Technical Engines': [],
         };
-        const order: (keyof typeof categories)[] = ['Create & Edit', 'Assist & Analyze'];
+        const order: (keyof typeof categories)[] = ['Creative Engines', 'Technical Engines'];
 
         for (const feature of FEATURES) {
             if (feature.category in categories) {
@@ -145,10 +110,6 @@ const App: React.FC = () => {
             }
         }
         
-        for (const category in categories) {
-            categories[category].sort((a, b) => a.title.localeCompare(b.title));
-        }
-
         return { order, categories };
     }, []);
 
@@ -176,9 +137,13 @@ const App: React.FC = () => {
         </a>
     );
 
+    // If not authenticated, show the AuthScreen
+    if (!isAuthenticated) {
+        return <AuthScreen onLogin={handleLogin} />;
+    }
 
     return (
-        <div className="h-screen flex flex-col bg-slate-950 font-sans text-slate-100">
+        <div className="h-screen flex flex-col bg-slate-950 font-sans text-slate-100 animate-fadeIn">
             <TrafficBoosterModal
                 show={trafficBoosterState.show}
                 onClose={closeTrafficBooster}
@@ -203,6 +168,9 @@ const App: React.FC = () => {
                     </button>
                 </div>
                 <div className="flex items-center space-x-2">
+                     <a href="#" onClick={(e) => { e.preventDefault(); setActiveFeature('marketplace'); }} title="Marketplace" className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    </a>
                      <a href="#" onClick={(e) => { e.preventDefault(); setActiveFeature('pricing'); }} title="Pricing & Plans" className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
                         <PricingIcon className="w-6 h-6" />
                     </a>
@@ -251,12 +219,12 @@ const App: React.FC = () => {
                     {/* Background pattern */}
                     <div className="absolute inset-0 bg-grid-slate-800/50 [mask-image:linear-gradient(to_bottom,white_4rem,transparent_20rem)]"></div>
                     
-                    <div className="relative">
+                    <div className="relative h-full">
                         {!activeFeature && (
                             <div className="space-y-12">
                                 <div>
-                                    <h1 className="text-4xl font-extrabold text-white mb-2">Welcome to the AI Creative Suite</h1>
-                                    <p className="text-lg text-slate-400 mb-8">Your all-in-one platform for AI-powered content creation. Select a tool to get started.</p>
+                                    <h1 className="text-4xl font-extrabold text-white mb-2">Welcome to AI Creative Suite</h1>
+                                    <p className="text-lg text-slate-400 mb-8">The most advanced creative AI platform ever built.</p>
                                 </div>
                                 {categorizedFeatures.order.map(categoryName => (
                                     <div key={categoryName}>
@@ -275,17 +243,19 @@ const App: React.FC = () => {
                         )}
 
                         {ActiveComponent && activeFeatureDetails && (
-                            <div>
-                                <div className="flex items-center space-x-4 mb-8">
+                            <div className="h-full flex flex-col">
+                                <div className="flex items-center space-x-4 mb-4 flex-shrink-0">
                                     <button onClick={() => setActiveFeature(null)} className="p-2 rounded-full bg-slate-800/70 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>
                                     </button>
                                     <div>
-                                        <h1 className="text-3xl font-bold text-white">{activeFeatureDetails.title}</h1>
-                                        <p className="text-slate-400">{activeFeatureDetails.description}</p>
+                                        <h1 className="text-2xl font-bold text-white">{activeFeatureDetails.title}</h1>
+                                        <p className="text-slate-400 text-sm">{activeFeatureDetails.description}</p>
                                     </div>
                                 </div>
-                                <ActiveComponent onShare={openTrafficBooster} onBack={() => setActiveFeature(null)} />
+                                <div className="flex-grow min-h-0">
+                                    <ActiveComponent onShare={openTrafficBooster} />
+                                </div>
                             </div>
                         )}
                          {ActiveComponent && !activeFeatureDetails && activeFeature === 'pricing' && (
@@ -295,7 +265,12 @@ const App: React.FC = () => {
                         )}
                         {ActiveComponent && !activeFeatureDetails && activeFeature === 'profile-settings' && (
                              <div>
-                                <ProfileAndSettings />
+                                <ProfileAndSettings onSignOut={handleLogout} />
+                            </div>
+                        )}
+                        {ActiveComponent && !activeFeatureDetails && activeFeature === 'marketplace' && (
+                             <div className="h-full">
+                                <Marketplace />
                             </div>
                         )}
                     </div>

@@ -151,9 +151,32 @@ export const extendVideo = async (prompt: string, video: any, aspectRatio: '16:9
     });
 };
 
+/**
+ * Consolidated function to handle Video polling logic loop
+ * This replaces repeated setInterval logic in components
+ */
+export const processVideoOperation = async (initialOperation: any): Promise<Blob> => {
+    const ai = getGeminiAI();
+    let op = initialOperation;
+    
+    // Poll loop
+    while (!op.done) {
+        await new Promise(resolve => setTimeout(resolve, 5000)); // 5s poll interval
+        op = await ai.operations.getVideosOperation({ operation: op });
+    }
+    
+    // Check for success
+    const uri = op.response?.generatedVideos?.[0]?.video?.uri;
+    if (!uri) throw new Error("Video generation finished, but no video URI was returned.");
+    
+    // Fetch result
+    const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
+    if (!response.ok) throw new Error(`Failed to fetch video content: ${response.statusText}`);
+    
+    return await response.blob();
+};
+
 export const pollVideoOperation = async (operation: any): Promise<any> => {
-    // Correct usage: pass the operation name, not the whole object if checking via name,
-    // but the SDK method getVideosOperation accepts {operation: op} according to guidelines.
     return getGeminiAI().operations.getVideosOperation({ operation });
 };
 
@@ -508,6 +531,26 @@ export const generateVibeApp = async (prompt: string): Promise<GenerateContentRe
     Return ONLY the HTML code string, no markdown formatting.`;
     
     return generateTextWithThinking(fullPrompt);
+};
+
+// --- New UI Generator for App Launchpad ---
+export const generateUiComponent = async (prompt: string, type: 'mobile' | 'desktop' | 'tablet'): Promise<GenerateContentResponse> => {
+    const fullPrompt = `Generate a ${type} UI design for: "${prompt}".
+    Return single-file HTML/CSS using Tailwind CSS via CDN.
+    The design should be modern, high-fidelity, and glassmorphic (dark mode by default).
+    Use placeholder images (via unsplash source url) where appropriate.
+    Ensure it is fully responsive but optimized for the requested device type.
+    Return ONLY the HTML code string.`;
+    
+    return generateTextWithThinking(fullPrompt);
+};
+
+export const generateFlowDiagram = async (description: string): Promise<GenerateContentResponse> => {
+    const prompt = `Create a Mermaid.js flowchart diagram code for the following user flow: "${description}".
+    Use top-down (TD) orientation.
+    Style nodes nicely.
+    Return ONLY the mermaid code string (no markdown ticks).`;
+    return generateText(prompt, 'gemini-2.5-flash');
 };
 
 export const reviewCode = async (code: string): Promise<GenerateContentResponse> => {

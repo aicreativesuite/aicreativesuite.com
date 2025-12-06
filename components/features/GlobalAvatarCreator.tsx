@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { generateText, generateImage, generateSpeech, generateVideoFromImage, pollVideoOperation } from '../../services/geminiService';
+import { generateText, generateImage, generateSpeech, generateVideoFromImage, processVideoOperation } from '../../services/geminiService';
 import { TTS_VOICES, VEO_LOADING_MESSAGES, BACKGROUND_OPTIONS, AVATAR_EXPRESSIONS, SUPPORTED_LANGUAGES } from '../../constants';
 import Loader from '../common/Loader';
 import ApiKeyDialog from '../common/ApiKeyDialog';
@@ -52,11 +52,8 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
     const [error, setError] = useState<string | null>(null);
     const [apiKeyReady, setApiKeyReady] = useState(false);
     const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
-    const [isSaved, setIsSaved] = useState(false);
     
     // Refs
-    const pollIntervalRef = useRef<number | null>(null);
-    const messageIntervalRef = useRef<number | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -80,8 +77,6 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
         checkKey();
 
         return () => {
-            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-            if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
             if (audioUrl) URL.revokeObjectURL(audioUrl);
             if (videoUrl) URL.revokeObjectURL(videoUrl);
         };
@@ -100,41 +95,6 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
             setApiKeyReady(true);
             setShowApiKeyDialog(false);
         }
-    };
-
-    const stopLoading = () => {
-        setLoadingStep('');
-        if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
-        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    };
-
-    const handlePolling = (initialOperation: any) => {
-        let op = initialOperation;
-        pollIntervalRef.current = window.setInterval(async () => {
-            try {
-                op = await pollVideoOperation(op);
-                if (op.done) {
-                    stopLoading();
-                    const uri = op.response?.generatedVideos?.[0]?.video?.uri;
-                    if (uri) {
-                        const response = await fetch(`${uri}&key=${process.env.API_KEY}`);
-                        const blob = await response.blob();
-                        setVideoUrl(URL.createObjectURL(blob));
-                    } else {
-                        setError('Video generation finished, but no video was returned.');
-                    }
-                }
-            } catch (err: any) {
-                stopLoading();
-                if (err.message?.includes("Requested entity was not found")) {
-                    setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
-                    setApiKeyReady(false);
-                    setShowApiKeyDialog(true);
-                } else {
-                    setError('An error occurred while checking video status.');
-                }
-            }
-        }, 10000);
     };
 
     const handleTranslatePreview = async () => {
@@ -212,7 +172,6 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
         setAvatarImage(null);
         setAudioUrl(null);
         setVideoUrl(null);
-        setIsSaved(false);
 
         try {
             const effectiveLanguage = isCustomLanguage ? customLanguage : targetLanguage;
@@ -257,18 +216,22 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
 
             // Step 3: Generate Video
             setLoadingStep('video');
-            let i = 0;
-            setLoadingMessage(VEO_LOADING_MESSAGES[i]);
-            messageIntervalRef.current = window.setInterval(() => {
-                i = (i + 1) % VEO_LOADING_MESSAGES.length;
-                setLoadingMessage(VEO_LOADING_MESSAGES[i]);
+            let msgIdx = 0;
+            const msgInterval = setInterval(() => {
+                msgIdx = (msgIdx + 1) % VEO_LOADING_MESSAGES.length;
+                setLoadingMessage(VEO_LOADING_MESSAGES[msgIdx]);
             }, 3000);
+            setLoadingMessage(VEO_LOADING_MESSAGES[0]);
 
-            const operation = await generateVideoFromImage(finalVideoPrompt, imageBytes, 'image/jpeg', '9:16', false);
-            handlePolling(operation);
+            try {
+                const operation = await generateVideoFromImage(finalVideoPrompt, imageBytes, 'image/jpeg', '9:16', false);
+                const videoBlob = await processVideoOperation(operation);
+                setVideoUrl(URL.createObjectURL(videoBlob));
+            } finally {
+                clearInterval(msgInterval);
+            }
 
         } catch (err: any) {
-            stopLoading();
             if (err.message?.includes("Requested entity was not found")) {
                 setError("An API Key error occurred. Please select a valid key and ensure your project has billing enabled.");
                 setApiKeyReady(false);
@@ -277,6 +240,8 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
                 setError(err.message || 'An error occurred during generation.');
             }
             console.error(err);
+        } finally {
+            setLoadingStep('');
         }
     };
 
@@ -287,11 +252,6 @@ const GlobalAvatarCreator: React.FC<GlobalAvatarCreatorProps> = ({ onShare }) =>
             videoRef.current.play();
             audioRef.current.play();
         }
-    };
-
-    const handleSave = () => {
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 2000);
     };
 
     return (

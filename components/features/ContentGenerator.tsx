@@ -5,7 +5,7 @@ import { EXPANDED_CONTENT_TYPES, CONTENT_TONES } from '../../constants';
 import Loader from '../common/Loader';
 import { Remarkable } from 'remarkable';
 
-const md = new Remarkable({ html: true });
+const md = new Remarkable({ html: false });
 
 interface ContentGeneratorProps {
     onShare: (options: { contentText: string; contentType: 'text' }) => void;
